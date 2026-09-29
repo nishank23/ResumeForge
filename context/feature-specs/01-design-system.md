@@ -1,0 +1,43 @@
+# F01 — Design System
+
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Not started
+
+## Goal and dependencies
+
+Give the shell and all three remotes one accessible visual language that satisfies the user's modern-interface and animation requirement. Read [UI context](../ui-context.md) and [Performative UI integration](../frontend-integration.md), resolve D06 and validate D13, and complete the toolchain/federation compatibility check in the [Phase 1 plan](../build-plans/01-foundation.md). No dependencies are installed during context review.
+
+## Ownership and planned files
+
+`packages/shared/src/components/ui/`, `packages/shared/src/styles/`, `packages/shared/src/utils/`, `apps/shell/src/`, and each remote's browser entrypoint. Public exports use `@resume-forge/shared`; apps consume the same tokens and component APIs.
+
+## Build scope
+
+1. Define approved tokens, typography, spacing, focus states, and document-vs-application surfaces.
+2. Configure Tailwind v4 and shadcn/ui for the Vite monorepo; expose a shared stylesheet and `cn()` helper.
+3. Add only the primitives required by the first flows, with accessible labels, keyboard behavior, and error/loading variants.
+4. Build a shell navigation/layout preview with a remote component and an error fallback. Keep private/authenticated screens as future feature work.
+5. Verify shared React instances, CSS loading, and component styling in production federation builds, not just dev servers.
+
+## States and limits
+
+Provide button loading/disabled states, form errors, cards, dialogs, empty states, toasts/status announcements, and skeletons. Keep the scope focused on the resume workspace; a marketing site and diagramming controls are outside this feature. Proposed theme values are not approved until D06 is resolved.
+
+## Acceptance and verification
+
+- [ ] Shell and remotes render the same tokens without duplicate conflicting CSS or React runtimes.
+- [ ] Controls work with keyboard navigation, visible focus, accessible names, and disabled/loading states.
+- [ ] Layout remains usable on narrow screens and with zoom/long content.
+- [ ] Token contrast and font licensing are checked for the actual chosen design.
+- [ ] Approved motion works with keyboard interaction and reduced-motion settings; chosen themes are visually verified without delaying controls.
+- [ ] Shared package typecheck and affected production builds pass; visual review is recorded.
+
+No OAuth, profile persistence, resume generation, or expanded template library belongs in this feature.
+
+## Performative UI foundation — 2026-09-29 planning update
+
+Add shared PromptHero/Prompt wrappers, selected-context labels, action chips, an accessible comparison surface and real request state controls. Include suitable Performative UI backgrounds, GlassCard surfaces and gradient accents alongside shadcn/ui/Tiptap and the existing token system. Aurora is the proposed default atmospheric effect; other catalog choices follow the integration document. Verify D13 before pinning or integration; visual layout/theme/placement remain D06. F01 uses synthetic UI states only; provider calls and persistence belong to Phase 2.
+
+References: [frontend integration](../frontend-integration.md), [contextual editing contract](../resume-editing-contract.md).
+
+- [ ] Controlled input, IME/keyboard submit, optional toolbar removal, busy guards, token/CSS loading and reduced motion pass shell/remote production review.
+- [ ] Backgrounds/surfaces preserve contrast and pointer/focus behavior, use static/absent reduced-motion fallback, stop rendering offscreen/in hidden tabs and stay within a measured mobile rendering budget.

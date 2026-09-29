@@ -1,0 +1,125 @@
+# Data Model
+
+## Status and ownership
+
+This is a logical schema specification, not a runnable Prisma schema. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
+
+Use opaque stable IDs, UTC timestamps, explicit foreign keys, and server-derived ownership. Every tenant-owned object resolves to exactly one workspace. No child ID is sufficient authority to read or modify its parent resource.
+
+## Source entity inventory
+
+| Entity / owner | Fields to preserve from the source | Constraints and interpretation |
+|---|---|---|
+| User / auth | id, email, name, avatarUrl, provider, providerId, refreshToken, providerData, isOnboarded, createdAt, updatedAt | Do not store plaintext refreshToken or expose providerData. Proposed replacement relations below; authenticated account email is private identity data. |
+| UserProfile / profile | id, userId, fullName, location, professionalSummary, embedding, createdAt, updatedAt | Source has unique userId; D03 must resolve shared master vs workspace copies before finalizing uniqueness. |
+| UserContact / profile | id, profileId, email, phone, address, linkedinUrl, githubUrl, portfolioUrl, updatedAt | Unique profileId; separate storage/DTO access. Contact email is independent of login email. |
+| Education / profile | id, profileId, institution, degree, fieldOfStudy, startDate, endDate, gpa, description, sortOrder | Scoped through profile; validate dates/GPA without requiring GPA. |
+| Experience / profile | id, profileId, company, title, location, startDate, endDate, isCurrent, bulletPoints, keywords, metrics, sortOrder | No fabricated bullet metrics; current role has an explicit open end date. |
+| Skill / profile | id, profileId, name, category, proficiency, embedding | Categories: technical, soft, language, tool. Proficiency: beginner, intermediate, advanced, expert; handle absence rather than inventing it. |
+| UserProject / profile | id, profileId, name, description, url, technologies, startDate, endDate | Professional projects, not recruitment projects. URL is validated/sanitized. |
+| Certification / profile | id, profileId, name, issuer, issueDate, expiryDate, credentialUrl | Expiry may be absent; credential must come from user facts. |
+| Organization / workspace | id, name, slug, logoUrl, settings, createdAt, updatedAt | Unique slug; proposed Workspace relation under D04. |
+| Vendor / workspace | id, name, slug, logoUrl, settings, createdAt, updatedAt | Unique slug; consent is not implied by creation. |
+| OrganizationMembership / workspace | id, organizationId, userId, role, status, createdAt, updatedAt | Unique organizationId+userId; roles must match organization type. |
+| VendorMembership / workspace | id, vendorId, userId, role, status, createdAt, updatedAt | Unique vendorId+userId; roles must match vendor type. |
+| JDHistory / resume | id, profileId, workspaceType, workspaceId, createdByUserId, jobTitle, company, rawJD, parsedKeywords, parsedRequirements, parsedResponsibilities, experienceLevel, roleType, embedding, createdAt | Scoped to workspace and accessible profile; JD/company fields describe tailoring input, not a jobs table. |
+| Resume / resume | id, profileId, ownerUserId, workspaceType, workspaceId, createdByUserId, jdHistoryId, templateId, content, atsBreakdown, atsScore, pdfR2Key, currentVersion, status, createdAt, updatedAt | Current summary/pointers; never diverge from current immutable version. Proposed basic-builder mode makes JD and JD-specific score nullable; missing score is not zero. |
+| ResumeVersion / resume | id, resumeId, versionNumber, content, atsBreakdown, atsScore, pdfR2Key, createdByUserId, createdAt | Unique resumeId+versionNumber; immutable content snapshot. Artifacts may finish later via separate metadata. |
+| AuditEvent / workspace | id, actorUserId, workspaceType, workspaceId, targetUserId, action, resourceType, resourceId, metadata, timestamp | Append-only application access; metadata allowlist excludes raw sensitive data. |
+| TaskRun / resume | id, runId, profileId, workspaceType, workspaceId, userId, createdAt | Unique external runId when assigned; ownership verified before task status/token access. |
+
+## Proposed supporting models and fields
+
+| Model/change | Reason and proposed shape | Decision |
+|---|---|---|
+| Workspace | id, type, personalOwnerUserId?, timestamps; one personal workspace per user; org/vendor row links to one workspace | D04 |
+| ProfileWorkspaceGrant or workspace-owned copy | Defines which profile is accessible in a workspace, its consent, allowed operations, grantedBy, and revokedAt; alternative copy model needs distinct profile ownership/version semantics | D03 |
+| OAuthAccount | userId, provider, providerSubject, minimal provider metadata; unique(provider, providerSubject) | D08 |
+| Session | userId, hashed refresh credential, expiry, revokedAt, rotation family/replay metadata; keep provider tokens encrypted only if actually required | D08 |
+| WorkspaceInvitation | workspace, intended role, minimal invite target, hashed token, inviter, expiry, acceptedAt/revokedAt; membership becomes active only under approved consent flow | D02 |
+| Profile revision | revision counter and onboarding draft/completion fields; optimistic save and reproducible generation snapshots | F03/F04 proposal |
+| Version provenance | schemaVersion, source profile revision/fact IDs, JD revision, template version, model/prompt/rubric versions, content checksum | F06/F07 proposal |
+| Protected resume header snapshot | Contact snapshot separate from contact-free resume content, or an equally enforceable approved alternative; no unrestricted header inside public content JSON | D12 |
+| Artifact metadata | Version ID, privacy variant, R2 key, checksum, content/template revision, status, createdAt; unique render identity prevents duplicate artifacts on retry | D12 |
+| TaskRun lifecycle | resumeId?, kind, dispatch/status/stage, idempotency key, attempt/error code, input revisions, updatedAt; external runId nullable until dispatch completes | F06 proposal |
+| AuditOutbox | Producer-local immutable event intent and delivery state; unique event ID used for idempotent ingestion into AuditEvent | D11 |
+| Template registry metadata | Stable templateId + version + renderer contract; static first template does not require a template table | F08 proposal |
+
+Proposed Workspace foreign keys replace unenforced polymorphic pairs where practical. Keep workspace type consistent with its parent, not freely supplied on writes. Final schema may retain type on audit/snapshot records for historical interpretation.
+
+## Relationship sketch under the proposed Workspace model
+
+```mermaid
+erDiagram
+    User ||--o{ OAuthAccount : signs_in_with
+    User ||--o{ Session : has
+    User ||--|| UserProfile : owns_master
+    User ||--o{ Workspace : owns_personal
+    UserProfile ||--o| UserContact : has
+    Workspace ||--o{ ProfileWorkspaceGrant : permits
+    UserProfile ||--o{ ProfileWorkspaceGrant : grants
+    UserProfile ||--o{ Experience : contains
+    UserProfile ||--o{ Education : contains
+    UserProfile ||--o{ Skill : contains
+    UserProfile ||--o{ UserProject : contains
+    UserProfile ||--o{ Certification : contains
+    Workspace ||--o{ JDHistory : scopes
+    Workspace ||--o{ Resume : scopes
+    JDHistory ||--o{ Resume : informs
+    Resume ||--o{ ResumeVersion : versions
+    ResumeVersion ||--o{ Artifact : renders
+    Resume ||--o{ TaskRun : generates
+    Workspace ||--o{ AuditEvent : records
+```
+
+This sketch shows D03's proposed shared-master choice, not an approved resolution. Organization/vendor memberships retain their typed source relations unless D04 explicitly replaces them.
+
+## JSONB contracts
+
+| Column / contract | Stored value | Validation |
+|---|---|---|
+| Provider metadata | Minimal provider identity metadata | Allowlist; no raw tokens or unneeded profile dump |
+| Experience.bulletPoints | `string[]` or versioned fact-bearing bullets after schema decision | Size limits; source facts retained |
+| Experience.keywords | `string[]` | Derived metadata; cannot become unsupported skills |
+| Experience.metrics | `QuantifiedAchievement[]` | Metric, value, direction, source evidence |
+| UserProject.technologies | `string[]` | Bounded normalized list |
+| JD parsed fields | ExtractedKeyword[], Requirement[], responsibilities[] | Schema version, evidence from JD, optional unknown fields |
+| ResumeVersion.content | StructuredResumeContent | Stable section/item IDs, order, text, source references; scoped replacement validation; no unguarded contact fields |
+| ATS breakdown | Five component results | Score, weight, reasons, input hash, rubric version |
+| Organization/Vendor.settings | OrgSettings / VendorSettings | Explicit supported keys; no arbitrary policy override |
+| AuditEvent.metadata | Sanitized request/action context | Allowlisted keys, request ID; no profile text or tokens |
+
+## Vectors
+
+Source dimensions: UserProfile 1536, JDHistory 1536, Skill 384. Treat these as requested targets awaiting D07 compatibility validation. Profile/JD similarity requires the same embedding model/version and dimensions. Skill comparisons use their own compatible embedding space; never compare a 384-dimensional vector directly with a 1536-dimensional vector.
+
+Store model identifier, dimensions, source hash, and generatedAt alongside vectors. Recompute only changed content, invalidate stale results, and isolate semantic queries by tenant/profile authorization before returning matches. Embeddings are derived private data, not a public catalog.
+
+## Constraints, deletion, and consistency
+
+- Index scoped lists by workspace/time/ID, memberships by workspace/user, profile sections by profile/order, and audit events by workspace/time and actor/time. Validate actual query plans later.
+- Prevent a resume linking to a JD/profile outside its authorized scope. A foreign key alone does not establish consent.
+- Concurrent saves require an expected revision; return a conflict rather than overwrite a newer edit. Allocate version numbers transactionally.
+- Atomic onboarding completion belongs to the profile domain; synchronize auth `isOnboarded` idempotently or derive it from profile state. Do not claim a cross-service HTTP exchange is atomic.
+- Deletion removes access first, prevents workers recreating deleted output, then cleans version artifacts idempotently. Retention and audit pseudonymization require D11; do not blindly cascade away audit history.
+- Account deletion, shared-profile revocation, and any retained workspace copies must follow the approved D03/D11 policy before release.
+
+Verification belongs in [F03](feature-specs/03-database-schema.md) and [validation-strategy.md](validation-strategy.md).
+
+## Proposed builder and suggestion persistence
+
+[Contextual editing](resume-editing-contract.md) adds a resume-service-owned ResumeSuggestion linked to workspace, resume, immutable base version, expected revision, stable target, optional JD/input revisions, validated proposal/provenance, status and applied-version ID. Extend TaskRun with a section-suggestion kind. Version provenance distinguishes profile-copy, manual save, full generation, suggestion apply and explicit restoration.
+
+Unselected content and protected header references survive Apply unchanged. Apply atomically creates one version, advances its pointer, records suggestion linkage and local audit intent; duplicate Apply converges on the same result. A changed base version causes conflict. Resolve suggestion retention under D11 and privacy under D12 before persistence. Do not store a browser-selected JSON path as mutation authority. Basic drafts may have no JD or score; per-version JD provenance prevents retargeting from rewriting history.
+
+## Proposed U06 models and version extensions
+
+- Resume metadata: title and metadata revision. Clone records source resume/version provenance, new identity and independent initial version; never copies artifact URLs or active task state.
+- ResumePreference: unique actor+workspace, nullable activeResumeId and revision. Validate target scope on every read/write and invalidate on deletion/revocation; a stored preference grants no access.
+- ATSIssue: immutable evaluation/rule/version identity, target and evidence. Actor-scoped IssuePreference stores dismissal only; resolved state comes from later evaluation, not user manipulation of score evidence.
+- ResumeImport (F19): creator/workspace/target profile, private upload relation, file type/size/checksum, parser/schema versions, bounded extraction, separated contact staging, review revision, lifecycle, expiry and resulting resume ID. States uploaded/queued/processing/review-ready/confirmed/failed/canceled/expired; terminal cancellation/expiry prevents publication. Confirm idempotently creates one resume; corrections and confirmation retain provenance.
+- ResumeFact provenance: stable fact ID, origin profile/manual/import, confirmation revision and scoped source reference. AI-created text cannot become factual evidence without independent user confirmation. Import/local facts remain resume-local; no automatic master merge.
+- ResumeVersion render identity (F20): template ID/version, settings schema version and validated typography/margins/spacing/colors/preset snapshot. Include render-settings hash with content, renderer/font version and privacy variant in artifact identity; changing settings invalidates old current-artifact claims.
+- TemplatePreset (F20): owner actor or workspace, stable ID/version, typed settings only, visibility and archivedAt. Historical resume versions embed settings or retain immutable preset versions. No content/contact fields or executable code.
+
+All relations enforce tenant/profile scope through their parent. No Phase 6 tables are required in initial migrations merely because they are planned. D14/D05/D11/D12 and feature acceptance govern their later implementation.

@@ -1,0 +1,50 @@
+# Keep project documentation, AGENTS.md, source files and lockfiles in Git.
+
+# Local environment values and private keys (sanitized examples may be committed)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Dependencies and package caches
+node_modules/
+.pnpm-store/
+
+# Generated builds, caches and test reports
+dist/
+build/
+.turbo/
+.vite/
+.cache/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Local deployment/runtime metadata
+.wrangler/
+.vercel/
+.trigger/
+
+# Local code index (project Markdown remains tracked)
+.codegraph/
+
+# Runtime logs and temporary data
+*.log
+logs/
+/tmp/
+/uploads/
+/exports/
+
+# Operating-system and editor scratch files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+*.swp
+*.swo
+*~
