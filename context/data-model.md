@@ -2,7 +2,7 @@
 
 ## Status and ownership
 
-This is a logical schema specification, not a runnable Prisma schema. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
+This is the logical schema specification. The initial identity/workspace/profile/contact/grant subset is implemented in `packages/prisma-client/prisma/schema.prisma`; remaining entities are planned. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
 
 Use opaque stable IDs, UTC timestamps, explicit foreign keys, and server-derived ownership. Every tenant-owned object resolves to exactly one workspace. No child ID is sufficient authority to read or modify its parent resource.
 
@@ -72,7 +72,7 @@ erDiagram
     Workspace ||--o{ AuditEvent : records
 ```
 
-This sketch shows D03's proposed shared-master choice, not an approved resolution. Organization/vendor memberships retain their typed source relations unless D04 explicitly replaces them.
+D03 shared-master and D04 common Workspace were approved on 2026-09-30; this sketch also includes entities not yet implemented. Organization/vendor memberships retain their typed source relations unless D04 explicitly replaces them.
 
 ## JSONB contracts
 

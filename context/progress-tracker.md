@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-09-30
 
-**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope and audit-contract foundations verified on 2026-09-30.
+**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope, audit contracts and initial local identity migration verified on 2026-09-30.
 
 **Context approved by user:** Yes — 2026-09-29 ("I confirm everything").
 
@@ -16,7 +16,7 @@ This is the canonical status file. [project-tracker.md](../project-tracker.md) l
 
 ## Current goal
 
-Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 is in progress: the unblocked personal-scope policy and content-free audit-intent contracts are verified; schema, session, durable audit delivery, vectors and database-backed acceptance remain gated by D03/D04/D07/D08/D11 and a development database target.
+Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 is in progress: the unblocked personal-scope policy and content-free audit-intent contracts are verified; the initial local identity/workspace/profile migration is verified. Remaining persistence tables and durable audit delivery are pending; vectors remain gated by D07.
 
 ## Documentation checklist
 
@@ -52,7 +52,7 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 | --- | ---------- | ---------------------------------------------------------------------- | ------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
 | F01 | 1          | [Design system](feature-specs/01-design-system.md)                     | Spec drafted | **Complete (P1.2)**              | **Passed** (`pnpm build`, `pnpm check`, production federation & CSS token audit)         |
 | F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Not started                      | Not run                                                                                  |
-| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 contracts)** | Personal scope + audit contracts: 21/21 tests passed; migrations/database checks not run |
+| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 persistence)** | 21 policy/contract tests; local migration plus 7 database subtests and restore passed |
 | F04 | 1          | [Individual profile wizard](feature-specs/04-profile-wizard.md)        | Spec drafted | Not started                      | Not run                                                                                  |
 | F05 | 2          | [JD parser](feature-specs/05-jd-parser.md)                             | Spec drafted | Not started                      | Not run                                                                                  |
 | F06 | 2          | [Resume generator + suggestions](feature-specs/06-resume-generator.md) | Spec drafted | Not started                      | Not run                                                                                  |
@@ -73,7 +73,7 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 
 ## In progress
 
-**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and fail-closed personal ownership/scope decisions. Added `@resume-forge/audit-contracts` with the 22 documented event names, authoritative actor/workspace/resource fields, explicit outcomes, canonical UTC timestamps and allowlisted identifier/status metadata. Raw content, unknown keys, URLs, emails, nested values and action/resource/outcome mismatches are rejected. Role bundles, shared-workspace grants, persistence, audit delivery/retention and sensitive-read failure behavior remain inactive until their decisions are resolved.
+**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and fail-closed personal ownership/scope decisions. Added `@resume-forge/audit-contracts` with the 22 documented event names, authoritative actor/workspace/resource fields, explicit outcomes, canonical UTC timestamps and allowlisted identifier/status metadata. Raw content, unknown keys, URLs, emails, nested values and action/resource/outcome mismatches are rejected. Initial persistence and grant models are now implemented; shared-workspace routes, role bundles, session rotation, audit delivery and sensitive-read enforcement remain unimplemented.
 
 ## Decisions awaiting review
 
@@ -81,15 +81,15 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 | Decision group               | IDs                                                                               | Effect                                                                                                                          |
 | ---------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Original product questions   | D01 billing; D02 vendor consent; D03 profile sharing                              | Billing can remain future scope; consent/sharing affect data and shared access                                                  |
-| Foundation design            | D04 workspace identity; D08 identity/session model; D11 audit/retention           | Resolve before their dependent schema/auth implementation; D06 baseline tokens & D13 Performative UI wrappers completed in P1.2 |
+| Original product questions   | D01 billing; D02 vendor consent                              | Billing can remain future scope; vendor consent flow remains Phase 4; D03 approved                                                  |
+| Foundation design            | D11 retention/deletion periods (durability approved)           | D03/D04/D08 and D11 durability approved 2026-09-30; retention required before real-data deployment |
 | AI and content               | D07 embedding dimensions/model; D09 ATS rubric; D12 contact-safe rendering/export | Resolve before vectors, scoring, and content/artifact contracts                                                                 |
 | Shared policy and operations | D05 full role grants; D10 hosting/domains/invitations                             | Resolve before affected integrations and shared release                                                                         |
 | Additional intake            | D14 PDF/DOC/DOCX resume import                                                    | F19 in proposed Phase 6; formats/parser/limits/retention remain open before implementation                                      |
 
 ## Next step
 
-P1.3: continue with a dependency-ready persistence slice after D03 profile sharing, D04 workspace identity, D08 sessions/account linking, D11 audit durability/retention and the development database target are settled. D07 separately gates vector columns. The verified scope and audit-intent contracts are ready for future REST, job, download and MCP entrypoints; they do not persist events or expose a private route.
+D03/D04/D08 and D11 durability were approved by the user on 2026-09-30; local PostgreSQL only is selected under D10. Initial identity/workspace/profile/contact/grant migration is implemented and verified. Continue P1.3 with profile sections and typed workspace/membership constraints, then durable audit capture and the remaining version/task foundations. D07 vectors, D12 protected snapshots and real-data retention remain separate gates. Do not start OAuth or mark F03 complete yet.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -232,3 +232,14 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Added 12 Node tests covering accepted events and privacy/schema failures.
 - Verification: package build/lint/typecheck/test passed; `pnpm check` passed 21/21 tasks, `pnpm build` passed 9/9 packages, and `pnpm test` passed 11/11 tasks with 21/21 policy/contract cases.
 - Scope boundary: this package returns a sanitized event intent only. D11 still gates transactional outboxes, retry/idempotent ingestion, sensitive-read failure policy, retention/deletion and the Phase 4 viewer.
+
+## P1.3 local identity persistence — 2026-09-30
+
+- User selected local PostgreSQL only and approved all four recommended schema designs (D03/D04/D08/D11 durability). Production hosting and retention remain deferred.
+- Added pinned Prisma 7.10.0/client/adapter-pg, generated server-only client, reviewed initial SQL migration, and project-local SCRAM-authenticated PostgreSQL scripts on loopback port 55432. Runtime data and credentials are ignored.
+- Implemented User/OAuthAccount/Session/Workspace/UserProfile/UserContact/ProfileWorkspaceGrant with unique identities, owner-attributed grants, restrictive foreign keys and explicit SQL CHECK constraints.
+- `pnpm db:migrate`: initial migration applied on PostgreSQL 18.3. `pnpm db:test`: 7/7 database subtests plus parent passed, covering scopes, constraints, revocation, separate contacts, rollback via independent connection and synthetic backup/restore. Fixtures and restore databases are disposable; no production database was contacted.
+- Remaining: profile sections, organization/vendor details/memberships, resume/version/task foundations, durable audit outbox/delivery, service repositories/roles, OAuth/session behavior, vectors and private UI integration. F03 remains in progress. See [database notes](../docs/database-foundation.md) for limits.
+
+- Regression verification: `pnpm check` passed; `pnpm test` passed 12/12 tasks (all 10 package builds and 21 existing policy/audit test cases). New client generation/build/typecheck passed; Node syntax checks and `git diff --check` passed. Database credentials and generated client source confirmed ignored.
+- Local stop/start preserved the database; repeating `pnpm db:migrate` reported no pending migrations. The final `pnpm db:test` command rebuilt the client and again passed all seven subtests plus parent. PostgreSQL remains running for manual checks. Initial sandbox shared-memory restriction was resolved by authorized local execution; no outstanding database test failure.

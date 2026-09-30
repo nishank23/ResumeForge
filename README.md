@@ -51,7 +51,7 @@ The project and planned GitHub repository are named `resume-forge`. The layout a
 
 ## Stack (verified in P1.1 & P1.2)
 
-pnpm 12 + Turborepo 2; Vite 6 + React 19 + TypeScript 5.9 + `@module-federation/vite` microfrontends (`shell`, `auth-mfe`, `profile-mfe`, `resume-mfe`); Tailwind v4 + shadcn/ui + `performative-ui@0.7.0` wrappers in `@resume-forge/shared`; Hono 4 services on Node.js 22; planned Neon PostgreSQL + pgvector + Prisma; Google/LinkedIn OAuth; Trigger.dev; Vercel AI SDK with Gemini by default; Cloudflare Pages and R2. See [architecture](context/architecture-context.md) and [progress tracker](context/progress-tracker.md) for pinned versions.
+pnpm 12 + Turborepo 2; Vite 6 + React 19 + TypeScript 5.9 + `@module-federation/vite` microfrontends (`shell`, `auth-mfe`, `profile-mfe`, `resume-mfe`); Tailwind v4 + shadcn/ui + `performative-ui@0.7.0` wrappers in `@resume-forge/shared`; Hono 4 services on Node.js 22; local PostgreSQL 18 + Prisma 7 (pgvector and hosting deferred); Google/LinkedIn OAuth; Trigger.dev; Vercel AI SDK with Gemini by default; Cloudflare Pages and R2. See [architecture](context/architecture-context.md) and [progress tracker](context/progress-tracker.md) for pinned versions.
 
 ## Development
 
@@ -67,7 +67,7 @@ Open **http://localhost:3000**. The shell opens **My resumes**; all three fronte
 The UI is a sample workspace: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it. OAuth, database persistence, AI, scoring and PDF export are not connected. No credentials or `.env` file are needed for this preview.
 
 ```bash
-pnpm build   # Build all seven workspace packages
+pnpm build   # Build all workspace packages
 pnpm check   # Lint and typecheck, including dependency builds
 ```
 
@@ -80,6 +80,23 @@ pnpm --parallel --filter @resume-forge/shell --filter @resume-forge/auth-mfe --f
 This serves the frontend production builds on ports 3000–3003. The gateway is not required for the sample UI. Shared styles are a built package; after editing them during development, run `pnpm --filter @resume-forge/shared build` and refresh, or restart `pnpm dev`.
 
 See [UI review and verification](docs/ui-redesign-review.md) for the latest changes and manual checks. The 2026-09-29 planning notes below describe earlier stages; the current tracker takes precedence.
+
+### Local PostgreSQL
+
+Install PostgreSQL command-line tools (`initdb`, `pg_ctl`, `psql`, `createdb`, `pg_dump`) on your PATH. Verified with Homebrew PostgreSQL 18.3 and Prisma 7.10.0. From the repository root:
+
+```bash
+pnpm db:local:start
+pnpm db:migrate
+pnpm db:test
+pnpm db:local:status
+# When finished:
+pnpm db:local:stop
+```
+
+The dedicated cluster listens only on `127.0.0.1:55432`, uses SCRAM password authentication, and stores data/credentials in ignored `.local/` (do not delete it to reset development). Prisma CLI reads `.local/database.env` automatically; an explicit `DATABASE_URL` overrides it for migrations. Database tests always use the managed local cluster, create disposable test databases, and remove only those databases. Expect seven passing subtests plus their parent test, including rollback and backup/restore checks. `db:local:start` is safe to repeat and preserves data.
+
+This slice adds identity, session, workspace, profile/contact and grant persistence models. It does not connect sample UI, implement OAuth/session rotation, or activate shared workspaces. Local database credentials have administrative privileges for migrations and disposable database tests; restricted service roles are required before private routes use the database. See [database foundation](docs/database-foundation.md).
 
 ## Latest planning update
 

@@ -7,6 +7,11 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "db:local:start": "node scripts/local-db.mjs start",
+    "db:local:stop": "node scripts/local-db.mjs stop",
+    "db:local:status": "node scripts/local-db.mjs status",
+    "db:migrate": "pnpm --filter @resume-forge/prisma-client migrate",
+    "db:test": "pnpm --filter @resume-forge/prisma-client test:db",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",

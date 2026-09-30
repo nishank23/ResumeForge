@@ -34,6 +34,8 @@ blob-report/
 .codegraph/
 
 # Runtime logs and temporary data
+.local/
+packages/prisma-client/src/generated/
 *.log
 logs/
 /tmp/

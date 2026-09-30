@@ -1,6 +1,6 @@
 # F03 — Database Schema and Prisma
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Not started
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — initial local identity migration verified
 
 ## Goal and dependencies
 
@@ -12,7 +12,7 @@ Create the persistence foundation for all phases without losing tenant isolation
 
 ## Build scope
 
-1. Validate the planned Prisma 7 + Neon + pgvector runtime/adapter/version combination using current official documentation and a development database.
+1. Validate the planned Prisma 7 + local PostgreSQL runtime/adapter/version combination (hosted database deferred; pgvector gated by D07) using current official documentation and a development database.
 2. Translate the approved logical model into foreign keys, typed roles/statuses, unique membership/provider/version identities, and scoped indexes.
 3. Keep UserContact separate, add the approved session/workspace/profile-access model, and define version/task/audit foundations before storing private data.
 4. Version JSONB schemas and embedding metadata. Add vector columns/indexes only after dimension/model compatibility is verified.
