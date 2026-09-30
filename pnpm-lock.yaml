@@ -427,6 +427,28 @@ importers:
         specifier: ^8.30.0
         version: 8.70.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
 
+  packages/audit-contracts:
+    dependencies:
+      '@resume-forge/access-policy':
+        specifier: workspace:*
+        version: link:../access-policy
+      '@resume-forge/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.0
+        version: 10.0.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))
+      eslint:
+        specifier: ^9.20.0
+        version: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.30.0
+        version: 8.70.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+
   packages/shared:
     dependencies:
       '@resume-forge/shared-types':

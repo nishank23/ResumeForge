@@ -32,7 +32,8 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [ ] Add constraints, revisions, version/task foundations, tenant indexes, and synthetic fixtures.
 - [ ] Add approved vector columns only after D07 validation; avoid guessed dimensions/model names.
 - [x] Establish fail-closed personal workspace/resource ownership checks without activating proposed shared-role mappings.
-- [ ] Establish approved audit capture before exposing private routes.
+- [x] Define a content-free, allowlisted audit event-intent contract with scoped identifiers and explicit outcomes.
+- [ ] Establish D11-approved durable audit capture/outbox behavior before exposing private routes.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)

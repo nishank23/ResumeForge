@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-09-30
 
-**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope policy foundation verified on 2026-09-30.
+**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope and audit-contract foundations verified on 2026-09-30.
 
 **Context approved by user:** Yes — 2026-09-29 ("I confirm everything").
 
@@ -16,7 +16,7 @@ This is the canonical status file. [project-tracker.md](../project-tracker.md) l
 
 ## Current goal
 
-Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 is in progress: the unblocked personal-scope policy slice is verified; schema, session, audit, vector and database-backed acceptance remain gated by D03/D04/D07/D08/D11 and a development database target.
+Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 is in progress: the unblocked personal-scope policy and content-free audit-intent contracts are verified; schema, session, durable audit delivery, vectors and database-backed acceptance remain gated by D03/D04/D07/D08/D11 and a development database target.
 
 ## Documentation checklist
 
@@ -34,46 +34,46 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 
 ## Phase status
 
-| Phase                                                               | State                                              | Exit evidence                                                                                                                                                  |
-| ------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Context                                                             | Approved by user                                   | 2026-09-29 confirmation                                                                                                                                        |
-| [1 — Foundation](build-plans/01-foundation.md)                      | **In progress — P1.1/P1.2 complete; P1.3 started** | Workspace scaffold, F01 UI/federation, and tested Phase 1 personal workspace/resource scope policy are passing; database-backed F03 acceptance remains pending |
-| [2 — AI pipeline](build-plans/02-ai-pipeline.md)                    | Not started                                        | None; no application implementation                                                                                                                            |
-| [3 — Complete individual flow](build-plans/03-individual-flow.md)   | Not started                                        | None; no application implementation                                                                                                                            |
-| [4 — Multi-tenant](build-plans/04-multi-tenant.md)                  | Not started                                        | None; no application implementation                                                                                                                            |
-| [5 — Advanced](build-plans/05-advanced.md)                          | Not started                                        | None; no application implementation                                                                                                                            |
-| [6 — Resume builder expansion](build-plans/06-builder-expansion.md) | Proposed allocation; Not started                   | F19/F20 specs drafted; no implementation                                                                                                                       |
+| Phase                                                               | State                                              | Exit evidence                                                                                                                                       |
+| ------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Context                                                             | Approved by user                                   | 2026-09-29 confirmation                                                                                                                             |
+| [1 — Foundation](build-plans/01-foundation.md)                      | **In progress — P1.1/P1.2 complete; P1.3 started** | Workspace scaffold, F01 UI/federation, personal scope policy, and safe audit-intent validation pass; database-backed F03 acceptance remains pending |
+| [2 — AI pipeline](build-plans/02-ai-pipeline.md)                    | Not started                                        | None; no application implementation                                                                                                                 |
+| [3 — Complete individual flow](build-plans/03-individual-flow.md)   | Not started                                        | None; no application implementation                                                                                                                 |
+| [4 — Multi-tenant](build-plans/04-multi-tenant.md)                  | Not started                                        | None; no application implementation                                                                                                                 |
+| [5 — Advanced](build-plans/05-advanced.md)                          | Not started                                        | None; no application implementation                                                                                                                 |
+| [6 — Resume builder expansion](build-plans/06-builder-expansion.md) | Proposed allocation; Not started                   | F19/F20 specs drafted; no implementation                                                                                                            |
 
 ## Feature status
 
 “Spec drafted” means documentation exists. It does not mean the feature works or that its proposed details are approved.
 
-| ID  | Phase      | Feature/spec                                                           | Context      | Implementation                      | Verification                                                                     |
-| --- | ---------- | ---------------------------------------------------------------------- | ------------ | ----------------------------------- | -------------------------------------------------------------------------------- |
-| F01 | 1          | [Design system](feature-specs/01-design-system.md)                     | Spec drafted | **Complete (P1.2)**                 | **Passed** (`pnpm build`, `pnpm check`, production federation & CSS token audit) |
-| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Not started                         | Not run                                                                          |
-| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 policy slice)** | Personal ownership policy: 9/9 tests passed; migrations/database checks not run  |
-| F04 | 1          | [Individual profile wizard](feature-specs/04-profile-wizard.md)        | Spec drafted | Not started                         | Not run                                                                          |
-| F05 | 2          | [JD parser](feature-specs/05-jd-parser.md)                             | Spec drafted | Not started                         | Not run                                                                          |
-| F06 | 2          | [Resume generator + suggestions](feature-specs/06-resume-generator.md) | Spec drafted | Not started                         | Not run                                                                          |
-| F07 | 2          | [ATS scoring + breakdown](feature-specs/07-ats-scoring.md)             | Spec drafted | Not started                         | Not run                                                                          |
-| F08 | 2          | [Resume builder + preview](feature-specs/08-resume-preview.md)         | Spec drafted | Not started                         | Not run                                                                          |
-| F09 | 3          | [PDF export + R2](feature-specs/09-pdf-export.md)                      | Spec drafted | Not started                         | Not run                                                                          |
-| F10 | 3          | [Resume dashboard](feature-specs/10-resume-dashboard.md)               | Spec drafted | Not started                         | Not run                                                                          |
-| F11 | 3          | [JD history](feature-specs/11-jd-history.md)                           | Spec drafted | Not started                         | Not run                                                                          |
-| F12 | 3          | [Profile editor](feature-specs/12-profile-editor.md)                   | Spec drafted | Not started                         | Not run                                                                          |
-| F13 | 4          | [Workspace management](feature-specs/13-workspace-management.md)       | Spec drafted | Not started                         | Not run                                                                          |
-| F14 | 4          | [RBAC + privacy](feature-specs/14-rbac-privacy.md)                     | Spec drafted | Not started                         | Not run                                                                          |
-| F15 | 4          | [Audit logging](feature-specs/15-audit-logging.md)                     | Spec drafted | Not started                         | Not run                                                                          |
-| F16 | 5          | [LinkedIn data import](feature-specs/16-linkedin-import.md)            | Spec drafted | Not started                         | Not run                                                                          |
-| F17 | 5          | [Keyword gap analysis](feature-specs/17-keyword-gap-analysis.md)       | Spec drafted | Not started                         | Not run                                                                          |
-| F18 | 5          | [MCP integration](feature-specs/18-mcp-integration.md)                 | Spec drafted | Not started                         | Not run                                                                          |
-| F19 | 6 proposed | [Existing resume file import](feature-specs/19-resume-file-import.md)  | Spec drafted | Not started                         | Not run                                                                          |
-| F20 | 6 proposed | [Template customization](feature-specs/20-template-customization.md)   | Spec drafted | Not started                         | Not run                                                                          |
+| ID  | Phase      | Feature/spec                                                           | Context      | Implementation                   | Verification                                                                             |
+| --- | ---------- | ---------------------------------------------------------------------- | ------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| F01 | 1          | [Design system](feature-specs/01-design-system.md)                     | Spec drafted | **Complete (P1.2)**              | **Passed** (`pnpm build`, `pnpm check`, production federation & CSS token audit)         |
+| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Not started                      | Not run                                                                                  |
+| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 contracts)** | Personal scope + audit contracts: 21/21 tests passed; migrations/database checks not run |
+| F04 | 1          | [Individual profile wizard](feature-specs/04-profile-wizard.md)        | Spec drafted | Not started                      | Not run                                                                                  |
+| F05 | 2          | [JD parser](feature-specs/05-jd-parser.md)                             | Spec drafted | Not started                      | Not run                                                                                  |
+| F06 | 2          | [Resume generator + suggestions](feature-specs/06-resume-generator.md) | Spec drafted | Not started                      | Not run                                                                                  |
+| F07 | 2          | [ATS scoring + breakdown](feature-specs/07-ats-scoring.md)             | Spec drafted | Not started                      | Not run                                                                                  |
+| F08 | 2          | [Resume builder + preview](feature-specs/08-resume-preview.md)         | Spec drafted | Not started                      | Not run                                                                                  |
+| F09 | 3          | [PDF export + R2](feature-specs/09-pdf-export.md)                      | Spec drafted | Not started                      | Not run                                                                                  |
+| F10 | 3          | [Resume dashboard](feature-specs/10-resume-dashboard.md)               | Spec drafted | Not started                      | Not run                                                                                  |
+| F11 | 3          | [JD history](feature-specs/11-jd-history.md)                           | Spec drafted | Not started                      | Not run                                                                                  |
+| F12 | 3          | [Profile editor](feature-specs/12-profile-editor.md)                   | Spec drafted | Not started                      | Not run                                                                                  |
+| F13 | 4          | [Workspace management](feature-specs/13-workspace-management.md)       | Spec drafted | Not started                      | Not run                                                                                  |
+| F14 | 4          | [RBAC + privacy](feature-specs/14-rbac-privacy.md)                     | Spec drafted | Not started                      | Not run                                                                                  |
+| F15 | 4          | [Audit logging](feature-specs/15-audit-logging.md)                     | Spec drafted | Phase 1 contract foundation only | 12/12 contract tests; delivery, persistence and viewer not started                       |
+| F16 | 5          | [LinkedIn data import](feature-specs/16-linkedin-import.md)            | Spec drafted | Not started                      | Not run                                                                                  |
+| F17 | 5          | [Keyword gap analysis](feature-specs/17-keyword-gap-analysis.md)       | Spec drafted | Not started                      | Not run                                                                                  |
+| F18 | 5          | [MCP integration](feature-specs/18-mcp-integration.md)                 | Spec drafted | Not started                      | Not run                                                                                  |
+| F19 | 6 proposed | [Existing resume file import](feature-specs/19-resume-file-import.md)  | Spec drafted | Not started                      | Not run                                                                                  |
+| F20 | 6 proposed | [Template customization](feature-specs/20-template-customization.md)   | Spec drafted | Not started                      | Not run                                                                                  |
 
 ## In progress
 
-**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and a fail-closed personal ownership/scope decision. It denies missing actors, non-individual workspaces, spoofed client workspace selectors, cross-workspace resources, cross-user resources and invalid identifiers. Role bundles, shared-workspace grants, field projection and audit durability remain inactive until their decisions are resolved. Prisma models, migrations, fixtures and database recovery checks remain pending.
+**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and fail-closed personal ownership/scope decisions. Added `@resume-forge/audit-contracts` with the 22 documented event names, authoritative actor/workspace/resource fields, explicit outcomes, canonical UTC timestamps and allowlisted identifier/status metadata. Raw content, unknown keys, URLs, emails, nested values and action/resource/outcome mismatches are rejected. Role bundles, shared-workspace grants, persistence, audit delivery/retention and sensitive-read failure behavior remain inactive until their decisions are resolved.
 
 ## Decisions awaiting review
 
@@ -89,7 +89,7 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 ## Next step
 
-P1.3: continue with a dependency-ready persistence slice after D03 profile sharing, D04 workspace identity, D08 sessions/account linking, D11 audit/retention and the development database target are settled. D07 separately gates vector columns. The verified personal-scope helper is ready to be integrated into future REST, job, download and MCP entrypoints; it does not by itself expose a private route.
+P1.3: continue with a dependency-ready persistence slice after D03 profile sharing, D04 workspace identity, D08 sessions/account linking, D11 audit durability/retention and the development database target are settled. D07 separately gates vector columns. The verified scope and audit-intent contracts are ready for future REST, job, download and MCP entrypoints; they do not persist events or expose a private route.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -223,3 +223,12 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Added the root `pnpm test` task using the installed Turborepo 2.11.5 task contract.
 - Verification: `pnpm --filter @resume-forge/access-policy build`, package test/lint/typecheck, `pnpm check` (18/18), `pnpm build` (8/8), and `pnpm test` (9/9 tasks; 9/9 policy cases) passed.
 - Scope boundary: no Prisma schema, migration, database fixture, private route, session model, role bundle, audit outbox or vector column was implemented. F03 remains in progress.
+
+## P1.3 audit-intent contract foundation — 2026-09-30
+
+- Added `@resume-forge/audit-contracts` with the 22 documented base/proposed event names and typed workspace/resource/outcome contracts.
+- Added runtime validation for attributable actor/workspace/resource scope, opaque bounded IDs, canonical UTC timestamps, action/resource compatibility and denied/failed outcome semantics.
+- Metadata accepts only 11 named identifier/status keys, at most eight entries, with the canonical 27-name permission vocabulary. Unknown keys, nested data, raw text, email-like values and URLs fail validation.
+- Added 12 Node tests covering accepted events and privacy/schema failures.
+- Verification: package build/lint/typecheck/test passed; `pnpm check` passed 21/21 tasks, `pnpm build` passed 9/9 packages, and `pnpm test` passed 11/11 tasks with 21/21 policy/contract cases.
+- Scope boundary: this package returns a sanitized event intent only. D11 still gates transactional outboxes, retry/idempotent ingestion, sensitive-read failure policy, retention/deletion and the Phase 4 viewer.
