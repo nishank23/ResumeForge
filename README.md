@@ -2,7 +2,7 @@
 
 A planned multi-tenant resume and professional-profile platform for individuals, organizations, and vendors. It tailors resumes to supplied job descriptions without changing the master profile.
 
-**Current stage: context prepared for review; development has not started.** The user will confirm the context before application scaffolding or implementation begins.
+**Current stage: Phase 1 in progress — P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) complete.** Next task: P1.3 persistence and access foundations (F03). The tracker records the current gate and supersedes earlier planning-stage status notes.
 
 ## Start here
 
@@ -49,11 +49,37 @@ resume-forge/
 
 The project and planned GitHub repository are named `resume-forge`. The layout above uses that canonical name; the existing local checkout directory has not been moved. All documentation and planned implementation paths are relative to this root.
 
-## Planned stack
+## Stack (verified in P1.1 & P1.2)
 
-pnpm + Turborepo; Vite + React + TypeScript microfrontends; Tailwind + shadcn/ui + selected Performative UI components; Hono services on Node.js; Neon PostgreSQL + pgvector + Prisma; Google/LinkedIn OAuth; Trigger.dev; Vercel AI SDK with Gemini by default; Cloudflare Pages and R2. Exact version compatibility will be verified during foundation work. See [architecture](context/architecture-context.md).
+pnpm 12 + Turborepo 2; Vite 6 + React 19 + TypeScript 5.9 + `@module-federation/vite` microfrontends (`shell`, `auth-mfe`, `profile-mfe`, `resume-mfe`); Tailwind v4 + shadcn/ui + `performative-ui@0.7.0` wrappers in `@resume-forge/shared`; Hono 4 services on Node.js 22; planned Neon PostgreSQL + pgvector + Prisma; Google/LinkedIn OAuth; Trigger.dev; Vercel AI SDK with Gemini by default; Cloudflare Pages and R2. See [architecture](context/architecture-context.md) and [progress tracker](context/progress-tracker.md) for pinned versions.
 
-No resume-forge application code, dependency manifests, credentials, infrastructure, or migrations are created by this documentation stage. Run and deployment commands will be added only after the corresponding implementation exists.
+## Development
+
+Requires Node.js 22+ and the pinned pnpm 12.6.0. From the repository root:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open **http://localhost:3000**. The shell opens **My resumes**; all three frontend modules and the gateway start together. Starting only the shell will leave module-backed pages unavailable. Stop with Ctrl+C.
+
+The UI is a sample workspace: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it. OAuth, database persistence, AI, scoring and PDF export are not connected. No credentials or `.env` file are needed for this preview.
+
+```bash
+pnpm build   # Build all seven workspace packages
+pnpm check   # Lint and typecheck, including dependency builds
+```
+
+To inspect built output instead of development servers, stop `pnpm dev`, run `pnpm build`, then:
+
+```bash
+pnpm --parallel --filter @resume-forge/shell --filter @resume-forge/auth-mfe --filter @resume-forge/profile-mfe --filter @resume-forge/resume-mfe preview
+```
+
+This serves the frontend production builds on ports 3000–3003. The gateway is not required for the sample UI. Shared styles are a built package; after editing them during development, run `pnpm --filter @resume-forge/shared build` and refresh, or restart `pnpm dev`.
+
+See [UI review and verification](docs/ui-redesign-review.md) for the latest changes and manual checks. The 2026-09-29 planning notes below describe earlier stages; the current tracker takes precedence.
 
 ## Latest planning update
 

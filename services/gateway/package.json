@@ -1,0 +1,27 @@
+{
+  "name": "@resume-forge/gateway",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@resume-forge/shared-types": "workspace:*",
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^26.6.3",
+    "eslint": "^9.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.30.0"
+  }
+}

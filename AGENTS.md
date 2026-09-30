@@ -4,7 +4,7 @@
 
 These instructions govern the standalone resume-forge project rooted here. All required product context, feature specifications, and build plans live in this workspace.
 
-The user authorizes planning/context documentation and the requested project naming and `.gitignore` preparation. **Wait for the user's confirmation that context is complete and development may begin before scaffolding apps, installing dependencies, generating application configs, implementing features, migrating data, or provisioning services.** A checklist in a plan is future work, not authorization to execute it now. Later explicit user instructions can change this gate; record that change in the tracker.
+The user confirmed the context on 2026-09-29 ("I confirm everything"). **The context-review gate is cleared; do not request overall context approval again.** The confirmation turn requests starter prompts only, so do not scaffold in response to that request. On the next implementation request, execute the requested development slice using the approved context, beginning with Phase 1. Validate compatibility and resolve genuinely unspecified inputs at their dependent boundaries; a planning checklist is not an instruction to execute every phase at once. The current status in the tracker supersedes earlier planning-stage no-development statements in other documents.
 
 This project uses **Vite + React** microfrontends and **Hono** services. Follow the package boundaries, routing conventions, authentication model, and storage choices documented for resume-forge.
 
@@ -57,3 +57,14 @@ The same-day follow-up also selects suitable Performative UI backgrounds, surfac
 ## Comprehensive capability follow-up
 
 Read [resume capability coverage](context/resume-capability-coverage.md) for the 2026-09-29 U06 request. The roadmap now documents 20 features: original F01–F18 plus proposed Phase 6 F19 file intake and F20 templates/formatting. Keep evidence separate from untested behavior; do not call planned coverage implemented parity. D14 now gates import details, not whether intake appears in the plan. Search/clone/active selection belong to F10; manual structure and draft modes to F08. Cover-letter permissions stay inactive through proposed Phase 6. All additions remain behind the existing development gate.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->

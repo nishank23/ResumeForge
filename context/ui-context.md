@@ -1,5 +1,11 @@
 # UI Context
 
+## Current implementation — 2026-09-30
+
+The user requested direct UI/UX improvement on 2026-09-29. F01 now uses a document-focused personal preview: sidebar navigation, a resume library entry route, separate creation/editor pages, a white resume beside a section assistant, and mobile view controls. Shared tokens use canvas `#F7F8FA`, surface `#FFFFFF`, muted surface `#EEF1F6`, ink `#172033`, secondary ink `#536079`, and indigo `#4338CA`. Dark chrome is retained, with `#A5B4FC` primary and `#172033` button text. System sans serves the UI; installed Georgia serves document illustration headings. No external font download.
+
+Performative UI remains installed and wrapped. Static Aurora is restricted to welcome/create/sign-in areas; sample suggestions use an explicit request/review/apply flow. Diagnostic tools live under Preferences. All visible state is synthetic and session-local; no persistence, authorization or provider integration is implied. See [review and verification](../docs/ui-redesign-review.md). Earlier proposals below are historical guidance, not evidence of additional implementation.
+
 ## Design status
 
 The user requested a **modern frontend with attractive animations** and selected **Performative UI**, including backgrounds and other suitable components alongside shadcn/ui, on 2026-09-29. Visual concept work is paused. Layout, palette, theme scope and motion details remain **proposed (D06)**; no Studio/Focus choice is required now. Use [frontend integration](frontend-integration.md) for verified component and signed-in editor observations and [contextual editing](resume-editing-contract.md) for the selected-section workflow.
@@ -8,19 +14,19 @@ Use a modern, readable document workspace: clear typography, compact navigation,
 
 ## Proposed tokens and typography
 
-| Role | Token | Draft value |
-|---|---|---|
-| Page | `--background` | `#F6F7FB` |
-| Surface | `--surface` | `#FFFFFF` |
-| Muted surface | `--surface-muted` | `#EEF1F7` |
-| Primary text | `--foreground` | `#172033` |
-| Secondary text | `--muted-foreground` | `#536079` |
-| Border | `--border` | `#D8DEEA` |
-| Primary action | `--primary` | `#4338CA` |
-| Text on primary | `--primary-foreground` | `#FFFFFF` |
-| Destructive | `--destructive` | `#B42318` |
-| Success | `--success` | `#157347` |
-| Warning | `--warning` | `#8A5200` |
+| Role            | Token                  | Draft value |
+| --------------- | ---------------------- | ----------- |
+| Page            | `--background`         | `#F6F7FB`   |
+| Surface         | `--surface`            | `#FFFFFF`   |
+| Muted surface   | `--surface-muted`      | `#EEF1F7`   |
+| Primary text    | `--foreground`         | `#172033`   |
+| Secondary text  | `--muted-foreground`   | `#536079`   |
+| Border          | `--border`             | `#D8DEEA`   |
+| Primary action  | `--primary`            | `#4338CA`   |
+| Text on primary | `--primary-foreground` | `#FFFFFF`   |
+| Destructive     | `--destructive`        | `#B42318`   |
+| Success         | `--success`            | `#157347`   |
+| Warning         | `--warning`            | `#8A5200`   |
 
 Define tokens centrally in `packages/shared/src/styles/`; components use semantic utilities. Validate actual foreground/background combinations during F01, including muted text and focus rings. Token values are not a contrast certification.
 
@@ -40,16 +46,16 @@ Backgrounds can decorate the sign-in/welcome area, dashboard header and outer wo
 
 ## Screens and proposed routes
 
-| Screen / route | Owner | Main content and states |
-|---|---|---|
-| `/sign-in`, `/auth/callback/:provider` | Auth MFE | Google/LinkedIn buttons, cancellation/error/retry, session bootstrap |
-| `/onboarding` | Profile MFE | Stepper, draft/save state, repeated sections, final review |
-| `/w/:workspaceId/profile` | Profile MFE | Master profile sections and separately permitted contact |
-| `/w/:workspaceId/resumes` | Resume MFE | Empty state or paginated resume list, create action |
-| `/w/:workspaceId/resumes/new` | Resume MFE | Create from authorized profile or tailor to pasted JD; PromptHero intent entry, one initial template, explicit submit |
-| `/w/:workspaceId/resumes/:resumeId` | Resume MFE | Version selector, section/item controls, contextual Prompt, suggestion comparison/apply/discard, preview, score/PDF freshness |
-| `/w/:workspaceId/jd-history` | Resume MFE | Parsed JD summaries, pagination, detail, reuse |
-| `/w/:workspaceId/settings`, `/members`, `/audit` under the same workspace prefix | Shell | Phase 4 settings, membership management, authorized audit view |
+| Screen / route                                                                   | Owner       | Main content and states                                                                                                       |
+| -------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `/sign-in`, `/auth/callback/:provider`                                           | Auth MFE    | Google/LinkedIn buttons, cancellation/error/retry, session bootstrap                                                          |
+| `/onboarding`                                                                    | Profile MFE | Stepper, draft/save state, repeated sections, final review                                                                    |
+| `/w/:workspaceId/profile`                                                        | Profile MFE | Master profile sections and separately permitted contact                                                                      |
+| `/w/:workspaceId/resumes`                                                        | Resume MFE  | Empty state or paginated resume list, create action                                                                           |
+| `/w/:workspaceId/resumes/new`                                                    | Resume MFE  | Create from authorized profile or tailor to pasted JD; PromptHero intent entry, one initial template, explicit submit         |
+| `/w/:workspaceId/resumes/:resumeId`                                              | Resume MFE  | Version selector, section/item controls, contextual Prompt, suggestion comparison/apply/discard, preview, score/PDF freshness |
+| `/w/:workspaceId/jd-history`                                                     | Resume MFE  | Parsed JD summaries, pagination, detail, reuse                                                                                |
+| `/w/:workspaceId/settings`, `/members`, `/audit` under the same workspace prefix | Shell       | Phase 4 settings, membership management, authorized audit view                                                                |
 
 Routes are proposed contracts, not existing pages. Resolve workspace type and membership on the server rather than trusting a route param. A personal workspace can show simpler labels without concealing scope in the request layer.
 

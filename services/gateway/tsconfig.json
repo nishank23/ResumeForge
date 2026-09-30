@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/shared-types" }
+  ]
+}

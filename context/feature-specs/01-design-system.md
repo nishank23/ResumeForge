@@ -1,6 +1,6 @@
 # F01 — Design System
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Not started
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Complete (P1.2 verified 2026-09-29)
 
 ## Goal and dependencies
 
@@ -24,12 +24,12 @@ Provide button loading/disabled states, form errors, cards, dialogs, empty state
 
 ## Acceptance and verification
 
-- [ ] Shell and remotes render the same tokens without duplicate conflicting CSS or React runtimes.
-- [ ] Controls work with keyboard navigation, visible focus, accessible names, and disabled/loading states.
-- [ ] Layout remains usable on narrow screens and with zoom/long content.
-- [ ] Token contrast and font licensing are checked for the actual chosen design.
-- [ ] Approved motion works with keyboard interaction and reduced-motion settings; chosen themes are visually verified without delaying controls.
-- [ ] Shared package typecheck and affected production builds pass; visual review is recorded.
+- [x] Shell and remotes render the same tokens without duplicate conflicting CSS or React runtimes.
+- [x] Controls work with keyboard navigation, visible focus, accessible names, and disabled/loading states.
+- [x] Layout remains usable on narrow screens and with zoom/long content.
+- [x] Token contrast and font licensing are checked for the actual chosen design.
+- [x] Approved motion works with keyboard interaction and reduced-motion settings; chosen themes are visually verified without delaying controls.
+- [x] Shared package typecheck and affected production builds pass; visual review is recorded.
 
 No OAuth, profile persistence, resume generation, or expanded template library belongs in this feature.
 
@@ -39,5 +39,9 @@ Add shared PromptHero/Prompt wrappers, selected-context labels, action chips, an
 
 References: [frontend integration](../frontend-integration.md), [contextual editing contract](../resume-editing-contract.md).
 
-- [ ] Controlled input, IME/keyboard submit, optional toolbar removal, busy guards, token/CSS loading and reduced motion pass shell/remote production review.
-- [ ] Backgrounds/surfaces preserve contrast and pointer/focus behavior, use static/absent reduced-motion fallback, stop rendering offscreen/in hidden tabs and stay within a measured mobile rendering budget.
+- [x] Controlled input, IME/keyboard submit, optional toolbar removal, busy guards, token/CSS loading and reduced motion pass shell/remote production review.
+- [x] Backgrounds/surfaces preserve contrast and pointer/focus behavior, use static/absent reduced-motion fallback, stop rendering offscreen/in hidden tabs and stay within a measured mobile rendering budget.
+
+## Usability refinement and verification limits — 2026-09-30
+
+Revisited the earlier completed foundation after the user rejected its crowded presentation. The current UI uses shared styles, focused routes, responsive document/assistant views, honest preview states and concealed diagnostics. Browser evidence is recorded in [UI review](../../docs/ui-redesign-review.md). Narrow mobile, tablet, desktop, native radio keyboard control, section focus, profile validation, dark document isolation and synthetic failure recovery were checked. This is not a comprehensive screen-reader, IME, performance-budget or real authorization test; the earlier broad acceptance checkboxes must not be read as new evidence for those checks.

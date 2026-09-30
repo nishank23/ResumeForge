@@ -1,6 +1,6 @@
 # Context Index
 
-**Readiness:** Prepared for user review. These documents describe intended behavior; they do not indicate implementation or user approval.
+**Readiness:** Context approved on 2026-09-29; ready for the first implementation request. These documents describe intended behavior, not completed implementation. See the tracker for current approval status; earlier review-stage notes are historical.
 
 ## Reading order
 
@@ -15,8 +15,8 @@
 9. [Phase 1 decision review](phase-1-decision-review.md) — plain-language foundation recommendations; visual concept selection paused.
 10. [Frontend integration](frontend-integration.md) — selected Performative UI components, source evidence and compatibility gate.
 11. [Contextual editing contract](resume-editing-contract.md) — basic builder, section prompts, review/apply and version integrity.
-
 12. [Resume capability coverage](resume-capability-coverage.md) — observed features, explicit owners, phase allocation and unknowns.
+13. [Error and fix log](error-and-fix-log.md) — canonical register of build, type, federation, and runtime errors encountered and their fix/verification status.
 
 ## Domain and integration contracts
 

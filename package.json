@@ -1,0 +1,24 @@
+{
+  "name": "@resume-forge/root",
+  "private": true,
+  "description": "resume-forge monorepo — AI resume and professional-profile management platform",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check": "turbo run lint typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0",
+    "turbo": "^2.11.5",
+    "typescript": "^5.8.3"
+  }
+}
