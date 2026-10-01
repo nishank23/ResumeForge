@@ -1,6 +1,6 @@
 # Progress Tracker
 
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-01
 
 **Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope, audit contracts and initial local identity migration verified on 2026-09-30.
 
@@ -51,7 +51,7 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 | ID  | Phase      | Feature/spec                                                           | Context      | Implementation                   | Verification                                                                             |
 | --- | ---------- | ---------------------------------------------------------------------- | ------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
 | F01 | 1          | [Design system](feature-specs/01-design-system.md)                     | Spec drafted | **Complete (P1.2)**              | **Passed** (`pnpm build`, `pnpm check`, production federation & CSS token audit)         |
-| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Not started                      | Not run                                                                                  |
+| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Scaffolding complete (LinkedIn Secrets Pending) | Manual Google OAuth test pending                                                         |
 | F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 persistence)** | 21 policy/contract tests; local migration plus 7 database subtests and restore passed |
 | F04 | 1          | [Individual profile wizard](feature-specs/04-profile-wizard.md)        | Spec drafted | Not started                      | Not run                                                                                  |
 | F05 | 2          | [JD parser](feature-specs/05-jd-parser.md)                             | Spec drafted | Not started                      | Not run                                                                                  |
@@ -89,7 +89,7 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 ## Next step
 
-D03/D04/D08 and D11 durability were approved by the user on 2026-09-30; local PostgreSQL only is selected under D10. Initial identity/workspace/profile/contact/grant migration is implemented and verified. Continue P1.3 with profile sections and typed workspace/membership constraints, then durable audit capture and the remaining version/task foundations. D07 vectors, D12 protected snapshots and real-data retention remain separate gates. Do not start OAuth or mark F03 complete yet.
+P1.4 Google OAuth/local session slice implemented and tested with a synthetic provider against local PostgreSQL. Real Google verification awaits corrected client ID/rotated secret and registered backend callback (see [setup](../docs/google-login.md)). Next unblocked work: shell session bootstrap/protected routing and onboarding transition, preserving the explicit sample-preview mode. LinkedIn/account linking remain incomplete. P1.3 tables exist, but extended scope constraints, service repositories/roles and actual audit capture/delivery still need implementation and acceptance evidence; tables alone are not durable behavior.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -239,7 +239,27 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Added pinned Prisma 7.10.0/client/adapter-pg, generated server-only client, reviewed initial SQL migration, and project-local SCRAM-authenticated PostgreSQL scripts on loopback port 55432. Runtime data and credentials are ignored.
 - Implemented User/OAuthAccount/Session/Workspace/UserProfile/UserContact/ProfileWorkspaceGrant with unique identities, owner-attributed grants, restrictive foreign keys and explicit SQL CHECK constraints.
 - `pnpm db:migrate`: initial migration applied on PostgreSQL 18.3. `pnpm db:test`: 7/7 database subtests plus parent passed, covering scopes, constraints, revocation, separate contacts, rollback via independent connection and synthetic backup/restore. Fixtures and restore databases are disposable; no production database was contacted.
-- Remaining: profile sections, organization/vendor details/memberships, resume/version/task foundations, durable audit outbox/delivery, service repositories/roles, OAuth/session behavior, vectors and private UI integration. F03 remains in progress. See [database notes](../docs/database-foundation.md) for limits.
+- Remaining: service repositories/roles, OAuth/session behavior, vectors and private UI integration. F03 remains in progress. See [database notes](../docs/database-foundation.md) for limits.
 
 - Regression verification: `pnpm check` passed; `pnpm test` passed 12/12 tasks (all 10 package builds and 21 existing policy/audit test cases). New client generation/build/typecheck passed; Node syntax checks and `git diff --check` passed. Database credentials and generated client source confirmed ignored.
 - Local stop/start preserved the database; repeating `pnpm db:migrate` reported no pending migrations. The final `pnpm db:test` command rebuilt the client and again passed all seven subtests plus parent. PostgreSQL remains running for manual checks. Initial sandbox shared-memory restriction was resolved by authorized local execution; no outstanding database test failure.
+
+## P1.3 profile, task, and audit extensions — 2026-09-30
+
+- Implemented profile section tables (Education, Experience, Skill, UserProject, Certification) connected to UserProfile.
+- Implemented typed workspace dependencies (Organization, Vendor, WorkspaceMembership).
+- Added version and task persistence foundations (JDHistory, Resume, ResumeVersion, TaskRun).
+- Added audit storage models (AuditEvent, AuditOutbox); this is not evidence of implemented durable capture or delivery.
+- Verified Prisma format, generated client, and migration integrity via local database tests (`pnpm db:test` and `pnpm check` passed).
+
+## P1.4 Google sign-in and local sessions — 2026-10-01
+
+- Inspected and retained existing uncommitted profile/task/audit migration and auth scaffold; corrected the scaffold instead of rebuilding completed identity persistence.
+- Fixed root `.env` loading, local database fallback, backend GET callback routing, credentialed OAuth-cookie fetch, real Google code exchange and userinfo validation. Removed the fabricated Google identity path and raw error logging.
+- Added expiring browser-bound single-use state with PKCE, transactional provider identity/workspace provisioning without email merging, hashed rotating refresh credentials, five-minute access credentials, Origin checks, minimal identity response and logout/replay revocation. No OAuth-created master profile.
+- Added visible failure/retry/session-success/logout states; LinkedIn is explicitly disabled. Full shell protection and onboarding are not implemented by this slice; F02 remains in progress.
+- `pnpm --filter @resume-forge/auth-service test:db`: seven integration subtests plus parent passed against disposable PostgreSQL databases using a synthetic provider. `pnpm check` and `pnpm test` passed (13 build/test tasks; 21 existing contract cases). New auth lint is included in root checks.
+- Browser verified sign-in controls and handoff to Google. Google returned `invalid_client`; both configured Google fields had client-secret format. Added a fail-fast client-ID format guard to prevent sending a secret as public client ID. User must set the actual ID, rotate the exposed secret and register the exact backend redirect. No successful real-provider login claimed.
+- Corrected the earlier durable-audit completion claim: models exist, capture/retry/ingestion behavior is pending. Existing migration changes remain intact. Local auth is intentionally not production-ready; see [Google setup and boundaries](../docs/google-login.md).
+
+- Follow-up: user updated credentials; a value-safe check confirmed valid client-ID format and a configured secret. Restarted local auth and verified HTTP 200, Google origin, S256 PKCE and exact backend redirect. Seven auth integration subtests plus parent passed again after the format guard. Frontend build scan found no configured Google secret. Google Console callback registration and successful consent/login still require manual verification.

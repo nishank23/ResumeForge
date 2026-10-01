@@ -64,7 +64,7 @@ pnpm dev
 
 Open **http://localhost:3000**. The shell opens **My resumes**; all three frontend modules and the gateway start together. Starting only the shell will leave module-backed pages unavailable. Stop with Ctrl+C.
 
-The UI is a sample workspace: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it. OAuth, database persistence, AI, scoring and PDF export are not connected. No credentials or `.env` file are needed for this preview.
+The UI is a sample workspace: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it. The workspace preview is not connected to persistence, AI, scoring or PDF export. Google sign-in and local sessions are implemented separately on the sign-in page; follow [Google login setup](docs/google-login.md). No credentials or `.env` file are needed for this preview.
 
 ```bash
 pnpm build   # Build all workspace packages

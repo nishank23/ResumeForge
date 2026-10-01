@@ -1,6 +1,6 @@
 # F02 — Google and LinkedIn OAuth
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Not started
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — local Google/session slice; real provider verification pending
 
 ## Goal and dependencies
 

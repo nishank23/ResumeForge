@@ -29,11 +29,11 @@ Planned files: shared components/tokens, shell router/layout, remote entrypoints
 Planned files: Prisma models/migrations, shared domain schemas, authorization personal-scope helpers, audit event/outbox contracts.
 
 - [ ] Implement the approved workspace/profile/contact/session model from [F03](../feature-specs/03-database-schema.md).
-- [ ] Add constraints, revisions, version/task foundations, tenant indexes, and synthetic fixtures.
+- [x] Add constraints, revisions, version/task foundations, tenant indexes, and synthetic fixtures.
 - [ ] Add approved vector columns only after D07 validation; avoid guessed dimensions/model names.
 - [x] Establish fail-closed personal workspace/resource ownership checks without activating proposed shared-role mappings.
 - [x] Define a content-free, allowlisted audit event-intent contract with scoped identifiers and explicit outcomes.
-- [ ] Establish D11-approved durable audit capture/outbox behavior before exposing private routes.
+- [ ] Establish D11-approved durable audit capture/outbox behavior before exposing private routes. Storage models exist; capture and delivery are unimplemented.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)

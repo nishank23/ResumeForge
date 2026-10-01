@@ -17,14 +17,14 @@
 | Method | Path | Contract |
 |---|---|---|
 | GET | `/auth/google/url` | Create a bound OAuth transaction; return authorized provider URL |
-| POST | `/auth/google/callback` | Validate callback transaction and code; exchange server-side; establish session |
+| GET | `/auth/google/callback` | Local Google redirect endpoint: validate bound single-use transaction, exchange code server-side, set refresh cookie and redirect to sign-in status |
 | GET | `/auth/linkedin/url` | Equivalent LinkedIn initiation |
 | POST | `/auth/linkedin/callback` | Equivalent LinkedIn callback |
 | POST | `/auth/refresh` | Rotate the current application refresh session |
 | POST | `/auth/logout` | Revoke the session and clear client credentials |
 | GET | `/auth/me` | Minimal identity/session summary; no raw provider data |
 
-Provider redirect lands on the auth MFE callback page, which submits the validated transaction to the callback API. Verify the actual provider configuration and supported scopes during F02. OAuth login does not imply full LinkedIn profile-import access. Session transport/cookies and account linking depend on D08/D10.
+Google local redirect lands directly on auth-service port 4001; no authorization code is forwarded through the frontend. LinkedIn callback remains planned. Verify the actual provider configuration and supported scopes during F02. OAuth login does not imply full LinkedIn profile-import access. Session transport/cookies and account linking depend on D08/D10.
 
 ## Profile service
 
