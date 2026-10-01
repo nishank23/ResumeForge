@@ -38,6 +38,8 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 
 ## Task P1.4 — Authentication (F02)
 
+LinkedIn is on hold by user request (2026-10-01), pending credentials/configuration. Google/session slices proceed independently. Shell session bootstrap and cross-tab coordination are implemented; protected routing/onboarding remain pending.
+
 Planned files: auth service/gateway, auth MFE, shell session bootstrap, personal-workspace provisioning path.
 
 - [ ] Implement [F02](../feature-specs/02-auth-oauth.md) provider transactions, session rotation/revocation, and protected routing.

@@ -89,7 +89,7 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 ## Next step
 
-P1.4 Google OAuth/local session slice implemented and tested with a synthetic provider against local PostgreSQL. Real Google verification awaits corrected client ID/rotated secret and registered backend callback (see [setup](../docs/google-login.md)). Next unblocked work: shell session bootstrap/protected routing and onboarding transition, preserving the explicit sample-preview mode. LinkedIn/account linking remain incomplete. P1.3 tables exist, but extended scope constraints, service repositories/roles and actual audit capture/delivery still need implementation and acceptance evidence; tables alone are not durable behavior.
+P1.4 shell session bootstrap and cross-tab refresh/logout coordination are implemented. Next unblocked slice: protected workspace routing and the authenticated onboarding transition, after checking the remaining F03 service authorization/audit prerequisites for persisted private data. Sample preview remains public and separate. LinkedIn implementation is **on hold at the user's request (2026-10-01), awaiting OAuth credentials and provider configuration**; do not work on or mark it complete until resumed. Google real-provider consent verification, account linking, P1.3 scope constraints/service roles and durable audit capture/delivery remain pending.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -263,3 +263,15 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Corrected the earlier durable-audit completion claim: models exist, capture/retry/ingestion behavior is pending. Existing migration changes remain intact. Local auth is intentionally not production-ready; see [Google setup and boundaries](../docs/google-login.md).
 
 - Follow-up: user updated credentials; a value-safe check confirmed valid client-ID format and a configured secret. Restarted local auth and verified HTTP 200, Google origin, S256 PKCE and exact backend redirect. Seven auth integration subtests plus parent passed again after the format guard. Frontend build scan found no configured Google secret. Google Console callback registration and successful consent/login still require manual verification.
+
+## P1.4 shared browser sessions — 2026-10-01
+
+- Started from clean commit `9eabc96`; preserved the completed Google server flow.
+- Recorded LinkedIn implementation on hold pending credentials. Disabled button now explains this prerequisite.
+- Added one shared, Zod-validated session controller used by shell and auth MFE. Restores session on mount, revalidates on focus/every 60 seconds, and keeps access credentials private in memory.
+- Web Locks serialize refresh/logout across same-origin tabs; BroadcastChannel carries only logout invalidation, never credentials or identity. Unsupported Web Locks fail closed. Tabs receiving logout stay cleared until a new page/sign-in; failed server logout exposes a retry instead of claiming successful revocation.
+- Generation checks prevent late in-flight identity responses restoring signed-out state. Shell account status reflects the server session while retaining the sample-workspace label. Route subtree remounts on identity/status changes to clear mounted drafts/selections.
+- Seven deterministic controller tests cover deduplication, serialization, revoked identity, outage/malformed response recovery, late response rejection, logout failure/retry, and unsupported locking. Browser multi-tab Google testing remains a manual check.
+- Scope boundary: this is session bootstrap/coordination, not completion of F02 protected routes, onboarding, account linking, or later private resume operations.
+
+- Final verification: `pnpm check` passed 25/25 tasks; `pnpm test` passed 14/14 tasks (all workspace builds plus 28 controller/policy/audit cases). `git diff --check` passed. Live browser restored an existing authenticated session in two tabs, with matching account status, the sample-workspace boundary, and disabled LinkedIn credential-waiting label. This verifies restoration, not a fresh Google consent round-trip. Cross-tab logout against the live account was left for manual verification; deterministic tests cover invalidation and stale-response races.

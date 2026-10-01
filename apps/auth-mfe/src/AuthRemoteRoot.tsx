@@ -1,51 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { FileText, ShieldCheck } from "lucide-react";
 import {
   AuroraBackdrop,
   Button,
   GlassCardSurface,
+  useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 
 const AUTH_URL = "http://localhost:4001/api/v1/auth";
-let sessionRequest: Promise<boolean> | undefined;
-function restoreSession(): Promise<boolean> {
-  // Share the request across React StrictMode mounts; refresh credentials are single-use.
-  sessionRequest ??= (async () => {
-    const response = await fetch(`${AUTH_URL}/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (response.status === 401) return false;
-    if (!response.ok) throw new Error("Session unavailable");
-    const body: unknown = await response.json();
-    if (
-      !body ||
-      typeof body !== "object" ||
-      !("data" in body) ||
-      !body.data ||
-      typeof body.data !== "object" ||
-      !("accessToken" in body.data) ||
-      typeof body.data.accessToken !== "string"
-    )
-      throw new Error("Invalid session response");
-    const me = await fetch(`${AUTH_URL}/me`, {
-      headers: { Authorization: `Bearer ${body.data.accessToken}` },
-    });
-    return me.ok;
-  })().finally(() => {
-    sessionRequest = undefined;
-  });
-  return sessionRequest;
-}
-
 export interface AuthRemoteRootProps {
   readonly context?: ShellFederationContext;
 }
 
 export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
   const [loading, setLoading] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+  const { state: session, restore, logout } = useSession();
+  const signedIn = session.status === "authenticated";
+  const logoutFailed =
+    session.status === "error" && session.operation === "logout";
   const [error, setError] = useState<string | null>(() => {
     const reason = new URLSearchParams(window.location.search).get(
       "auth_error",
@@ -58,27 +31,6 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
       return "Google sign-in could not finish. Try again and check the callback configuration if it continues.";
     return null;
   });
-  useEffect(() => {
-    let mounted = true;
-    void restoreSession()
-      .then((authenticated) => {
-        if (mounted) setSignedIn(authenticated);
-      })
-      .catch(() => {
-        if (
-          mounted &&
-          new URLSearchParams(window.location.search).has("signed_in")
-        ) {
-          setError(
-            "The session could not be restored. Please try signing in again.",
-          );
-        }
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const handleLoginGoogle = (): void => {
     setLoading(true);
     setError(null);
@@ -111,14 +63,12 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
   };
   const handleLogout = (): void => {
     setLoading(true);
-    void fetch(`${AUTH_URL}/logout`, { method: "POST", credentials: "include" })
-      .then((response) => {
-        if (!response.ok) throw new Error("Logout failed");
-        setSignedIn(false);
+    void logout()
+      .then(() => {
         window.history.replaceState(null, "", window.location.pathname);
       })
       .catch(() => {
-        setError("Sign-out failed. Please try again.");
+        setError("Sign-out failed. Please retry to end your server session.");
       })
       .finally(() => {
         setLoading(false);
@@ -153,6 +103,30 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
               : "Sign in to your account."}
           </p>
           {error ? <p role="alert">{error}</p> : null}
+          {session.status === "loading" ? (
+            <p role="status">Checking your session…</p>
+          ) : null}
+          {session.status === "error" && !logoutFailed ? (
+            <p role="alert">
+              Your session could not be verified. Check the auth service and try
+              again.
+            </p>
+          ) : null}
+          {session.status === "error" && !logoutFailed ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                void restore();
+              }}
+            >
+              Retry session check
+            </Button>
+          ) : null}
+          {logoutFailed ? (
+            <Button onClick={handleLogout} disabled={loading}>
+              Retry sign out
+            </Button>
+          ) : null}
           {signedIn ? (
             <p>
               Profile onboarding is still being connected. The workspace preview
@@ -172,7 +146,7 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
                   : "Continue with Google"}
             </Button>
             <Button disabled variant="outline">
-              LinkedIn — coming next
+              LinkedIn — awaiting credentials
             </Button>
             {context?.onNavigate ? (
               <Button

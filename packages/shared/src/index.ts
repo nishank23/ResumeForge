@@ -159,3 +159,5 @@ export type {
   ThemeMode,
   ShellFederationContext,
 } from "@resume-forge/shared-types";
+export { useSession } from "./auth/use-session";
+export type { SessionState, SessionIdentity } from "./auth/session";

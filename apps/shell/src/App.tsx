@@ -28,6 +28,7 @@ import {
   RemoteErrorBoundary,
   RemoteSuspenseFallback,
   useReducedMotion,
+  useSession,
   type ShellFederationContext,
   type ThemeMode,
   type WorkspaceRef,
@@ -83,6 +84,7 @@ export function App() {
 }
 
 function WorkspaceShell() {
+  const { state: session } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<ThemeMode>("light");
@@ -215,9 +217,22 @@ function WorkspaceShell() {
             <p>Explore with sample content. Changes stay in this session.</p>
           </div>
           <Link className="rf-account" to="/sign-in">
-            <span className="rf-avatar">G</span>
+            <span className="rf-avatar">
+              {session.status === "authenticated" ? "✓" : "G"}
+            </span>
             <span>
-              Guest preview<small>Account setup coming soon</small>
+              {session.status === "authenticated"
+                ? (session.identity.name ?? "Signed in")
+                : session.status === "loading"
+                  ? "Checking session…"
+                  : session.status === "error"
+                    ? "Session unavailable"
+                    : "Guest preview"}
+              <small>
+                {session.status === "authenticated"
+                  ? "Signed in · Sample workspace"
+                  : "Sign in or explore the preview"}
+              </small>
             </span>
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
@@ -246,7 +261,13 @@ function WorkspaceShell() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="rf-main">
-          <Routes>
+          <Routes
+            key={
+              session.status === "authenticated"
+                ? session.identity.id
+                : session.status
+            }
+          >
             <Route
               path="/"
               element={<Navigate to={`${prefix}/resumes`} replace />}

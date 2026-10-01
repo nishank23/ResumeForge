@@ -2,6 +2,8 @@
 
 **Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — local Google/session slice; real provider verification pending
 
+**LinkedIn status (2026-10-01): On hold by user request — awaiting OAuth client credentials and provider configuration.** Continue independent Google/session work; do not mark the two-provider acceptance complete.
+
 ## Goal and dependencies
 
 Authenticate users with Google/LinkedIn and establish revocable application sessions. Requires F03's identity/session/personal-workspace foundations, F01 sign-in components, and D08/D10 configuration decisions. Consult [API contracts](../../docs/api-reference.md) and [authorization model](../authorization-model.md).
@@ -40,3 +42,5 @@ Use F01 shared primitives on auth screens; do not add AI input to sign-in. Resum
 References: [frontend integration](../frontend-integration.md), [contextual editing contract](../resume-editing-contract.md).
 
 - [ ] Expired sessions cannot submit/read/apply suggestions or populate a newly signed-in user’s view with prior private state.
+
+Shell session bootstrap and browser refresh/logout coordination are implemented; protected routing and persisted onboarding remain pending. Session controller tests use synthetic responses; they are not real Google consent verification.
