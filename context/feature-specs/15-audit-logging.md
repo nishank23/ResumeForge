@@ -1,6 +1,6 @@
 # F15 — Audit Logging and Viewer
 
-**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; cross-service transport/viewer pending
+**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; authenticated local HTTP transport implemented; scheduling/production identity/viewer pending
 
 ## Goal and dependencies
 
@@ -12,16 +12,16 @@ Workspace service owns AuditEvent ingestion/query APIs and the shell audit viewe
 
 ## Event catalog
 
-| Event | Trigger |
-|---|---|
-| `profile.viewed`, `profile.updated` | Authorized professional-data access/change |
-| `contact.viewed`, `contact.updated` | Private contact access/change; update event extends source coverage |
-| `resume.created`, `resume.generated` | Resume creation and accepted generation request |
-| `resume.generation_completed`, `resume.generation_failed` | Worker outcome; proposed lifecycle events |
-| `resume.updated`, `resume.downloaded`, `resume.deleted` | Version save, authorized download issuance/stream, deletion |
-| `member.invited`, `member.removed`, `member.role_changed` | Membership actions |
-| `member.accepted`, `member.suspended`, `profile.access_revoked` | Proposed consent/access changes under approved policies |
-| `authorization.denied` | Sensitive denial with minimal safe context |
+| Event                                                           | Trigger                                                             |
+| --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `profile.viewed`, `profile.updated`                             | Authorized professional-data access/change                          |
+| `contact.viewed`, `contact.updated`                             | Private contact access/change; update event extends source coverage |
+| `resume.created`, `resume.generated`                            | Resume creation and accepted generation request                     |
+| `resume.generation_completed`, `resume.generation_failed`       | Worker outcome; proposed lifecycle events                           |
+| `resume.updated`, `resume.downloaded`, `resume.deleted`         | Version save, authorized download issuance/stream, deletion         |
+| `member.invited`, `member.removed`, `member.role_changed`       | Membership actions                                                  |
+| `member.accepted`, `member.suspended`, `profile.access_revoked` | Proposed consent/access changes under approved policies             |
+| `authorization.denied`                                          | Sensitive denial with minimal safe context                          |
 
 Record outcome semantics explicitly: download authorization/issuance does not prove the recipient read a PDF. Permission keys and event names are different contracts.
 
@@ -56,4 +56,8 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 - [x] Workspace-owned ingestion validates personal scope and preserves event time/outcome/correlation. Event ID becomes the ledger primary key; equivalent retries converge and conflicting payloads cannot overwrite history.
 - [x] Verify outage/recovery, lost acknowledgements, concurrent claims/ingestion, expired leases with stale-completion fencing, invalid scope/payload and acknowledgement commit failure in disposable local PostgreSQL databases.
 
-`pnpm audit:deliver:local` runs one bounded batch against the managed local development database using trusted in-process composition. It exposes no HTTP route and does not authenticate future service callers. Automatic scheduling, authenticated transport, append-only runtime privileges, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
+`pnpm audit:deliver:local` now runs one bounded batch over authenticated loopback HTTP to workspace-service. The sole allowed local service identity is `local-audit-relay`, with a randomly generated server-only key stored in ignored `.local/audit-transport.env`; unknown service IDs, bad keys and browser-origin requests are rejected before ingestion. Requests are strictly validated and bounded to 16 KiB; replies to 1 KiB. Only a matching event acknowledgement after ledger COMMIT marks the outbox delivered.
+
+Automatic scheduling, production service identity/HTTPS policy, append-only runtime privileges, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
+
+- [x] Local HTTP authentication/validation tests and disposable PostgreSQL HTTP recovery cases pass, including lost acknowledgement and ledger COMMIT failure. Manual commands and local-only limits are in [database notes](../../docs/database-foundation.md).

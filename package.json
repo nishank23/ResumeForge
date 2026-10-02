@@ -21,7 +21,9 @@
     "test": "turbo run test",
     "check": "turbo run lint typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "audit:local:init": "node scripts/init-local-audit.mjs",
+    "audit:serve:local": "pnpm --filter @resume-forge/workspace-service... build && node scripts/start-local-audit.mjs"
   },
   "devDependencies": {
     "prettier": "^3.5.0",

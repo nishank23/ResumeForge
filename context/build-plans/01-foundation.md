@@ -35,7 +35,8 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [x] Define a content-free, allowlisted audit event-intent contract with scoped identifiers and explicit outcomes.
 - [x] Add validated personal-workspace audit capture in the same transaction as domain work; verify rollback and fail-closed contact result delivery.
 - [x] Verify bounded local outbox delivery, persisted retry/lease recovery and workspace-owned idempotent personal ingestion.
-- [ ] Complete authenticated cross-service transport/scheduling and wire capture into private routes. Local relay/ingestor exist; transport, least-privilege roles and route integration remain pending.
+- [x] Verify authenticated local HTTP audit transport, bounded validation/acknowledgements, timeout/retry and ingestion COMMIT-failure recovery.
+- [ ] Add automatic delivery scheduling, least-privilege service roles and private-route capture integration; production service identity remains a deployment prerequisite.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)

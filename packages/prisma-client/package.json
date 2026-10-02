@@ -16,7 +16,8 @@
     "@resume-forge/audit-contracts": "workspace:*",
     "@prisma/client": "7.10.0",
     "@prisma/adapter-pg": "7.10.0",
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "prisma": "7.10.0",

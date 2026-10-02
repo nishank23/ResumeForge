@@ -1,15 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { serve } from "@hono/node-server";
+import { createWorkspaceAuditApp } from "../dist/app.js";
 import {
   createDatabaseClient,
   withPersonalAuditTransaction,
   deliverAuditOutbox,
   AuditDeliveryRejection,
+  createLocalAuditHttpTransport,
 } from "@resume-forge/prisma-client";
 import { ingestPersonalAuditEvent } from "../dist/audit.js";
 
@@ -430,6 +433,159 @@ test("local audit delivery, retry, isolation and crash recovery", async (t) => {
               data: { eventId: randomUUID(), payload: intent(), ...data },
             }),
           );
+        }
+      },
+    );
+    await t.test(
+      "authenticated HTTP outage and lost reply retain committed work and recover once",
+      async () => {
+        const key = randomBytes(32).toString("hex");
+        const app = createWorkspaceAuditApp({ db: observer, relayKey: key });
+        let loseReply = true;
+        let server;
+        const endpoint = await new Promise((resolve) => {
+          server = serve(
+            {
+              hostname: "127.0.0.1",
+              port: 0,
+              fetch: async (req) => {
+                const response = await app.fetch(req);
+                if (response.status === 200 && loseReply) {
+                  loseReply = false;
+                  return new Response("synthetic lost acknowledgement");
+                }
+                return response;
+              },
+            },
+            (info) =>
+              resolve(`http://127.0.0.1:${info.port}/internal/audit/events`),
+          );
+        });
+        try {
+          const event = intent();
+          const saved = await queue(event);
+          const bad = createLocalAuditHttpTransport({
+            endpoint,
+            key: randomBytes(32).toString("hex"),
+          });
+          assert.equal((await deliverAuditOutbox(db, bad, options)).retried, 1);
+          assert.equal(
+            await observer.auditEvent.count({ where: { id: event.eventId } }),
+            0,
+          );
+          assert.equal(
+            (await row(event)).lastErrorCode,
+            "delivery_unavailable",
+          );
+          time += 5000;
+          const send = createLocalAuditHttpTransport({ endpoint, key });
+          assert.equal(
+            (await deliverAuditOutbox(db, send, options)).retried,
+            1,
+          );
+          assert.equal(
+            await observer.auditEvent.count({ where: { id: event.eventId } }),
+            1,
+          );
+          time += 10000;
+          assert.equal(
+            (await deliverAuditOutbox(db, send, options)).delivered,
+            1,
+          );
+          assert.equal(
+            await observer.auditEvent.count({ where: { id: event.eventId } }),
+            1,
+          );
+          assert.equal((await row(event)).attempts, 3);
+          assert.equal(
+            (
+              await observer.userProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).revision,
+            saved.revision,
+          );
+          await assert.rejects(
+            send({ ...event, correlationId: randomUUID() }),
+            (error) =>
+              error instanceof AuditDeliveryRejection &&
+              error.code === "event_conflict",
+          );
+          await assert.rejects(
+            send(intent({ workspaceId: other.id })),
+            (error) =>
+              error instanceof AuditDeliveryRejection &&
+              error.code === "invalid_scope",
+          );
+        } finally {
+          await new Promise((resolve) => {
+            server.close(resolve);
+            server.closeAllConnections();
+          });
+        }
+      },
+    );
+    await t.test(
+      "HTTP acknowledges only a committed ledger insert and recovers after COMMIT failure",
+      async () => {
+        const key = randomBytes(32).toString("hex");
+        const app = createWorkspaceAuditApp({ db: observer, relayKey: key });
+        let server;
+        const endpoint = await new Promise((resolve) => {
+          server = serve(
+            { hostname: "127.0.0.1", port: 0, fetch: app.fetch },
+            (info) =>
+              resolve(`http://127.0.0.1:${info.port}/internal/audit/events`),
+          );
+        });
+        const event = intent();
+        try {
+          await db.$executeRawUnsafe(
+            `CREATE FUNCTION fail_http_ledger_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."id" = '${event.eventId}'::uuid THEN RAISE EXCEPTION 'synthetic commit failure'; END IF; RETURN NEW; END $$`,
+          );
+          await db.$executeRawUnsafe(
+            'CREATE CONSTRAINT TRIGGER fail_http_ledger_commit AFTER INSERT ON "AuditEvent" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fail_http_ledger_commit()',
+          );
+          const saved = await queue(event);
+          const send = createLocalAuditHttpTransport({ endpoint, key });
+          assert.equal(
+            (await deliverAuditOutbox(db, send, options)).retried,
+            1,
+          );
+          assert.equal((await row(event)).deliveryState, "pending");
+          assert.equal(
+            (await row(event)).lastErrorCode,
+            "delivery_unavailable",
+          );
+          assert.equal(
+            await observer.auditEvent.count({ where: { id: event.eventId } }),
+            0,
+          );
+          assert.equal(
+            (
+              await observer.userProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).revision,
+            saved.revision,
+          );
+          await db.$executeRawUnsafe(
+            'DROP TRIGGER fail_http_ledger_commit ON "AuditEvent"',
+          );
+          time += 5000;
+          assert.equal(
+            (await deliverAuditOutbox(db, send, options)).delivered,
+            1,
+          );
+          assert.equal(
+            await observer.auditEvent.count({ where: { id: event.eventId } }),
+            1,
+          );
+        } finally {
+          await new Promise((resolve) => {
+            server.close(resolve);
+            server.closeAllConnections();
+          });
         }
       },
     );

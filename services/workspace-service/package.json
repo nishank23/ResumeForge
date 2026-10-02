@@ -8,12 +8,16 @@
   "scripts": {
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
-    "test:db": "pnpm --filter @resume-forge/workspace-service... build && node --test test/audit.test.mjs"
+    "test:db": "pnpm --filter @resume-forge/workspace-service... build && node --test test/audit.test.mjs",
+    "test": "node --test test/transport.test.mjs"
   },
   "dependencies": {
     "@resume-forge/prisma-client": "workspace:*",
     "@resume-forge/audit-contracts": "workspace:*",
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.13.7",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -26,13 +26,13 @@ Duplicate event IDs reject and roll back the entire operation. This is capture u
 
 ## Remaining P1.3 work
 
-Authenticated audit transport and scheduling; scoped service repositories and least-privilege roles; private-route integration. Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+Automatic audit scheduling and production service identity; scoped service repositories and least-privilege roles; private-route integration. Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
 
 ## Local audit relay and ledger — 2026-10-02
 
 `deliverAuditOutbox` in the server-only Prisma package claims at most 25 due rows by default (maximum 100) using parameterized PostgreSQL [queue row locking](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE). It commits a 30-second lease and increments attempts before invoking transport outside a database transaction. Acknowledgements are fenced by lease token; stalled/crashed claims become eligible after expiry. Delivery is at least once, so the recipient must be idempotent.
 
-`ingestPersonalAuditEvent` belongs to workspace-service and is invoked only by trusted local composition. It validates content-free intent and personal ownership, inserts the event using its producer event ID, and compares a canonical SHA-256 intent hash on repeats. Equivalent retries return the existing event; conflicting reuse fails without overwriting it. Occurrence time, outcome and correlation are retained. Legacy rows retain NULL for previously absent fields. No gateway/internal HTTP endpoint is enabled.
+`ingestPersonalAuditEvent` belongs to workspace-service and is invoked by its authenticated local HTTP boundary (or trusted in-process tests). It validates content-free intent and personal ownership, inserts the event using its producer event ID, and compares a canonical SHA-256 intent hash on repeats. Equivalent retries return the existing event; conflicting reuse fails without overwriting it. Occurrence time, outcome and correlation are retained. Legacy rows retain NULL for previously absent fields. The local internal ingestion endpoint is described below; the gateway does not forward it.
 
 Transient failures keep the event pending with a persisted exponential delay starting at 5 seconds and capped at 5 minutes; attempts continue without dropping the intent. Only fixed failure codes are recorded, never raw exceptions. Invalid payload/scope or conflicting identity becomes blocked, retained for controlled remediation. Automatic remediation is not implemented. Delivered intents are retained pending a retention decision.
 
@@ -42,9 +42,43 @@ From the project root:
 pnpm db:local:start
 pnpm db:migrate
 pnpm db:test:audit
-pnpm audit:deliver:local
 ```
 
-`db:test:audit` uses disposable synthetic databases and should print 10 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, and ledger commit followed by acknowledgement COMMIT failure. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
+`db:test:audit` uses disposable synthetic databases and should print 12 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, ledger commit followed by acknowledgement COMMIT failure, authenticated HTTP retry after a rejected credential/lost reply, and ledger COMMIT failure before HTTP acknowledgement. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
 
-The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Authenticated cross-service transport, least-privilege/append-only roles, denied-event capture, full service coverage and retention remain prerequisites for release.
+The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, least-privilege/append-only roles, denied-event capture, full service coverage and retention remain prerequisites for release.
+
+## Authenticated local audit HTTP — 2026-10-02
+
+The workspace app uses Hono's [Node.js adapter](https://hono.dev/docs/getting-started/nodejs) with the already locked Hono 4.13.10 / adapter 1.19.17 versions. `POST http://127.0.0.1:4005/internal/audit/events` is an internal server route. It requires both the `local-audit-relay` service ID and its generated credential, checked before body parsing or database access. It has no CORS, rejects Origin-bearing requests, and the public gateway has no forwarding route. It records previously authorized, personal-scoped history; service authentication is not a replacement for the producer's actor/action/resource checks.
+
+The relay sends content-free validated intent, refuses redirects and non-loopback endpoints, bounds replies to 1 KiB, and uses a 3-second timeout. The route rejects actual bodies over 16 KiB, malformed JSON, unknown fields/private metadata and unsupported content types. Errors contain fixed codes only. A valid acknowledgement must match the event ID and arrives after ingestion COMMIT; missing/malformed replies, authentication failure, timeouts or service failures keep the outbox pending. Only matching permanent error/status pairs block the retained event. One 25-event operator batch uses a 120-second lease to cover its bounded transport waits; stale completion remains fenced if a process stalls longer.
+
+From the project root, run once (repeat safely; an existing key is kept):
+
+```sh
+pnpm audit:local:init
+```
+
+The key is written with mode 0600 to ignored `.local/audit-transport.env`. Do not put it in frontend/VITE variables or send it in chat. Rotation is manual for now: stop the service, replace the key locally, then restart both readers. Existing intents survive rotation. These scripts read the ignored local files directly, ignore root/process database overrides and refuse production mode. The database is still the managed local cluster; no hosted database is contacted.
+
+Start the recipient in a separate terminal and keep it running:
+
+```sh
+pnpm audit:serve:local
+```
+
+Expected terminal output: `Local workspace audit service listening on http://127.0.0.1:4005`.
+
+In another terminal:
+
+```sh
+curl -i -X POST http://127.0.0.1:4005/internal/audit/events -H 'Content-Type: application/json' -d '{}'
+pnpm audit:deliver:local
+pnpm --filter @resume-forge/workspace-service test
+pnpm db:test:audit
+```
+
+The credential-free curl must return HTTP 401 with `service_unauthorized`. The relay prints only batch/backlog counts; an empty queue prints all zeros and makes no HTTP calls, so it alone does not prove connectivity. Transport tests should show 8 passes and database tests 12 passes with zero failures. Tests create/discard synthetic databases and temporary loopback listeners; they do not add development events. Stop the recipient with Ctrl-C when finished. No new UI flow is added.
+
+This is a local development identity, not production service authentication. Deployment credential distribution/rotation, HTTPS/network policy, automatic scheduling, restricted runtime database roles and private domain routes remain pending. Full F03/F15 acceptance is not complete.

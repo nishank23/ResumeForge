@@ -8,8 +8,8 @@ import {
 type Database = ReturnType<typeof createDatabaseClient>;
 
 /**
- * Workspace-owned ingestion, callable only by trusted server composition.
- * No HTTP route is exposed. A future transport must authenticate its producer.
+ * Workspace-owned ingestion. HTTP composition must authenticate its producer
+ * before invoking this use case; trusted in-process tests may invoke it directly.
  * This records previously authorized history; it never grants resource access.
  */
 export async function ingestPersonalAuditEvent(db: Database, input: unknown) {

@@ -2,6 +2,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client.js";
 export { withPersonalAuditTransaction, AuditCaptureError } from "./audit.js";
 export {
+  createLocalAuditHttpTransport,
+  INTERNAL_AUDIT_PATH,
+  LOCAL_AUDIT_SERVICE_ID,
+  localAuditRelayKeySchema,
+} from "./audit-http.js";
+export {
   deliverAuditOutbox,
   AuditDeliveryRejection,
   type AuditDeliverySummary,
