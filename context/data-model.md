@@ -106,6 +106,12 @@ Store model identifier, dimensions, source hash, and generatedAt alongside vecto
 
 Verification belongs in [F03](feature-specs/03-database-schema.md) and [validation-strategy.md](validation-strategy.md).
 
+## Implemented local audit delivery contract — 2026-10-02
+
+AuditOutbox now stores attempts, nextAttemptAt, leaseToken/leaseExpiresAt, deliveredAt and an allowlisted lastErrorCode. Database checks constrain pending/delivering/delivered/blocked states, nonnegative attempts, active-lease fields and delivered timestamps. Claiming is atomic and bounded; acknowledgements update only the current lease token. Transient failures retry with persisted exponential delay (5 seconds to 5 minutes), while invalid/conflicting events remain blocked without payload edits or deletion. Expired claims can be recovered after a process failure.
+
+Workspace-service owns personal ledger ingestion. AuditEvent.id is the producer eventId; normalized intent hashes detect conflicting reuse. New events preserve occurredAt as timestamp and include outcome/correlationId/payloadHash. These three fields remain nullable on legacy history rather than inventing missing facts. Ingestion does not reauthorize resource use or grant access: the producer must authorize the original action, and a future HTTP adapter must authenticate the producer. Local in-process delivery is verified; shared-workspace transport, append-only privileges and retention remain open.
+
 ## Proposed builder and suggestion persistence
 
 [Contextual editing](resume-editing-contract.md) adds a resume-service-owned ResumeSuggestion linked to workspace, resume, immutable base version, expected revision, stable target, optional JD/input revisions, validated proposal/provenance, status and applied-version ID. Extend TaskRun with a section-suggestion kind. Version provenance distinguishes profile-copy, manual save, full generation, suggestion apply and explicit restoration.

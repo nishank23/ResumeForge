@@ -62,9 +62,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open **http://localhost:3000**. The shell opens **My resumes**; all three frontend modules and the gateway start together. Starting only the shell will leave module-backed pages unavailable. Stop with Ctrl+C.
+Open **http://localhost:3000**. The shell checks your session first: signed-out users see sign-in, incomplete accounts see the profile-setup entry, and completed accounts enter their personal workspace. All three frontend modules and the gateway start together. Starting only the shell will leave module-backed pages unavailable. Stop with Ctrl+C.
 
-The UI is a sample workspace: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it. The workspace preview is not connected to persistence, AI, scoring or PDF export. Google sign-in and local sessions are implemented separately on the sign-in page; follow [Google login setup](docs/google-login.md). No credentials or `.env` file are needed for this preview.
+Workspace screens require a verified local session and use its personal workspace ID. They still contain sample content: create-mode selection, section selection/review/apply, profile validation, themes and responsive navigation are interactive. Changes are local to the mounted preview and reset when leaving it or losing access. These screens are not connected to profile/resume persistence, AI, scoring or PDF export. Profile setup is an honest pending entry, not a completed wizard. Follow [Google login setup](docs/google-login.md) for server credentials and manual routing checks. Standalone remotes remain synthetic previews.
 
 ```bash
 pnpm build   # Build all workspace packages
@@ -89,14 +89,16 @@ Install PostgreSQL command-line tools (`initdb`, `pg_ctl`, `psql`, `createdb`, `
 pnpm db:local:start
 pnpm db:migrate
 pnpm db:test
+pnpm db:test:audit
+pnpm audit:deliver:local
 pnpm db:local:status
 # When finished:
 pnpm db:local:stop
 ```
 
-The dedicated cluster listens only on `127.0.0.1:55432`, uses SCRAM password authentication, and stores data/credentials in ignored `.local/` (do not delete it to reset development). Prisma CLI reads `.local/database.env` automatically; an explicit `DATABASE_URL` overrides it for migrations. Database tests always use the managed local cluster, create disposable test databases, and remove only those databases. Expect seven passing subtests plus their parent test, including rollback and backup/restore checks. `db:local:start` is safe to repeat and preserves data.
+The dedicated cluster listens only on `127.0.0.1:55432`, uses SCRAM password authentication, and stores data/credentials in ignored `.local/` (do not delete it to reset development). Prisma CLI reads `.local/database.env` automatically; an explicit `DATABASE_URL` overrides it for migrations. Database tests always use the managed local cluster, create disposable test databases, and remove only those databases. Expect 13 passes from `db:test` (including atomic capture, rollback and backup/restore) and 10 from `db:test:audit` (delivery, retry, scope and crash recovery). `db:local:start` is safe to repeat and preserves data.
 
-This slice adds identity, session, workspace, profile/contact and grant persistence models. It does not connect sample UI, implement OAuth/session rotation, or activate shared workspaces. Local database credentials have administrative privileges for migrations and disposable database tests; restricted service roles are required before private routes use the database. See [database foundation](docs/database-foundation.md).
+The local audit command processes one bounded batch and prints summary/backlog counts; an empty development queue reports all zeros. Tests do not seed this queue. It ignores hosted/root database settings and adds no HTTP route or scheduled worker. Storage models, Google/session lifecycle, atomic capture and local audit delivery foundations are implemented; sample UI persistence and shared workspaces remain pending. Local database credentials have administrative privileges for migrations and disposable database tests; restricted service roles are required before private routes use the database. See [database foundation](docs/database-foundation.md) for retry behavior and remaining limits.
 
 ## Latest planning update
 

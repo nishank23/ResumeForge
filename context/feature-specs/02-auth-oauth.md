@@ -43,4 +43,13 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 
 - [ ] Expired sessions cannot submit/read/apply suggestions or populate a newly signed-in user’s view with prior private state.
 
-Shell session bootstrap and browser refresh/logout coordination are implemented; protected routing and persisted onboarding remain pending. Session controller tests use synthetic responses; they are not real Google consent verification.
+Shell session bootstrap, browser refresh/logout coordination and protected personal routing are implemented. Persisted onboarding remains pending. Session controller/routing tests use synthetic responses; they are not real Google consent verification.
+
+## P1.4 protected shell entry — 2026-10-02
+
+- [x] Wait for verified session state before mounting workspace/onboarding content; anonymous sessions redirect to sign-in, verification failures show retry recovery.
+- [x] Bind navigation/federation context to the personal workspace returned by `/auth/me`; deny mismatched URL selectors, including the old hardcoded preview ID.
+- [x] Remount route content when actor/workspace/status changes, removing mounted drafts/selections after access loss. Ignore return URLs; only a verified OAuth success without an error flag hands off to the server-derived home route.
+- [x] Send incomplete accounts to an authenticated setup entry; completed accounts enter their personal workspace. The entry explicitly states setup is not yet connected and offers the protected sample workspace. It does not save a profile or change onboarding status.
+
+These are browser navigation controls, not backend permission enforcement. No private profile/resume API is enabled; sample content remains unsaved. Standalone remotes remain synthetic previews without private service access. F02 stays in progress while LinkedIn, explicit linking, full provider verification and persisted onboarding remain incomplete.

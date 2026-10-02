@@ -1,6 +1,6 @@
 # F15 — Audit Logging and Viewer
 
-**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Not started
+**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; cross-service transport/viewer pending
 
 ## Goal and dependencies
 
@@ -47,3 +47,13 @@ Add proposed resume.suggestion_requested, resume.suggestion_ready, resume.sugges
 References: [frontend integration](../frontend-integration.md), [contextual editing contract](../resume-editing-contract.md).
 
 - [ ] Retries/discards/Apply produce attributable deduplicated events without private prompt or resume content in audit metadata.
+
+2026-10-01: personal capture helper verified against local PostgreSQL, including domain rollback, duplicate event failure and withheld contact results on COMMIT failure. Production service coverage, retry/ingestion, append-only roles and retention acceptance remain open.
+
+## Phase 1 local delivery foundation — 2026-10-02
+
+- [x] Persist bounded relay claims, attempt counts, retry times, leases and safe failure codes. Retain blocked intents for remediation; never discard committed intents.
+- [x] Workspace-owned ingestion validates personal scope and preserves event time/outcome/correlation. Event ID becomes the ledger primary key; equivalent retries converge and conflicting payloads cannot overwrite history.
+- [x] Verify outage/recovery, lost acknowledgements, concurrent claims/ingestion, expired leases with stale-completion fencing, invalid scope/payload and acknowledgement commit failure in disposable local PostgreSQL databases.
+
+`pnpm audit:deliver:local` runs one bounded batch against the managed local development database using trusted in-process composition. It exposes no HTTP route and does not authenticate future service callers. Automatic scheduling, authenticated transport, append-only runtime privileges, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.

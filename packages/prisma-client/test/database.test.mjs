@@ -5,7 +5,11 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import pg from "pg";
-import { createDatabaseClient } from "../dist/index.js";
+import {
+  createDatabaseClient,
+  withPersonalAuditTransaction,
+  AuditCaptureError,
+} from "../dist/index.js";
 
 // Always use the managed local cluster, never DATABASE_URL or a developer's data.
 const local = parseEnv(
@@ -202,6 +206,195 @@ test("local migration, isolation, integrity, rollback and restore", async (t) =>
         } finally {
           await observer.$disconnect();
         }
+      },
+    );
+    const intent = (overrides = {}) => ({
+      eventId: randomUUID(),
+      action: "profile.updated",
+      actorUserId: alice.id,
+      workspaceType: "individual",
+      workspaceId: workspace.id,
+      resourceType: "profile",
+      resourceId: profile.id,
+      outcome: "succeeded",
+      occurredAt: new Date().toISOString(),
+      correlationId: "synthetic-request",
+      metadata: { permission: "profile.update" },
+      ...overrides,
+    });
+    const increment = (tx) =>
+      tx.userProfile.update({
+        where: { id: profile.id, userId: alice.id },
+        data: { revision: { increment: 1 } },
+      });
+    await t.test(
+      "audit and mutation commit together with normalized payload",
+      async () => {
+        const event = intent();
+        const result = await withPersonalAuditTransaction(
+          client,
+          alice.id,
+          { ...event, ignoredRootField: "must-not-persist" },
+          increment,
+        );
+        assert.equal(result.revision, 2);
+        const observer = createDatabaseClient(url.href);
+        try {
+          const row = await observer.auditOutbox.findUniqueOrThrow({
+            where: { eventId: event.eventId },
+          });
+          assert.equal(row.deliveryState, "pending");
+          assert.deepEqual(row.payload, event);
+          assert.equal(
+            (
+              await observer.userProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).revision,
+            2,
+          );
+        } finally {
+          await observer.$disconnect();
+        }
+      },
+    );
+    await t.test(
+      "invalid metadata and spoofed scope reject before domain work",
+      async () => {
+        let ran = false;
+        for (const event of [
+          intent({ metadata: { rawContact: "synthetic-private" } }),
+          intent({ actorUserId: bob.id }),
+          intent({ workspaceId: shared.id }),
+          intent({ targetUserId: bob.id }),
+          intent({ eventId: "not-a-uuid" }),
+          intent({ workspaceType: "vendor" }),
+        ]) {
+          await assert.rejects(
+            withPersonalAuditTransaction(client, alice.id, event, async () => {
+              ran = true;
+            }),
+            AuditCaptureError,
+          );
+        }
+        assert.equal(ran, false);
+      },
+    );
+    await t.test(
+      "failed domain operation leaves neither mutation nor audit",
+      async () => {
+        const event = intent();
+        await assert.rejects(
+          withPersonalAuditTransaction(client, alice.id, event, async (tx) => {
+            await increment(tx);
+            throw new Error("synthetic failure");
+          }),
+          /synthetic failure/,
+        );
+        assert.equal(
+          await client.auditOutbox.count({ where: { eventId: event.eventId } }),
+          0,
+        );
+        assert.equal(
+          (
+            await client.userProfile.findUniqueOrThrow({
+              where: { id: profile.id },
+            })
+          ).revision,
+          2,
+        );
+      },
+    );
+    await t.test(
+      "duplicate event ID rolls back the repeated mutation",
+      async () => {
+        const event = intent();
+        await withPersonalAuditTransaction(client, alice.id, event, increment);
+        await assert.rejects(
+          withPersonalAuditTransaction(client, alice.id, event, increment),
+          { code: "P2002" },
+        );
+        assert.equal(
+          (
+            await client.userProfile.findUniqueOrThrow({
+              where: { id: profile.id },
+            })
+          ).revision,
+          3,
+        );
+        assert.equal(
+          await client.auditOutbox.count({ where: { eventId: event.eventId } }),
+          1,
+        );
+      },
+    );
+    await t.test(
+      "contact result is withheld when durable commit fails",
+      async () => {
+        // A deferred trigger fails at COMMIT, after the query and outbox INSERT succeeded.
+        await client.$executeRawUnsafe(
+          `CREATE FUNCTION reject_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit commit failure'; END; $$`,
+        );
+        await client.$executeRawUnsafe(
+          `CREATE CONSTRAINT TRIGGER reject_test_audit AFTER INSERT ON "AuditOutbox" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reject_test_audit()`,
+        );
+        const contactId = (
+          await client.userContact.findUniqueOrThrow({
+            where: { profileId: profile.id },
+          })
+        ).id;
+        const event = intent({
+          action: "contact.viewed",
+          resourceType: "contact",
+          resourceId: contactId,
+          metadata: { permission: "profile.contact.read" },
+        });
+        let released = false;
+        try {
+          await assert.rejects(
+            withPersonalAuditTransaction(client, alice.id, event, (tx) =>
+              tx.userContact.findUniqueOrThrow({
+                where: { profileId: profile.id },
+              }),
+            ).then(() => {
+              released = true;
+            }),
+          );
+          assert.equal(released, false);
+          const observer = createDatabaseClient(url.href);
+          try {
+            assert.equal(
+              await observer.auditOutbox.count({
+                where: { eventId: event.eventId },
+              }),
+              0,
+            );
+          } finally {
+            await observer.$disconnect();
+          }
+        } finally {
+          await client.$executeRawUnsafe(
+            `DROP TRIGGER reject_test_audit ON "AuditOutbox"`,
+          );
+          await client.$executeRawUnsafe(`DROP FUNCTION reject_test_audit()`);
+        }
+        const contact = await withPersonalAuditTransaction(
+          client,
+          alice.id,
+          event,
+          (tx) =>
+            tx.userContact.findUniqueOrThrow({
+              where: { profileId: profile.id },
+            }),
+        );
+        assert.equal(contact.email, "contact@example.invalid");
+        const row = await client.auditOutbox.findUniqueOrThrow({
+          where: { eventId: event.eventId },
+        });
+        assert.equal(
+          JSON.stringify(row.payload).includes(contact.email),
+          false,
+        );
       },
     );
     await t.test(

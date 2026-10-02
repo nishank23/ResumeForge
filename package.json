@@ -12,6 +12,8 @@
     "db:local:status": "node scripts/local-db.mjs status",
     "db:migrate": "pnpm --filter @resume-forge/prisma-client migrate",
     "db:test": "pnpm --filter @resume-forge/prisma-client test:db",
+    "db:test:audit": "pnpm --filter @resume-forge/workspace-service test:db",
+    "audit:deliver:local": "pnpm --filter @resume-forge/workspace-service... build && node scripts/deliver-local-audit.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",

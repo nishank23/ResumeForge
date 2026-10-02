@@ -457,6 +457,9 @@ importers:
       '@prisma/client':
         specifier: 7.10.0
         version: 7.10.0(prisma@7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@resume-forge/audit-contracts':
+        specifier: workspace:*
+        version: link:../audit-contracts
       pg:
         specifier: 8.16.3
         version: 8.16.3
@@ -595,6 +598,25 @@ importers:
       typescript-eslint:
         specifier: ^8.71.0
         version: 8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+
+  services/workspace-service:
+    dependencies:
+      '@resume-forge/audit-contracts':
+        specifier: workspace:*
+        version: link:../../packages/audit-contracts
+      '@resume-forge/prisma-client':
+        specifier: workspace:*
+        version: link:../../packages/prisma-client
+      pg:
+        specifier: 8.16.3
+        version: 8.16.3
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
 
   services/gateway:
     dependencies:

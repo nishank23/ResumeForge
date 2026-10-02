@@ -148,15 +148,19 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
             <Button disabled variant="outline">
               LinkedIn — awaiting credentials
             </Button>
-            {context?.onNavigate ? (
+            {signedIn && context?.onNavigate ? (
               <Button
                 onClick={() => {
                   context.onNavigate?.(
-                    `/w/${context.activeWorkspace.id}/resumes`,
+                    session.identity.isOnboarded
+                      ? `/w/${session.identity.workspaceId}/resumes`
+                      : "/onboarding",
                   );
                 }}
               >
-                Explore the preview
+                {session.identity.isOnboarded
+                  ? "Open my workspace"
+                  : "Continue to profile setup"}
               </Button>
             ) : null}
           </div>

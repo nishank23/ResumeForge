@@ -1,8 +1,8 @@
 # Progress Tracker
 
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-02
 
-**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 personal-scope, audit contracts and initial local identity migration verified on 2026-09-30.
+**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 local persistence/capture/retry verified; P1.4 Google/local sessions, browser coordination and protected personal routing implemented.
 
 **Context approved by user:** Yes — 2026-09-29 ("I confirm everything").
 
@@ -16,7 +16,7 @@ This is the canonical status file. [project-tracker.md](../project-tracker.md) l
 
 ## Current goal
 
-Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 is in progress: the unblocked personal-scope policy and content-free audit-intent contracts are verified; the initial local identity/workspace/profile migration is verified. Remaining persistence tables and durable audit delivery are pending; vectors remain gated by D07.
+Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 personal-scope policy, audit-intent validation, local persistence migrations, atomic capture and local audit retry/ingestion are verified. Authenticated audit transport/scheduling, service authorization and private-route integration remain pending; vectors remain gated by D07.
 
 ## Documentation checklist
 
@@ -51,8 +51,8 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 | ID  | Phase      | Feature/spec                                                           | Context      | Implementation                   | Verification                                                                             |
 | --- | ---------- | ---------------------------------------------------------------------- | ------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
 | F01 | 1          | [Design system](feature-specs/01-design-system.md)                     | Spec drafted | **Complete (P1.2)**              | **Passed** (`pnpm build`, `pnpm check`, production federation & CSS token audit)         |
-| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Scaffolding complete (LinkedIn Secrets Pending) | Manual Google OAuth test pending                                                         |
-| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 persistence)** | 21 policy/contract tests; local migration plus 7 database subtests and restore passed |
+| F02 | 1          | [Google + LinkedIn OAuth](feature-specs/02-auth-oauth.md)              | Spec drafted | Google/local sessions and protected personal routing implemented; LinkedIn on hold | Auth/session tests plus 8 routing cases pass; live scope denial/setup/outage recovery verified; fresh Google consent pending |
+| F03 | 1          | [Database schema + Prisma](feature-specs/03-database-schema.md)        | Spec drafted | **In progress (P1.3 persistence)** | 21 policy/contract tests; local migration plus 12 database subtests and parent passed |
 | F04 | 1          | [Individual profile wizard](feature-specs/04-profile-wizard.md)        | Spec drafted | Not started                      | Not run                                                                                  |
 | F05 | 2          | [JD parser](feature-specs/05-jd-parser.md)                             | Spec drafted | Not started                      | Not run                                                                                  |
 | F06 | 2          | [Resume generator + suggestions](feature-specs/06-resume-generator.md) | Spec drafted | Not started                      | Not run                                                                                  |
@@ -64,7 +64,7 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 | F12 | 3          | [Profile editor](feature-specs/12-profile-editor.md)                   | Spec drafted | Not started                      | Not run                                                                                  |
 | F13 | 4          | [Workspace management](feature-specs/13-workspace-management.md)       | Spec drafted | Not started                      | Not run                                                                                  |
 | F14 | 4          | [RBAC + privacy](feature-specs/14-rbac-privacy.md)                     | Spec drafted | Not started                      | Not run                                                                                  |
-| F15 | 4          | [Audit logging](feature-specs/15-audit-logging.md)                     | Spec drafted | Phase 1 contract foundation only | 12/12 contract tests; delivery, persistence and viewer not started                       |
+| F15 | 4          | [Audit logging](feature-specs/15-audit-logging.md)                     | Spec drafted | Phase 1 capture and local retry/ingestion implemented | 12 contract tests, 5 capture cases and 9 local delivery subtests pass; authenticated transport/route integration/viewer pending |
 | F16 | 5          | [LinkedIn data import](feature-specs/16-linkedin-import.md)            | Spec drafted | Not started                      | Not run                                                                                  |
 | F17 | 5          | [Keyword gap analysis](feature-specs/17-keyword-gap-analysis.md)       | Spec drafted | Not started                      | Not run                                                                                  |
 | F18 | 5          | [MCP integration](feature-specs/18-mcp-integration.md)                 | Spec drafted | Not started                      | Not run                                                                                  |
@@ -73,7 +73,7 @@ Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F
 
 ## In progress
 
-**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and fail-closed personal ownership/scope decisions. Added `@resume-forge/audit-contracts` with the 22 documented event names, authoritative actor/workspace/resource fields, explicit outcomes, canonical UTC timestamps and allowlisted identifier/status metadata. Raw content, unknown keys, URLs, emails, nested values and action/resource/outcome mismatches are rejected. Initial persistence and grant models are now implemented; shared-workspace routes, role bundles, session rotation, audit delivery and sensitive-read enforcement remain unimplemented.
+**P1.3 — Persistence and access foundations (F03) (in progress).** Added `@resume-forge/access-policy` with the exact 27-name capability vocabulary and fail-closed personal ownership/scope decisions. Added `@resume-forge/audit-contracts` with the 22 documented event names, authoritative actor/workspace/resource fields, explicit outcomes, canonical UTC timestamps and allowlisted identifier/status metadata. Raw content, unknown keys, URLs, emails, nested values and action/resource/outcome mismatches are rejected. Local persistence/grant models, session rotation, atomic personal capture and local retry/ingestion are implemented. Shared-workspace routes, role bundles, authenticated audit transport/scheduling and private-route integration of sensitive-read enforcement remain pending.
 
 ## Decisions awaiting review
 
@@ -89,7 +89,7 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 ## Next step
 
-P1.4 shell session bootstrap and cross-tab refresh/logout coordination are implemented. Next unblocked slice: protected workspace routing and the authenticated onboarding transition, after checking the remaining F03 service authorization/audit prerequisites for persisted private data. Sample preview remains public and separate. LinkedIn implementation is **on hold at the user's request (2026-10-01), awaiting OAuth credentials and provider configuration**; do not work on or mark it complete until resumed. Google real-provider consent verification, account linking, P1.3 scope constraints/service roles and durable audit capture/delivery remain pending.
+Protected personal shell routing is verified. Next unblocked backend slice: authenticated internal audit transport between producer relay and workspace ingestion, followed by restricted runtime database roles/service authorization before private profile persistence. Keep D05 shared-role activation and D11 retention boundaries open; do not enable shared workspaces or claim a completed onboarding wizard. LinkedIn stays **on hold by user request, awaiting credentials/configuration**. F02/F03/F15 remain in progress.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -275,3 +275,40 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Scope boundary: this is session bootstrap/coordination, not completion of F02 protected routes, onboarding, account linking, or later private resume operations.
 
 - Final verification: `pnpm check` passed 25/25 tasks; `pnpm test` passed 14/14 tasks (all workspace builds plus 28 controller/policy/audit cases). `git diff --check` passed. Live browser restored an existing authenticated session in two tabs, with matching account status, the sample-workspace boundary, and disabled LinkedIn credential-waiting label. This verifies restoration, not a fresh Google consent round-trip. Cross-tab logout against the live account was left for manual verification; deterministic tests cover invalidation and stale-response races.
+
+## P1.3 atomic personal audit capture — 2026-10-01
+
+- Committed the previously verified shared-session slice as `d0def17` at the user's request. This new slice remains uncommitted for review.
+- Checked onboarding dependencies and chose atomic audit capture before exposing private profile/contact persistence. LinkedIn remains on hold.
+- Added `withPersonalAuditTransaction` in the server-only Prisma package. It validates/prunes audit intent, binds the supplied authenticated actor to the personal workspace/target, executes scoped caller work, and inserts the pending outbox intent in one transaction. Return values are released only after successful commit.
+- Invalid metadata/scope rejects before domain work; domain errors and duplicate event IDs roll back. Duplicate IDs are not treated as successful mutation replay. Service callers still own authentication, permission/resource checks and side-effect-free scoped queries.
+- Added five real PostgreSQL cases, including an independent observer and a deferred trigger failing at COMMIT to prove contact-read results are withheld on audit failure and recover afterward. No private route, delivery worker, audit viewer or retention process was enabled.
+- Final verification (2026-10-02): `pnpm db:test` passed all 12 subtests plus parent (13/13), including migration, isolation, audit commit/rollback and synthetic backup/restore in disposable local databases. The preceding verification logs confirm `pnpm check` passed 26/26 tasks and `pnpm test` passed 14/14 tasks with 28 controller/policy/contract cases; those completed checks were not repeated during resume.
+- Fixed a concurrent Prisma generation failure (`EEXIST`) by generating in the package build only, making its Turborepo typecheck depend on that build and caching generated output. No dependency versions changed.
+- Targeted `pnpm exec prettier --check` passed for the changed Prisma source/test/package/Turborepo files; `git diff --check` passed.
+- Local verification: run `pnpm db:local:start`, then `pnpm db:test` from the project root; expect 13 passes, zero failures, including the contact COMMIT-failure/recovery case. This slice adds no new UI flow.
+
+## P1.3 local audit delivery and ingestion — 2026-10-02
+
+- Preserved the completed, uncommitted atomic-capture work; selected the next D11-approved slice without rebuilding auth/session behavior. No commit or push was requested for this turn.
+- Added an additive audit migration: durable attempt/backoff/lease/acknowledgement fields and state constraints/indexes on AuditOutbox; nullable outcome/correlation/hash fields on legacy AuditEvent history. New ingestions require complete validated intent and use the producer event ID as ledger identity.
+- Added producer-side `deliverAuditOutbox` with bounded atomic claims, 30-second leases, stale-owner fencing, persisted exponential retry (5 seconds to 5 minutes), fixed error codes and retained blocked intents. Domain mutations are never replayed by delivery.
+- Added workspace-owned `ingestPersonalAuditEvent`: validates personal scope, preserves occurrence time/outcome/correlation, deduplicates equivalent events and rejects conflicting ID reuse without updating history. No shared-workspace or HTTP route is activated.
+- Added `pnpm audit:deliver:local` for one batch in the managed local database only and `pnpm db:test:audit` for disposable synthetic verification. The runner prints counts/backlog only and leaves scheduling/manual remediation explicit.
+- Verification: `pnpm db:test:audit` passed 9 subtests plus parent (10/10), including outage/backoff recovery, lost acknowledgement, concurrent claims/ingestion, expired lease/stale completion, malformed/spoofed scope, conflicting payload and acknowledgement COMMIT failure. `pnpm db:test` passed 12 subtests plus parent (13/13), retaining capture rollback/contact failure and backup/restore checks.
+- `pnpm db:migrate` applied `202610020001_audit_delivery` to local PostgreSQL successfully. The local runner completed with zero claimed/delivered/retried/blocked/stale events because the development queue was empty; synthetic tests cover nonempty delivery.
+- `pnpm check` passed 27/27 tasks; `pnpm test` passed 15/15 tasks with the existing 28 policy/contract/controller cases. Workspace-service and its dependency builds passed. Frozen-lockfile installation reused 443 packages with zero downloads; existing dependency versions remain unchanged.
+- Targeted Prettier verification and `git diff --check` passed. The final local runner printed an empty pending/delivering/blocked backlog with exit code 0. README/database notes include the new commands and expected results.
+- Remaining: authenticated cross-service transport, automatic scheduling, least-privilege/append-only runtime roles, service route coverage/denied-event capture, shared-workspace ingestion, viewer and retention. Local retry foundations do not complete F03/F15 or authorize real-data deployment. LinkedIn remains on hold.
+- Manual checks: `pnpm db:test:audit` should show 10 passes, zero failures; `pnpm audit:deliver:local` should print summary/backlog counts, all zero on an empty queue. No new UI is added. See [database notes](../docs/database-foundation.md).
+
+## P1.4 protected personal shell routing — 2026-10-02
+
+- Preserved all completed audit/session work and selected the independently unblocked browser-routing slice. Reused the frontend-design skill and existing shared surfaces/typography for recovery/denial/setup states; no new visual system or dependency upgrade.
+- Replaced the hardcoded workspace selector with `/auth/me`'s validated personal workspace ID. Anonymous/loading/error states cannot mount workspace or onboarding children. Wrong workspace URLs render a denial with a safe return path; inactive shared workspaces receive no browser access.
+- Added actor+workspace route keys to clear mounted drafts/selections on scope/status changes. Signed-out navigation no longer offers a guest workspace bypass. This remains browser navigation only; private APIs still require independent backend authorization.
+- Root and successful OAuth handoff follow server onboarding status. Incomplete users see an authenticated setup-pending entry with an explicit protected sample-workspace link; completed users enter their personal workspace. Return URLs are ignored and callback errors are not hidden by conflicting success flags. No profile creation/save or fabricated completion state.
+- Verification: 8 shell routing tests passed, including actual nested guard rendering with child mount counts, spoofed selectors, session outage/recovery/logout, scope reset keys, safe callback handoff and honest setup entry. `pnpm check` passed 27/27 tasks; `pnpm test` passed 16/16 tasks with 36 policy/contract/controller/routing cases. Shell/auth MFE lint/typecheck and production builds passed; targeted Prettier and `git diff --check` passed.
+- Live production-browser evidence: existing local session restored; old preview selector was denied; root entered the incomplete setup screen; its protected sample link opened the authoritative workspace. Auth stop/reload replaced content with recovery; restart plus retry restored the workspace. A 390px viewport denial check showed no horizontal overflow. Account/profile data were not copied into fixtures or documentation. A clipped content-only screenshot is saved at `/tmp/resume-forge-protected-route.jpg`.
+- Limits: no fresh Google consent, live anonymous/logout round-trip or completed-user browser account was exercised; tests cover those routing states. Standalone remotes remain synthetic previews. Existing federation `vm` externalization warning remains nonfatal. Auth service was restarted for verification and remains available on localhost:4001. Changes remain uncommitted.
+- Manual checks: follow [protected-routing steps](../docs/google-login.md). Use a private/signed-out window for redirects; verify your workspace UUID and denial after changing it; verify cross-tab sign-out removes protected content. Persisted onboarding, private profile/resume APIs, authenticated audit transport and runtime privileges remain pending.

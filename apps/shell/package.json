@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
     "preview": "vite preview --port 3000",
     "clean": "rm -rf dist *.tsbuildinfo"
   },

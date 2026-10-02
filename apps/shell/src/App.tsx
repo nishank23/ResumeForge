@@ -33,6 +33,13 @@ import {
   type ThemeMode,
   type WorkspaceRef,
 } from "@resume-forge/shared";
+import {
+  HomeRoute,
+  OnboardingEntry,
+  ProtectedRoute,
+  SignInRoute,
+} from "./SessionRoutes";
+import { sessionRouteKey } from "./routing";
 
 function createRetryableLazy<P extends object>(
   factory: () => Promise<{ default: React.ComponentType<P> }>,
@@ -68,13 +75,6 @@ const LazyResumeRemoteRoot = createRetryableLazy(
   () => import("resume_mfe/ResumeRemoteRoot"),
 );
 
-const WORKSPACE: WorkspaceRef = {
-  id: "ws-personal-01",
-  name: "Personal workspace",
-  type: "individual",
-  roleLabel: "Preview",
-};
-
 export function App() {
   return (
     <BrowserRouter>
@@ -84,7 +84,7 @@ export function App() {
 }
 
 function WorkspaceShell() {
-  const { state: session } = useSession();
+  const { state: session, restore } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<ThemeMode>("light");
@@ -92,7 +92,15 @@ function WorkspaceShell() {
   const [quietMotion, setQuietMotion] = useState(false);
   const [simulateFailure, setSimulateFailure] = useState(false);
   const reducedMotion = useReducedMotion() || quietMotion;
-  const prefix = `/w/${WORKSPACE.id}`;
+  const workspace: WorkspaceRef = {
+    id: session.status === "authenticated" ? session.identity.workspaceId : "",
+    name: "Personal workspace",
+    type: "individual",
+    roleLabel: "Preview",
+  };
+  const prefix = session.status === "authenticated" ? `/w/${workspace.id}` : "";
+  const home =
+    session.status === "authenticated" ? `${prefix}/resumes` : "/sign-in";
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -105,8 +113,8 @@ function WorkspaceShell() {
     setTheme((value) => (value === "light" ? "dark" : "light"));
   };
   const context: ShellFederationContext = {
-    activeWorkspace: WORKSPACE,
-    availableWorkspaces: [WORKSPACE],
+    activeWorkspace: workspace,
+    availableWorkspaces: session.status === "authenticated" ? [workspace] : [],
     theme,
     reducedMotion,
     apiBaseUrl: "http://localhost:4000",
@@ -124,15 +132,18 @@ function WorkspaceShell() {
       icon: Briefcase,
     },
   ];
-  const current = location.pathname.includes("/profile")
-    ? "My profile"
-    : location.pathname.includes("jd-history")
-      ? "Job descriptions"
-      : location.pathname.includes("settings")
-        ? "Preferences"
-        : location.pathname === "/sign-in"
-          ? "Welcome"
-          : "My resumes";
+  const current =
+    location.pathname === "/onboarding"
+      ? "Profile setup"
+      : location.pathname.includes("/profile")
+        ? "My profile"
+        : location.pathname.includes("jd-history")
+          ? "Job descriptions"
+          : location.pathname.includes("settings")
+            ? "Preferences"
+            : location.pathname === "/sign-in"
+              ? "Welcome"
+              : "My resumes";
   const remote = (
     name: "auth" | "profile" | "resume",
     child: React.ReactNode,
@@ -158,7 +169,7 @@ function WorkspaceShell() {
         Skip to main content
       </a>
       <aside className="rf-sidebar rf-app-chrome">
-        <Link className="rf-brand" to={`${prefix}/resumes`}>
+        <Link className="rf-brand" to="/">
           <span className="rf-brand-mark">
             <FileText size={21} aria-hidden="true" />
           </span>
@@ -187,28 +198,37 @@ function WorkspaceShell() {
           className={`rf-nav ${menuOpen ? "is-open" : ""}`}
           aria-label="Workspace navigation"
         >
-          {items.map((item) => (
-            <Link
-              key={item.path}
-              onClick={() => {
-                setMenuOpen(false);
-              }}
-              to={item.path}
-              aria-current={
-                location.pathname.startsWith(item.path) ? "page" : undefined
-              }
-            >
-              <item.icon size={19} aria-hidden="true" />
-              {item.label}
+          {session.status === "authenticated" ? (
+            items.map((item) => (
+              <Link
+                key={item.path}
+                onClick={() => {
+                  setMenuOpen(false);
+                }}
+                to={item.path}
+                aria-current={
+                  location.pathname.startsWith(item.path) ? "page" : undefined
+                }
+              >
+                <item.icon size={19} aria-hidden="true" />
+                {item.label}
+              </Link>
+            ))
+          ) : (
+            <Link to="/sign-in">
+              <UserRound size={19} aria-hidden="true" />
+              Sign in
             </Link>
-          ))}
-          <Link
-            to={`${prefix}/settings`}
-            aria-current={current === "Preferences" ? "page" : undefined}
-          >
-            <Settings size={19} aria-hidden="true" />
-            Preferences
-          </Link>
+          )}
+          {session.status === "authenticated" ? (
+            <Link
+              to={`${prefix}/settings`}
+              aria-current={current === "Preferences" ? "page" : undefined}
+            >
+              <Settings size={19} aria-hidden="true" />
+              Preferences
+            </Link>
+          ) : null}
         </nav>
         <div className="rf-sidebar-bottom">
           <div className="rf-preview-note">
@@ -227,11 +247,11 @@ function WorkspaceShell() {
                   ? "Checking session…"
                   : session.status === "error"
                     ? "Session unavailable"
-                    : "Guest preview"}
+                    : "Signed out"}
               <small>
                 {session.status === "authenticated"
                   ? "Signed in · Sample workspace"
-                  : "Sign in or explore the preview"}
+                  : "Sign in to open your workspace"}
               </small>
             </span>
             <ArrowRight size={16} aria-hidden="true" />
@@ -261,151 +281,181 @@ function WorkspaceShell() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="rf-main">
-          <Routes
-            key={
-              session.status === "authenticated"
-                ? session.identity.id
-                : session.status
-            }
-          >
+          <Routes key={sessionRouteKey(session)}>
             <Route
               path="/"
-              element={<Navigate to={`${prefix}/resumes`} replace />}
+              element={<HomeRoute session={session} retry={restore} />}
             />
             <Route
               path="/sign-in"
-              element={remote("auth", <LazyAuthRemoteRoot context={context} />)}
-            />
-            <Route
-              path="/onboarding"
-              element={remote(
-                "profile",
-                <LazyProfileRemoteRoot context={context} />,
-              )}
-            />
-            <Route
-              path="/w/:workspaceId/profile"
-              element={remote(
-                "profile",
-                <LazyProfileRemoteRoot context={context} />,
-              )}
-            />
-            <Route
-              path="/w/:workspaceId/resumes"
               element={
-                <ResumeLibrary prefix={prefix} reducedMotion={reducedMotion} />
+                <SignInRoute session={session}>
+                  {remote("auth", <LazyAuthRemoteRoot context={context} />)}
+                </SignInRoute>
               }
             />
             <Route
-              path="/w/:workspaceId/resumes/new"
-              element={remote(
-                "resume",
-                <LazyResumeRemoteRoot
-                  key="create"
-                  context={context}
-                  view="create"
-                />,
-              )}
-            />
+              element={<ProtectedRoute session={session} retry={restore} />}
+            >
+              <Route
+                path="/onboarding"
+                element={<OnboardingEntry session={session} />}
+              />
+            </Route>
             <Route
-              path="/w/:workspaceId/resumes/:resumeId"
-              element={remote(
-                "resume",
-                <LazyResumeRemoteRoot
-                  key="editor"
-                  context={context}
-                  view="editor"
-                />,
-              )}
-            />
-            <Route
-              path="/w/:workspaceId/jd-history"
+              path="/w/:workspaceId"
               element={
-                <div className="rf-page">
-                  <div className="rf-page-heading">
-                    <h1>Job descriptions</h1>
-                    <p>The context behind your tailored resumes.</p>
-                  </div>
-                  <div className="rf-empty">
-                    <Briefcase size={32} />
-                    <h2>No job descriptions yet</h2>
-                    <p>
-                      Saved job descriptions and comparisons will appear here
-                      once tailoring is available.
-                    </p>
-                    <Link className="rf-text-link" to={`${prefix}/resumes/new`}>
-                      Explore resume creation <ArrowRight size={16} />
-                    </Link>
-                  </div>
-                </div>
+                <ProtectedRoute session={session} retry={restore} workspace />
               }
-            />
-            <Route
-              path="/w/:workspaceId/settings"
-              element={
-                <div className="rf-page rf-narrow">
-                  <div className="rf-page-heading">
-                    <h1>Preferences</h1>
-                    <p>A workspace that feels comfortable to use.</p>
-                  </div>
-                  <section className="rf-settings">
-                    <h2>Appearance</h2>
-                    <div className="rf-setting-row">
-                      <div>
-                        <strong>Color theme</strong>
-                        <p>Resume pages always stay white.</p>
-                      </div>
-                      <Button variant="outline" onClick={toggleTheme}>
-                        {theme === "light"
-                          ? "Use dark theme"
-                          : "Use light theme"}
-                      </Button>
+            >
+              <Route
+                index
+                element={<Navigate to={`${prefix}/resumes`} replace />}
+              />
+              <Route
+                path="profile"
+                element={remote(
+                  "profile",
+                  <LazyProfileRemoteRoot context={context} />,
+                )}
+              />
+              <Route
+                path="resumes"
+                element={
+                  <ResumeLibrary
+                    prefix={prefix}
+                    reducedMotion={reducedMotion}
+                  />
+                }
+              />
+              <Route
+                path="resumes/new"
+                element={remote(
+                  "resume",
+                  <LazyResumeRemoteRoot
+                    key="create"
+                    context={context}
+                    view="create"
+                  />,
+                )}
+              />
+              <Route
+                path="resumes/:resumeId"
+                element={remote(
+                  "resume",
+                  <LazyResumeRemoteRoot
+                    key="editor"
+                    context={context}
+                    view="editor"
+                  />,
+                )}
+              />
+              <Route
+                path="jd-history"
+                element={
+                  <div className="rf-page">
+                    <div className="rf-page-heading">
+                      <h1>Job descriptions</h1>
+                      <p>The context behind your tailored resumes.</p>
                     </div>
-                    <div className="rf-setting-row">
-                      <div>
-                        <strong>Reduce motion</strong>
-                        <p>Your system preference is always respected.</p>
+                    <div className="rf-empty">
+                      <Briefcase size={32} />
+                      <h2>No job descriptions yet</h2>
+                      <p>
+                        Saved job descriptions and comparisons will appear here
+                        once tailoring is available.
+                      </p>
+                      <Link
+                        className="rf-text-link"
+                        to={`${prefix}/resumes/new`}
+                      >
+                        Explore resume creation <ArrowRight size={16} />
+                      </Link>
+                    </div>
+                  </div>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <div className="rf-page rf-narrow">
+                    <div className="rf-page-heading">
+                      <h1>Preferences</h1>
+                      <p>A workspace that feels comfortable to use.</p>
+                    </div>
+                    <section className="rf-settings">
+                      <h2>Appearance</h2>
+                      <div className="rf-setting-row">
+                        <div>
+                          <strong>Color theme</strong>
+                          <p>Resume pages always stay white.</p>
+                        </div>
+                        <Button variant="outline" onClick={toggleTheme}>
+                          {theme === "light"
+                            ? "Use dark theme"
+                            : "Use light theme"}
+                        </Button>
                       </div>
+                      <div className="rf-setting-row">
+                        <div>
+                          <strong>Reduce motion</strong>
+                          <p>Your system preference is always respected.</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          aria-pressed={quietMotion}
+                          onClick={() => {
+                            setQuietMotion(!quietMotion);
+                          }}
+                        >
+                          {reducedMotion ? "Reduced" : "Standard"}
+                        </Button>
+                      </div>
+                    </section>
+                    <details className="rf-diagnostics">
+                      <summary>Developer diagnostics</summary>
+                      <p>
+                        Test the next preview module without affecting saved
+                        data.
+                      </p>
                       <Button
                         variant="outline"
-                        aria-pressed={quietMotion}
+                        aria-pressed={simulateFailure}
                         onClick={() => {
-                          setQuietMotion(!quietMotion);
+                          setSimulateFailure(!simulateFailure);
                         }}
                       >
-                        {reducedMotion ? "Reduced" : "Standard"}
+                        {simulateFailure
+                          ? "Restore module"
+                          : "Simulate remote failure"}
                       </Button>
-                    </div>
-                  </section>
-                  <details className="rf-diagnostics">
-                    <summary>Developer diagnostics</summary>
-                    <p>
-                      Test the next preview module without affecting saved data.
-                    </p>
-                    <Button
-                      variant="outline"
-                      aria-pressed={simulateFailure}
-                      onClick={() => {
-                        setSimulateFailure(!simulateFailure);
-                      }}
-                    >
-                      {simulateFailure
-                        ? "Restore module"
-                        : "Simulate remote failure"}
-                    </Button>
-                    {remote("auth", <LazyAuthRemoteRoot context={context} />)}
-                  </details>
-                </div>
-              }
-            />
+                      {remote("auth", <LazyAuthRemoteRoot context={context} />)}
+                    </details>
+                  </div>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <div className="rf-empty">
+                    <h1>Page not found</h1>
+                    <Link className="rf-text-link" to={home}>
+                      Back to my workspace
+                    </Link>
+                  </div>
+                }
+              />
+            </Route>
             <Route
               path="*"
               element={
                 <div className="rf-empty">
                   <h1>Page not found</h1>
                   <p>This page may have moved.</p>
-                  <Link className="rf-text-link" to={`${prefix}/resumes`}>
-                    Back to my resumes
+                  <Link className="rf-text-link" to={home}>
+                    {session.status === "authenticated"
+                      ? "Back to my resumes"
+                      : "Go to sign in"}
                   </Link>
                 </div>
               }

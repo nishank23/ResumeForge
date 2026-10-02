@@ -1,0 +1,133 @@
+import type { ReactNode } from "react";
+import { Link, Navigate, Outlet, useLocation, useParams } from "react-router";
+import { Button, type SessionState } from "@resume-forge/shared";
+import { resolveProtectedRoute, sessionHome } from "./routing";
+
+export function SessionRecovery({
+  session,
+  retry,
+}: {
+  session: SessionState;
+  retry: () => Promise<void>;
+}) {
+  if (session.status === "loading")
+    return (
+      <div className="rf-empty" role="status" aria-live="polite">
+        <h1>Checking your session</h1>
+        <p>Your workspace will open once your session is verified.</p>
+      </div>
+    );
+  return (
+    <div className="rf-empty">
+      <h1>We couldn’t verify your session</h1>
+      <p role="alert">
+        Check your connection and try again to open your workspace.
+      </p>
+      {session.status === "error" && session.operation === "logout" ? (
+        <Link className="rf-text-link" to="/sign-in">
+          Retry sign out
+        </Link>
+      ) : (
+        <Button
+          onClick={() => {
+            void retry();
+          }}
+        >
+          Retry session check
+        </Button>
+      )}
+      <Link className="rf-text-link" to="/sign-in">
+        Go to sign in
+      </Link>
+    </div>
+  );
+}
+
+export function ProtectedRoute({
+  session,
+  retry,
+  workspace = false,
+}: {
+  session: SessionState;
+  retry: () => Promise<void>;
+  workspace?: boolean;
+}) {
+  const params = useParams();
+  const decision = resolveProtectedRoute(
+    session,
+    workspace ? (params.workspaceId ?? "") : undefined,
+  );
+  if (decision.kind === "loading" || decision.kind === "recover")
+    return <SessionRecovery session={session} retry={retry} />;
+  if (decision.kind === "redirect")
+    return <Navigate to={decision.to} replace />;
+  if (decision.kind === "deny")
+    return (
+      <div className="rf-empty" role="alert">
+        <h1>This workspace isn’t available</h1>
+        <p>
+          Open the personal workspace associated with your signed-in account.
+        </p>
+        <Link className="rf-text-link" to="/">
+          Go to my workspace
+        </Link>
+      </div>
+    );
+  return <Outlet />;
+}
+
+export function HomeRoute({
+  session,
+  retry,
+}: {
+  session: SessionState;
+  retry: () => Promise<void>;
+}) {
+  if (session.status === "authenticated")
+    return <Navigate to={sessionHome(session.identity)} replace />;
+  if (session.status === "anonymous") return <Navigate to="/sign-in" replace />;
+  return <SessionRecovery session={session} retry={retry} />;
+}
+
+/** Only the known OAuth success flag triggers handoff; return URLs are ignored. */
+export function SignInRoute({
+  session,
+  children,
+}: {
+  session: SessionState;
+  children: ReactNode;
+}) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  if (
+    session.status === "authenticated" &&
+    params.get("auth") === "success" &&
+    !params.has("auth_error")
+  )
+    return <Navigate to={sessionHome(session.identity)} replace />;
+  return children;
+}
+
+export function OnboardingEntry({ session }: { session: SessionState }) {
+  if (session.status !== "authenticated") return null;
+  if (session.identity.isOnboarded)
+    return <Navigate to={sessionHome(session.identity)} replace />;
+  return (
+    <div className="rf-empty">
+      <h1>Set up your profile</h1>
+      <p>
+        Profile setup is being connected. You don’t need to enter personal
+        details yet.
+      </p>
+      <p>
+        The sample workspace is available to explore; its changes aren’t saved.
+      </p>
+      <Link
+        className="rf-text-link"
+        to={`/w/${session.identity.workspaceId}/resumes`}
+      >
+        Explore sample workspace
+      </Link>
+    </div>
+  );
+}

@@ -33,16 +33,19 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [ ] Add approved vector columns only after D07 validation; avoid guessed dimensions/model names.
 - [x] Establish fail-closed personal workspace/resource ownership checks without activating proposed shared-role mappings.
 - [x] Define a content-free, allowlisted audit event-intent contract with scoped identifiers and explicit outcomes.
-- [ ] Establish D11-approved durable audit capture/outbox behavior before exposing private routes. Storage models exist; capture and delivery are unimplemented.
+- [x] Add validated personal-workspace audit capture in the same transaction as domain work; verify rollback and fail-closed contact result delivery.
+- [x] Verify bounded local outbox delivery, persisted retry/lease recovery and workspace-owned idempotent personal ingestion.
+- [ ] Complete authenticated cross-service transport/scheduling and wire capture into private routes. Local relay/ingestor exist; transport, least-privilege roles and route integration remain pending.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)
 
-LinkedIn is on hold by user request (2026-10-01), pending credentials/configuration. Google/session slices proceed independently. Shell session bootstrap and cross-tab coordination are implemented; protected routing/onboarding remain pending.
+LinkedIn is on hold by user request (2026-10-01), pending credentials/configuration. Google/session slices proceed independently. Shell session bootstrap, cross-tab coordination and protected personal routing are implemented; persisted onboarding remains pending.
 
 Planned files: auth service/gateway, auth MFE, shell session bootstrap, personal-workspace provisioning path.
 
 - [ ] Implement [F02](../feature-specs/02-auth-oauth.md) provider transactions, session rotation/revocation, and protected routing.
+- [x] Guard shell workspace/onboarding routes, bind selectors to verified personal identity, provide outage recovery and clear mounted content on lost/changed scope.
 - [ ] Make identity/workspace provisioning idempotent and recover from partial cross-service failures.
 - [ ] Verify real configured provider callbacks and distinguish this evidence from mocked integration tests.
 

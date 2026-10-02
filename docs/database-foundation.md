@@ -14,6 +14,37 @@ Database constraints are not authorization. Future server queries must authentic
 
 For development backups, use `pg_dump` with the private connection settings from `.local/database.env` and write backups outside Git. Restore into a new database and verify it before changing your connection; do not overwrite the existing cluster as a recovery shortcut. The automated test demonstrates schema/data restore for synthetic fixtures, not a production recovery guarantee. Applied migrations are immutable; later corrections need a new migration. Review any generated SQL, especially dropped columns and manually maintained CHECK constraints.
 
+## Atomic personal audit capture (2026-10-01; verified 2026-10-02)
+
+`withPersonalAuditTransaction(db, authenticatedActorId, intent, operation)` is available from the server-only Prisma package. It validates the existing audit-intent contract and UUID database identifiers, requires a successful event attributed to the authenticated actor, and verifies that the actor owns the individual workspace. Shared workspaces and cross-user targets are rejected. The helper does not authenticate credentials or authorize action/resource permissions: service callers must do those checks and use scoped queries in `operation`.
+
+The callback's database work and the normalized `AuditOutbox` insert commit in one transaction. The helper resolves only after commit, so an authorized contact-read result is withheld if capture or commit fails. Callbacks must not stream results, log private values, send network requests, or perform other nontransactional side effects. No raw callback result enters the audit payload.
+
+Duplicate event IDs reject and roll back the entire operation. This is capture uniqueness, not idempotent mutation replay; service commands need their own idempotency contract. Events initially remain pending in the producer outbox. Local delivery/retry is described below; append-only runtime privileges, denied-event capture and retention remain unfinished. No private route is activated by this helper.
+
+`pnpm db:test` now includes five additional audit cases: atomic commit observed from another connection, invalid metadata/actor/workspace rejection, domain-failure rollback, duplicate-event rollback, and a deferred PostgreSQL trigger that forces COMMIT to fail after a contact query/outbox insert. The test verifies no contact result is released, then removes the test-only trigger and verifies recovery. It runs only in disposable synthetic databases.
+
 ## Remaining P1.3 work
 
-Profile section tables; typed organization/vendor details and memberships; resume/version/task foundations after their contracts; producer-local audit outbox and idempotent delivery; scoped service repositories and least-privilege roles. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+Authenticated audit transport and scheduling; scoped service repositories and least-privilege roles; private-route integration. Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+
+## Local audit relay and ledger — 2026-10-02
+
+`deliverAuditOutbox` in the server-only Prisma package claims at most 25 due rows by default (maximum 100) using parameterized PostgreSQL [queue row locking](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE). It commits a 30-second lease and increments attempts before invoking transport outside a database transaction. Acknowledgements are fenced by lease token; stalled/crashed claims become eligible after expiry. Delivery is at least once, so the recipient must be idempotent.
+
+`ingestPersonalAuditEvent` belongs to workspace-service and is invoked only by trusted local composition. It validates content-free intent and personal ownership, inserts the event using its producer event ID, and compares a canonical SHA-256 intent hash on repeats. Equivalent retries return the existing event; conflicting reuse fails without overwriting it. Occurrence time, outcome and correlation are retained. Legacy rows retain NULL for previously absent fields. No gateway/internal HTTP endpoint is enabled.
+
+Transient failures keep the event pending with a persisted exponential delay starting at 5 seconds and capped at 5 minutes; attempts continue without dropping the intent. Only fixed failure codes are recorded, never raw exceptions. Invalid payload/scope or conflicting identity becomes blocked, retained for controlled remediation. Automatic remediation is not implemented. Delivered intents are retained pending a retention decision.
+
+From the project root:
+
+```sh
+pnpm db:local:start
+pnpm db:migrate
+pnpm db:test:audit
+pnpm audit:deliver:local
+```
+
+`db:test:audit` uses disposable synthetic databases and should print 10 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, and ledger commit followed by acknowledgement COMMIT failure. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
+
+The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Authenticated cross-service transport, least-privilege/append-only roles, denied-event capture, full service coverage and retention remain prerequisites for release.
