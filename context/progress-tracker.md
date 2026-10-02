@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-02
 
-**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 local persistence/capture/retry/HTTP transport verified; P1.4 Google/local sessions, browser coordination and protected personal routing implemented.
+**Current stage:** Phase 1 in progress — P1.1/P1.2 complete; P1.3 local persistence/capture/retry/HTTP transport/runtime roles verified; P1.4 Google/local sessions, browser coordination and protected personal routing implemented.
 
 **Context approved by user:** Yes — 2026-09-29 ("I confirm everything").
 
@@ -16,7 +16,7 @@ This is the canonical status file. [project-tracker.md](../project-tracker.md) l
 
 ## Current goal
 
-Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 personal-scope policy, audit-intent validation, local persistence migrations, atomic capture and local audit retry/ingestion are verified. Automatic scheduling/production identity, service authorization and private-route integration remain pending; vectors remain gated by D07.
+Complete Phase 1 Foundation. P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) are complete. P1.3 personal-scope policy, audit-intent validation, local persistence migrations, atomic capture and local audit retry/ingestion are verified. Automatic scheduling/production identity and private-route integration remain pending; local service DB authorization is verified; vectors remain gated by D07.
 
 ## Documentation checklist
 
@@ -89,7 +89,7 @@ See [decisions.md](decisions.md) for proposed options and exact boundaries.
 
 ## Next step
 
-Protected personal shell routing is verified. Authenticated local audit transport is verified. Next unblocked backend slice: restricted runtime database roles and service authorization before private profile persistence; automatic audit scheduling remains pending. Keep D05 shared-role activation and D11 retention boundaries open; do not enable shared workspaces or claim a completed onboarding wizard. LinkedIn stays **on hold by user request, awaiting credentials/configuration**. F02/F03/F15 remain in progress.
+Protected personal shell routing is verified. Authenticated local audit transport is verified. Restricted local runtime roles and service DB authorization are verified. Next unblocked slice: automatic local audit relay scheduling with bounded runs and shutdown/recovery verification. Private profile persistence still requires actor/resource authorization and route capture integration. Keep D05 shared-role activation and D11 retention boundaries open; do not enable shared workspaces or claim a completed onboarding wizard. LinkedIn stays **on hold by user request, awaiting credentials/configuration**. F02/F03/F15 remain in progress.
 
 ## Historical verification evidence — 2026-09-28
 
@@ -327,3 +327,17 @@ User requested a product-quality UI/UX review before continuing. Reopened the in
 - Issue found and fixed: the existing intent validator normalizes away unknown top-level fields; the new HTTP Zod boundary rejects them before normalization. Existing in-process contract behavior was preserved. Request/error payloads and credentials are never printed or persisted as diagnostic messages.
 - Manual verification: follow [database notes](../docs/database-foundation.md): start local PostgreSQL, initialize the key, keep `pnpm audit:serve:local` running in a separate terminal, check credential-free curl receives 401, then run the relay/transport/database commands. Expect 8 transport and 12 audit database passes, zero failures; no new UI flow.
 - Pending: restricted runtime DB roles/service authorization (next), automatic scheduling, private-route integration and denied-event capture, production service identity/network policy, shared-workspace ingestion, viewer and retention. F02/F03/F15 remain in progress; LinkedIn stays on hold awaiting credentials. Do not claim private-data deployment readiness or completed onboarding.
+
+## P1.3 restricted local runtime roles — 2026-10-02
+
+- Committed the completed local audit HTTP slice as `af0ae6f` (`feat: authenticate local audit delivery`); no push performed. This new role slice remains uncommitted for review.
+- Added a versioned service grant matrix and transactional, idempotent local operator provisioning. Distinct auth/profile/relay/ingestor passwords are stored only in ignored `.local/runtime-database.env` with mode 0600. Migration and disposable-test administration retain the existing separate local credential. Setup refuses hosted/production targets, unmanaged role-name collisions and unexpected ownership/memberships, with rollback of partial credential/grant changes.
+- Normal runtime roles have no object ownership/memberships, superuser/role/database creation/replication/RLS bypass or schema/DDL/TEMP/delete/truncate grants. All normal runtime roles are denied AuditEvent UPDATE/DELETE/TRUNCATE. PUBLIC privileges and migration-owner defaults are revoked; future tables/functions do not gain automatic service access. Reapplication removes separately granted column ACLs as well as table grants.
+- Added runtime startup/delivery verification of actual role attributes, membership/ownership, effective table AND column ACLs, grant options, routines and sequences. Auth and audit runners read only their fixed local runtime URLs and fail closed without a root/process DATABASE_URL administrative fallback. HTTP service authentication remains independent.
+- Narrowed `/auth/me` to the onboarding field from UserProfile; auth cannot read professional/contact content. Changed capture to non-returning `createMany` so the profile producer needs only INSERT on AuditOutbox, preserving atomic rollback/duplicate failure and COMMIT-gated contact results. Relay can update delivery fields only; ingestion can insert ledger events and read id/hash only for deduplication. Profile section/contact storage rights do not expose a private API or activate shared-workspace roles.
+- Verification: `pnpm db:test:roles` passed 9 subtests plus parent (10/10). Separate restricted connections completed capture→relay→real authenticated HTTP→ledger ingestion and duplicate retry; denied unrelated tables/columns, history alteration and administrative SQL; retained spoofed-scope/duplicate rollback and fail-closed contact reads under a deferred COMMIT failure; verified future-object denial, column-grant drift/reprovisioning and transactional password rollback/collision rejection. Disposable databases and temporary roles were removed afterward.
+- `pnpm --filter @resume-forge/auth-service test:db` passed 7 subtests plus parent (8/8) with the main app using the restricted auth connection. `pnpm db:test` passed 13/13, `pnpm db:test:audit` passed 12/12, `pnpm check` passed 27/27 tasks and `pnpm test` passed 17/17 tasks (44 existing routing/policy/contract/controller/transport cases). No dependency versions or lockfile changed. Logs: `/tmp/resume-forge-runtime-{roles,auth,db,audit}-test.log`, `/tmp/resume-forge-runtime-check.log`, `/tmp/resume-forge-runtime-test.log`.
+- Targeted Prettier verification and `git diff --check` passed. Confirmed `.local/runtime-database.env` is ignored by Git and has mode 0600.
+- Applied verified role setup to the managed local development database; repeated setup succeeded. Live smoke: temporary restricted auth started on port 4101, `/auth/me` returned 401 without credentials, Google initiation returned 200; restricted audit ingestion started on 4005 and credential-free POST returned 401. Restricted relay printed an empty backlog (nonempty delivery is proven in synthetic tests). Both temporary verification servers were stopped. The existing auth watcher had stopped during the configuration transition; it was restarted on 4001 with restricted access after provisioning.
+- Manual check: run `pnpm db:runtime:init`, restart `pnpm dev`, then run `pnpm db:test:roles` (expect 10 passes). Follow [runtime role notes](../docs/runtime-database-roles.md) for audit startup/401/relay checks. Existing Google/session UI should behave as before; fresh Google consent remains manual. No new UI flow is introduced.
+- Boundaries: these grants enforce service table/column responsibilities, not per-user row-level security. Private use cases still require actor/action/resource authorization and scoped queries. Auth-owned personal workspace bootstrap remains an existing local exception pending extraction. Hosted role provisioning/identity, automatic relay scheduling (next), private profile routes and denied-event coverage, retention and shared-workspace activation remain pending. LinkedIn stays on hold; F03/F15 are not complete.

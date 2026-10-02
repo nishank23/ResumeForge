@@ -17,16 +17,17 @@ The callback is now a GET handled by the auth service, replacing the unfinished 
 ```bash
 pnpm db:local:start
 pnpm db:migrate
+pnpm db:runtime:init
 pnpm dev
 ```
 
-Restart `pnpm dev` after editing `.env`. The service loads the root `.env`, then missing database configuration from `.local/database.env`; existing process environment values take precedence. Expected terminal message: `Auth service listening on http://localhost:4001`. An invalid client ID produces a configuration error without printing the value.
+Restart `pnpm dev` after editing `.env`. OAuth settings load from the root `.env` (existing process values take precedence). The database URL is read only from ignored `.local/runtime-database.env` as the restricted auth role; root/process `DATABASE_URL` cannot override it. The actual role/privileges are verified before the service starts; missing/unsafe configuration fails without an administrative fallback. See [runtime database roles](runtime-database-roles.md). Expected terminal message: `Auth service listening on http://localhost:4001`. An invalid client ID produces a configuration error without printing the value.
 
 Open `http://localhost:3000/sign-in`, select **Continue with Google**, and complete Google's consent flow yourself. Once the shell verifies the returned session, incomplete accounts go to **Set up your profile** and completed accounts go to their personal workspace. The setup entry explicitly says profile setup is being connected; **Explore sample workspace** opens the protected preview. Visit `/sign-in` to test **Sign out** and repeat sign-in. No persisted profile wizard is implemented yet.
 
 ## Verification and boundaries
 
-`pnpm --filter @resume-forge/auth-service test:db` builds the service and tests synthetic Google responses against disposable local PostgreSQL databases. Coverage includes PKCE URL shape, malformed client IDs, missing configuration, cookie binding, expired/replayed callbacks, cancellation/provider failure, unique provider identity and workspace, no email merging, refresh rotation/replay, token expiration and logout. No Google credentials or personal accounts are used in these automated tests.
+`pnpm --filter @resume-forge/auth-service test:db` builds the service and tests synthetic Google responses against disposable local PostgreSQL databases. The main auth test app uses the restricted auth role. Coverage includes PKCE URL shape, malformed client IDs, missing configuration, cookie binding, expired/replayed callbacks, cancellation/provider failure, unique provider identity and workspace, no email merging, refresh rotation/replay, token expiration and logout. No Google credentials or personal accounts are used in these automated tests.
 
 Refresh credentials are random, hashed in PostgreSQL, and held in HttpOnly/SameSite=Lax cookies. Five-minute opaque access credentials remain in JavaScript memory; refresh expiry is absolute at 30 days. Origin checks protect POST endpoints. Each access request rechecks the persisted session. Pending OAuth attempts expire after ten minutes and are consumed before code exchange. Pending transactions/access tokens are process-local, so restarts require a retry/refresh. Concurrent refresh attempts intentionally invalidate a replayed family; the frontend deduplicates React StrictMode refresh requests. The shared shell/auth session controller now coordinates same-origin tabs through Web Locks and sends credential-free logout notifications through BroadcastChannel.
 

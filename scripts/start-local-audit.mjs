@@ -1,5 +1,8 @@
 import { createRequire } from "node:module";
-import { createDatabaseClient } from "../packages/prisma-client/dist/index.js";
+import {
+  createDatabaseClient,
+  assertRuntimeDatabaseRole,
+} from "../packages/prisma-client/dist/index.js";
 import { createWorkspaceAuditApp } from "../services/workspace-service/dist/app.js";
 import { loadLocalAuditConfig } from "./local-audit-config.mjs";
 
@@ -9,9 +12,9 @@ const { serve } = createRequire(
 )("@hono/node-server");
 let db;
 try {
-  const config = loadLocalAuditConfig();
+  const config = loadLocalAuditConfig("auditIngest");
   db = createDatabaseClient(config.databaseUrl);
-  await db.$connect();
+  await assertRuntimeDatabaseRole(db, "auditIngest");
   const app = createWorkspaceAuditApp({ db, relayKey: config.key });
   const server = serve(
     { fetch: app.fetch, hostname: "127.0.0.1", port: 4005 },
@@ -38,7 +41,7 @@ try {
   process.once("SIGTERM", stop);
 } catch {
   console.error(
-    "Local audit service startup failed. Run audit:local:init and check local database status/migrations.",
+    "Local audit service startup failed. Run db:runtime:init/audit:local:init and check local database status/migrations.",
   );
   await db?.$disconnect();
   process.exitCode = 1;

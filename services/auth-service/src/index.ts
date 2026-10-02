@@ -1,11 +1,22 @@
 import { serve } from "@hono/node-server";
-import { createDatabaseClient } from "@resume-forge/prisma-client";
+import {
+  createDatabaseClient,
+  assertRuntimeDatabaseRole,
+} from "@resume-forge/prisma-client";
 import { loadConfig } from "./config.js";
 import { createGoogleProvider } from "./google.js";
 import { createAuthApp } from "./app.js";
 
 const config = loadConfig();
 const db = createDatabaseClient(config.DATABASE_URL);
+try {
+  await assertRuntimeDatabaseRole(db, "auth");
+} catch {
+  await db.$disconnect();
+  throw new Error(
+    "Restricted auth database access unavailable. Run pnpm db:runtime:init and check local database status.",
+  );
+}
 const origin = `http://localhost:${String(config.AUTH_SERVICE_PORT)}`;
 const provider =
   config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET

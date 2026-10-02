@@ -223,7 +223,12 @@ export function createAuthApp({
     const session = await db.session.findUnique({
       where: { id: grant.sessionId },
       include: {
-        user: { include: { personalWorkspace: true, profile: true } },
+        user: {
+          include: {
+            personalWorkspace: true,
+            profile: { select: { onboardingCompletedAt: true } },
+          },
+        },
       },
     });
     if (!session || session.revokedAt || session.expiresAt.getTime() <= now())

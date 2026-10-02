@@ -45,3 +45,11 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 ## U06 schema planning boundary
 
 The [data model](../data-model.md) adds proposed resume metadata/preferences, issue preferences and later F19 import/F20 render-settings/preset relations. Define stable version/provenance and ownership seams early, but introduce later-phase persistence only with its approved implementation slice; context approval alone never executes migrations.
+
+## Phase 1 local runtime roles — 2026-10-02
+
+- [x] Distinct restricted auth, profile producer, audit relay and ledger ingestor connections enforce a versioned table/column grant allowlist. No runtime role owns objects, inherits memberships, has administrative/DDL privileges or can change existing AuditEvent history.
+- [x] Runtime entry points reject incorrect identities or missing/extra effective privileges; root/process database overrides cannot select administrative credentials.
+- [x] Verify scoped capture, duplicate rollback, real authenticated HTTP delivery, denied cross-service/DDL operations, future-object denial, column-grant drift and transactional/idempotent provisioning in disposable local PostgreSQL databases.
+
+Run `pnpm db:runtime:init` after local migrations and restart services. Profile capture uses INSERT-only outbox access; auth reads only onboarding columns from UserProfile. Full per-user policy, private repositories/routes, hosted provisioning and retention remain pending. The service grants are not row-level security or complete F03 acceptance. See [role setup and verification](../../docs/runtime-database-roles.md).

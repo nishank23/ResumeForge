@@ -88,8 +88,10 @@ Install PostgreSQL command-line tools (`initdb`, `pg_ctl`, `psql`, `createdb`, `
 ```bash
 pnpm db:local:start
 pnpm db:migrate
+pnpm db:runtime:init
 pnpm db:test
 pnpm db:test:audit
+pnpm db:test:roles
 pnpm audit:local:init
 # In another terminal, keep the recipient running: pnpm audit:serve:local
 pnpm audit:deliver:local
@@ -100,7 +102,7 @@ pnpm db:local:stop
 
 The dedicated cluster listens only on `127.0.0.1:55432`, uses SCRAM password authentication, and stores data/credentials in ignored `.local/` (do not delete it to reset development). Prisma CLI reads `.local/database.env` automatically; an explicit `DATABASE_URL` overrides it for migrations. Database tests always use the managed local cluster, create disposable test databases, and remove only those databases. Expect 13 passes from `db:test` (including atomic capture, rollback and backup/restore) and 12 from `db:test:audit` (delivery, retry, scope and crash recovery). `db:local:start` is safe to repeat and preserves data.
 
-The local audit command processes one bounded batch and prints summary/backlog counts; an empty development queue reports all zeros. Tests do not seed this queue. It ignores hosted/root database settings and delivers over authenticated loopback HTTP to workspace-service on port 4005. Run `audit:local:init` once and keep `audit:serve:local` running in another terminal. The generated credential stays in ignored `.local/`; automatic scheduling is pending. Storage models, Google/session lifecycle, atomic capture and local audit delivery foundations are implemented; sample UI persistence and shared workspaces remain pending. Local database credentials have administrative privileges for migrations and disposable database tests; restricted service roles are required before private routes use the database. See [database foundation](docs/database-foundation.md) for retry behavior and remaining limits.
+The local audit command processes one bounded batch and prints summary/backlog counts; an empty development queue reports all zeros. Tests do not seed this queue. It ignores hosted/root database settings and delivers over authenticated loopback HTTP to workspace-service on port 4005. Run `audit:local:init` once and keep `audit:serve:local` running in another terminal. The generated credential stays in ignored `.local/`; automatic scheduling is pending. Storage models, Google/session lifecycle, atomic capture and local audit delivery foundations are implemented; sample UI persistence and shared workspaces remain pending. Administrative credentials remain for migrations/disposable tests; auth, profile capture, relay and ingestion now have separate restricted runtime roles. Run `db:runtime:init` and restart local services; private domain APIs still require application authorization. See [runtime database roles](docs/runtime-database-roles.md). See [database foundation](docs/database-foundation.md) for retry behavior and remaining limits.
 
 ## Latest planning update
 

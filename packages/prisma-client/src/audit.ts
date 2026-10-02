@@ -54,7 +54,8 @@ export async function withPersonalAuditTransaction<T>(
     if (!workspace) throw new AuditCaptureError();
     const value = await operation(tx);
     // Persist only the normalized allowlisted contract, never the original input.
-    await tx.auditOutbox.create({
+    // Capture needs INSERT only; do not RETURN private queue rows to producers.
+    await tx.auditOutbox.createMany({
       data: {
         eventId: intent.eventId,
         payload: { ...intent, metadata: { ...intent.metadata } },

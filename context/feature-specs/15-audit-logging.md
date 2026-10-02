@@ -58,6 +58,8 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 
 `pnpm audit:deliver:local` now runs one bounded batch over authenticated loopback HTTP to workspace-service. The sole allowed local service identity is `local-audit-relay`, with a randomly generated server-only key stored in ignored `.local/audit-transport.env`; unknown service IDs, bad keys and browser-origin requests are rejected before ingestion. Requests are strictly validated and bounded to 16 KiB; replies to 1 KiB. Only a matching event acknowledgement after ledger COMMIT marks the outbox delivered.
 
-Automatic scheduling, production service identity/HTTPS policy, append-only runtime privileges, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
+Automatic scheduling, production service identity/HTTPS policy, hosted privilege provisioning, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
 
 - [x] Local HTTP authentication/validation tests and disposable PostgreSQL HTTP recovery cases pass, including lost acknowledgement and ledger COMMIT failure. Manual commands and local-only limits are in [database notes](../../docs/database-foundation.md).
+
+- [x] Separate restricted local producer/relay/ingestor DB roles preserve capture→HTTP→ledger delivery while every normal runtime role is denied ledger UPDATE/DELETE/TRUNCATE. Producer outbox access is INSERT only; relay cannot modify intent payload/event identity. Hosted provisioning, viewer access and retention remain pending. See [runtime role verification](../../docs/runtime-database-roles.md).

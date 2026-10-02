@@ -1,5 +1,6 @@
 import {
   createDatabaseClient,
+  assertRuntimeDatabaseRole,
   deliverAuditOutbox,
   createLocalAuditHttpTransport,
 } from "../packages/prisma-client/dist/index.js";
@@ -10,6 +11,7 @@ let db;
 try {
   const config = loadLocalAuditConfig();
   db = createDatabaseClient(config.databaseUrl);
+  await assertRuntimeDatabaseRole(db, "auditRelay");
   // A 25-event batch has up to 75 seconds of transport waits inside a 120s lease.
   const summary = await deliverAuditOutbox(
     db,
@@ -31,7 +33,7 @@ try {
   if (backlog.blocked > 0 || summary.retried > 0) process.exitCode = 1;
 } catch {
   console.error(
-    "Local audit delivery failed. Check audit:local:init, local database and audit:serve:local.",
+    "Local audit delivery failed. Check db:runtime:init, audit:local:init, local database and audit:serve:local.",
   );
   process.exitCode = 1;
 } finally {

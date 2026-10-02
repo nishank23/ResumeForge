@@ -1,11 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createDatabaseClient } from "@resume-forge/prisma-client";
+import {
+  createDatabaseClient,
+  runtimeRoleNames,
+  assertRuntimeDatabaseRole,
+} from "@resume-forge/prisma-client";
+import {
+  Client,
+  provisionRuntimeRoles,
+} from "../../../scripts/runtime-roles.mjs";
 import { createAuthApp } from "../dist/app.js";
 import { createGoogleProvider } from "../dist/google.js";
 
@@ -42,6 +50,19 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
   sql(`CREATE DATABASE "${name}"`);
   url.pathname = `/${name}`;
   const db = createDatabaseClient(url.href);
+  const prefix = `rf_auth_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const names = runtimeRoleNames(prefix);
+  const passwords = Object.fromEntries(
+    Object.keys(names).map((service) => [
+      service,
+      randomBytes(32).toString("hex"),
+    ]),
+  );
+  const runtimeUrl = new URL(url);
+  runtimeUrl.username = names.auth;
+  runtimeUrl.password = passwords.auth;
+  const runtimeDb = createDatabaseClient(runtimeUrl.href);
+  const admin = new Client({ connectionString: url.href });
   let time = Date.now();
   let exchangeCalls = 0;
   let identity = {
@@ -62,7 +83,7 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
     },
   };
   const app = createAuthApp({
-    db,
+    db: runtimeDb,
     provider,
     appOrigin: "http://localhost:3000",
     now: () => time,
@@ -97,6 +118,13 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
       },
     );
     assert.equal(migration.status, 0, "Fresh migrations must apply");
+    await admin.connect();
+    await provisionRuntimeRoles(admin, {
+      databaseName: name,
+      prefix,
+      passwords,
+    });
+    await assertRuntimeDatabaseRole(runtimeDb, "auth", names.auth);
     await t.test(
       "real authorization URL uses PKCE and the backend callback",
       () => {
@@ -245,7 +273,10 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
       },
     );
   } finally {
-    await db.$disconnect();
+    await Promise.all([db.$disconnect(), runtimeDb.$disconnect()]);
+    await admin.end();
     sql(`DROP DATABASE "${name}" WITH (FORCE)`);
+    for (const role of Object.values(names))
+      sql(`DROP ROLE IF EXISTS "${role}"`);
   }
 });

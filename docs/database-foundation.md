@@ -26,7 +26,7 @@ Duplicate event IDs reject and roll back the entire operation. This is capture u
 
 ## Remaining P1.3 work
 
-Automatic audit scheduling and production service identity; scoped service repositories and least-privilege roles; private-route integration. Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+Automatic audit scheduling and production service identity; scoped service repositories and private-route integration; hosted service roles/identity. Local runtime grants are verified; see [runtime database roles](runtime-database-roles.md). Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
 
 ## Local audit relay and ledger — 2026-10-02
 
@@ -41,12 +41,13 @@ From the project root:
 ```sh
 pnpm db:local:start
 pnpm db:migrate
+pnpm db:runtime:init
 pnpm db:test:audit
 ```
 
 `db:test:audit` uses disposable synthetic databases and should print 12 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, ledger commit followed by acknowledgement COMMIT failure, authenticated HTTP retry after a rejected credential/lost reply, and ledger COMMIT failure before HTTP acknowledgement. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
 
-The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, least-privilege/append-only roles, denied-event capture, full service coverage and retention remain prerequisites for release.
+The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, hosted role provisioning, denied-event capture, full service coverage and retention remain prerequisites for release.
 
 ## Authenticated local audit HTTP — 2026-10-02
 
@@ -81,4 +82,4 @@ pnpm db:test:audit
 
 The credential-free curl must return HTTP 401 with `service_unauthorized`. The relay prints only batch/backlog counts; an empty queue prints all zeros and makes no HTTP calls, so it alone does not prove connectivity. Transport tests should show 8 passes and database tests 12 passes with zero failures. Tests create/discard synthetic databases and temporary loopback listeners; they do not add development events. Stop the recipient with Ctrl-C when finished. No new UI flow is added.
 
-This is a local development identity, not production service authentication. Deployment credential distribution/rotation, HTTPS/network policy, automatic scheduling, restricted runtime database roles and private domain routes remain pending. Full F03/F15 acceptance is not complete.
+This is a local development identity, not production service authentication. Deployment credential distribution/rotation, HTTPS/network policy, automatic scheduling, hosted runtime role provisioning and private domain routes remain pending. Separate restricted roles are enforced for local auth/capture/relay/ingestion; run `pnpm db:runtime:init` before restarting services. See [runtime database roles](runtime-database-roles.md). Full F03/F15 acceptance is not complete.

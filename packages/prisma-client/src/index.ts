@@ -1,5 +1,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client.js";
+export {
+  runtimeRoleNames,
+  RUNTIME_GRANTS,
+  assertRuntimeDatabaseRole,
+  type RuntimeService,
+} from "./runtime-access.js";
 export { withPersonalAuditTransaction, AuditCaptureError } from "./audit.js";
 export {
   createLocalAuditHttpTransport,
