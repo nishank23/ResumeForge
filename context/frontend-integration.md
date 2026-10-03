@@ -1,6 +1,8 @@
 # Frontend Integration and Reference Review
 
-**Updated:** 2026-09-29. **Planning only; development remains unauthorized.** The user requested Performative UI, contextual prompts for selected resume content, and resume-building/tailoring capabilities informed by CareerZenith. Visual concept work is paused; no Studio/Focus layout, palette, or theme is approved.
+**Updated:** 2026-10-03. This document contains the original 2026-09-29 planning/reference baseline. The context gate was subsequently cleared and F01 implemented; the [tracker](progress-tracker.md) controls current authorization/status. The user requested Performative UI, contextual prompts for selected resume content, and resume-building/tailoring capabilities informed by CareerZenith. No Studio/Focus concept is selected.
+
+**Latest reference inspection:** [2026-10-03 blank-builder review](../docs/careerzenith-builder-review.md) records the requested Upload/Create → New flow, direct editing, Save/Cancel recovery, section addition, formatting and persistence checks, plus a comparison with the running local sample editor. The user wants the interactive document-builder experience improved before more backend work. The older observations below retain their original verification limits; this follow-up adds no completed F08/F20 implementation.
 
 ## Reference evidence and limits
 

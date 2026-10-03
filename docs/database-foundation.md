@@ -20,13 +20,13 @@ For development backups, use `pg_dump` with the private connection settings from
 
 The callback's database work and the normalized `AuditOutbox` insert commit in one transaction. The helper resolves only after commit, so an authorized contact-read result is withheld if capture or commit fails. Callbacks must not stream results, log private values, send network requests, or perform other nontransactional side effects. No raw callback result enters the audit payload.
 
-Duplicate event IDs reject and roll back the entire operation. This is capture uniqueness, not idempotent mutation replay; service commands need their own idempotency contract. Events initially remain pending in the producer outbox. Local delivery/retry is described below; append-only runtime privileges, denied-event capture and retention remain unfinished. No private route is activated by this helper.
+Duplicate event IDs reject and roll back the entire operation. This is capture uniqueness, not idempotent mutation replay; service commands need their own idempotency contract. Events initially remain pending in the producer outbox. Local delivery/retry and append-only local runtime privileges are verified. Professional-profile routes and their owned-workspace denial capture are implemented in the subsequent [profile API slice](profile-api.md); broader service coverage and retention remain unfinished. This helper alone grants no private-route permission.
 
 `pnpm db:test` now includes five additional audit cases: atomic commit observed from another connection, invalid metadata/actor/workspace rejection, domain-failure rollback, duplicate-event rollback, and a deferred PostgreSQL trigger that forces COMMIT to fail after a contact query/outbox insert. The test verifies no contact result is released, then removes the test-only trigger and verifies recovery. It runs only in disposable synthetic databases.
 
 ## Remaining P1.3 work
 
-Automatic audit scheduling and production service identity; scoped service repositories and private-route integration; hosted service roles/identity. Local runtime grants are verified; see [runtime database roles](runtime-database-roles.md). Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+Production service identity/scheduling supervision; private contact/section repositories and route integration; hosted service roles/identity. Local runtime grants and private professional-profile GET/PUT are verified; see [runtime database roles](runtime-database-roles.md). Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. Profile creation/drafts and onboarding remain pending; see [profile API](profile-api.md). D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
 
 ## Local audit relay and ledger — 2026-10-02
 
@@ -47,7 +47,7 @@ pnpm db:test:audit
 
 `db:test:audit` uses disposable synthetic databases and should print 12 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, ledger commit followed by acknowledgement COMMIT failure, authenticated HTTP retry after a rejected credential/lost reply, and ledger COMMIT failure before HTTP acknowledgement. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
 
-The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it is not a scheduled worker. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, hosted role provisioning, denied-event capture, full service coverage and retention remain prerequisites for release.
+The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it remains the one-pass operator command; the automatic worker is described below. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, hosted role provisioning, broader denied-event capture, full service coverage and retention remain prerequisites for release.
 
 ## Authenticated local audit HTTP — 2026-10-02
 
@@ -82,4 +82,38 @@ pnpm db:test:audit
 
 The credential-free curl must return HTTP 401 with `service_unauthorized`. The relay prints only batch/backlog counts; an empty queue prints all zeros and makes no HTTP calls, so it alone does not prove connectivity. Transport tests should show 8 passes and database tests 12 passes with zero failures. Tests create/discard synthetic databases and temporary loopback listeners; they do not add development events. Stop the recipient with Ctrl-C when finished. No new UI flow is added.
 
-This is a local development identity, not production service authentication. Deployment credential distribution/rotation, HTTPS/network policy, automatic scheduling, hosted runtime role provisioning and private domain routes remain pending. Separate restricted roles are enforced for local auth/capture/relay/ingestion; run `pnpm db:runtime:init` before restarting services. See [runtime database roles](runtime-database-roles.md). Full F03/F15 acceptance is not complete.
+This is a local development identity, not production service authentication. Deployment credential distribution/rotation, HTTPS/network policy, hosted scheduling/supervision, hosted runtime role provisioning and contact/section domain routes remain pending. Separate restricted roles are enforced for local auth/capture/relay/ingestion; run `pnpm db:runtime:init` before restarting services. See [runtime database roles](runtime-database-roles.md). Full F03/F15 acceptance is not complete.
+
+## Automatic local audit worker — 2026-10-02
+
+After local migrations, `pnpm db:runtime:init` and `pnpm audit:local:init`, start the recipient in one terminal:
+
+```sh
+pnpm audit:serve:local
+```
+
+Start delivery in another:
+
+```sh
+pnpm audit:worker:local
+```
+
+Expected startup line: `Local audit worker running: 5 events/pass, 5s between completed passes. Ctrl-C stops gracefully.` The first pass runs immediately. Each completed pass is followed by a five-second wait, so a slow pass cannot overlap the next one. It claims at most five due events with a 120-second lease, using the restricted relay role and the same authenticated/idempotent HTTP ingestion. The one-pass `audit:deliver:local` command still uses its existing 25-event batch.
+
+Each scheduled pass verifies actual runtime privileges before claiming; an unsafe/missing grant or database outage stops claims and emits a fixed unavailable message, then checks again after the poll wait. The worker reuses persisted nextAttemptAt/leases/backoff rather than resetting them on restart. Lost replies or expired claims converge on the existing ledger event. Blocked intents remain retained for remediation; domain operations are never replayed.
+
+Worker database connections and SQL statements use 3-second [node-postgres timeouts](https://node-postgres.com/apis/client); client query waits have a 4-second fallback. HTTP still has its 3-second timeout. These bound normal asynchronous waits; leases/fencing handle a killed or stalled process. This is local development execution, without an installed daemon, hosted scheduler or restart supervisor.
+
+Ctrl-C/SIGTERM cancels idle polling immediately, stops new passes/claims, drains an already active bounded pass and disconnects the database. Expect `Local audit worker stopped.` Restart the command to resume due work. A hard kill can leave a claim leased until expiry; the next worker reclaims it after expiry without dropping the intent. Keep the recipient running while the worker drains. There is no destructive queue reset or automatic blocked-event remediation.
+
+Logs contain only batch/backlog counts and fixed status messages. An empty development queue prints a zero summary once, then stays quiet; an empty summary does not prove HTTP event transfer. Changed backlogs, claimed events and recovery produce new counts. Credentials, profile/contact content and raw errors never enter worker logs. Configuration continues to reject production/hosted targets and administrative fallback.
+
+Verification commands:
+
+```sh
+pnpm --filter @resume-forge/workspace-service test
+pnpm db:test:roles
+pnpm db:test:audit
+```
+
+Expect 16 scheduling/transport passes, 12 role/database passes, and 12 audit passes, with zero failures. Worker cases cover absent callbacks, nonoverlap, timed retry, idle/active shutdown and production refusal. Disposable PostgreSQL fixtures prove bounded scheduled batches, lost-ack retry and expired-lease recovery across a worker restart without changing the producer revision, plus slow SQL cancellation/recovery. No synthetic intents are added to the development queue. Professional-profile route capture and selector-denial delivery were verified in the subsequent [profile API slice](profile-api.md); contact/section coverage, hosted supervision/identity, viewer and retention remain pending. No UI flow changes.

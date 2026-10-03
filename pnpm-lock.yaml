@@ -413,10 +413,16 @@ importers:
       '@resume-forge/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.0
         version: 10.0.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
       eslint:
         specifier: ^9.20.0
         version: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
@@ -564,6 +570,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.10)
+      '@resume-forge/access-policy':
+        specifier: workspace:*
+        version: link:../../packages/access-policy
       '@resume-forge/prisma-client':
         specifier: workspace:*
         version: link:../../packages/prisma-client
@@ -579,6 +588,49 @@ importers:
       oslo:
         specifier: ^1.2.1
         version: 1.2.1
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.71.0
+        version: 8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+
+  services/profile-service:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.13.7
+        version: 1.19.17(hono@4.13.10)
+      '@resume-forge/access-policy':
+        specifier: workspace:*
+        version: link:../../packages/access-policy
+      '@resume-forge/audit-contracts':
+        specifier: workspace:*
+        version: link:../../packages/audit-contracts
+      '@resume-forge/prisma-client':
+        specifier: workspace:*
+        version: link:../../packages/prisma-client
+      '@resume-forge/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      hono:
+        specifier: ^4.7.0
+        version: 4.13.10
       zod:
         specifier: 3.25.76
         version: 3.25.76

@@ -20,7 +20,13 @@ export async function ingestPersonalAuditEvent(db: Database, input: unknown) {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (
     intent.workspaceType !== "individual" ||
-    intent.outcome !== "succeeded" ||
+    !(
+      intent.outcome === "succeeded" ||
+      (intent.action === "authorization.denied" &&
+        intent.outcome === "denied" &&
+        intent.resourceType === "workspace" &&
+        intent.resourceId === intent.workspaceId)
+    ) ||
     (intent.targetUserId !== undefined &&
       intent.targetUserId !== intent.actorUserId) ||
     ![intent.eventId, intent.actorUserId, intent.workspaceId].every((id) =>

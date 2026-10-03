@@ -63,6 +63,8 @@ flowchart LR
 
 Services share a physical database initially, with logical table ownership. Shared Prisma access is not permission to mutate another service's domain tables. Use authenticated internal HTTP for cross-service use cases. Cross-service workflows use idempotency and reconciliation rather than pretending a distributed call is one SQL transaction.
 
+Local Phase 1 uses opaque access credentials backed by auth-service's process-local map and revocable database sessions. A service-authenticated `/internal/auth/resolve` boundary now supplies minimal personal actor context through `@resume-forge/access-policy/server`; it does not share the session database with profile consumers or activate shared-workspace policy. Production JWT/distributed storage and hosting remain deferred. See [actor resolution](../docs/actor-resolution.md).
+
 `/internal/` routes need service authentication as well as network isolation. Carry the verified actor and tenant context; workers must not impersonate a globally privileged user. Services enforce resource access even when the gateway already authenticated the request.
 
 ## Proposed repository layout after approval

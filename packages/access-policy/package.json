@@ -9,6 +9,11 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./server": {
+      "browser": null,
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
     }
   },
   "scripts": {
@@ -19,10 +24,12 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@resume-forge/shared-types": "workspace:*"
+    "@resume-forge/shared-types": "workspace:*",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@types/node": "^22.0.0",
     "eslint": "^9.20.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.30.0"

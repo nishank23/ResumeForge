@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { z } from "zod";
+import { localProfileServiceKeySchema } from "@resume-forge/access-policy/server";
 
 for (const file of ["../../../.env"]) {
   const url = new URL(file, import.meta.url);
@@ -49,5 +50,20 @@ export function loadConfig() {
     );
   if (process.env.NODE_ENV === "production")
     throw new Error("Local auth is not approved for production deployment.");
-  return result.data;
+  const file = new URL("../../../.local/auth-transport.env", import.meta.url);
+  let profileServiceKey: string | undefined;
+  if (existsSync(file)) {
+    try {
+      const parsed = localProfileServiceKeySchema.safeParse(
+        parseEnv(readFileSync(file, "utf8")).LOCAL_PROFILE_SERVICE_KEY,
+      );
+      if (!parsed.success) throw new Error();
+      profileServiceKey = parsed.data;
+    } catch {
+      throw new Error(
+        "Invalid local auth service credential. Check .local/auth-transport.env.",
+      );
+    }
+  }
+  return { ...result.data, profileServiceKey };
 }

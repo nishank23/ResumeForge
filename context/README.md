@@ -24,6 +24,8 @@
 - [Authorization model](authorization-model.md) — all 27 permissions, proposed complete role mapping, field policy.
 - [Validation strategy](validation-strategy.md) — context checks and meaningful future test/release gates.
 - [API reference](../docs/api-reference.md) — planned routes, ownership, validation and error contracts.
+- [Local actor resolution](../docs/actor-resolution.md) — implemented service-authenticated session boundary and consumer responsibilities.
+- [Local profile API](../docs/profile-api.md) — existing owned professional read/update, revision/audit contract and verification.
 - [Deployment plan](../docs/deployment.md) — topology, unresolved hosting choices, future readiness checks.
 - [MCP integration](../docs/mcp-integration.md) — Phase 5 tools and REST policy parity.
 

@@ -5,6 +5,7 @@ import { generateCodeVerifier, generateState } from "arctic";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { createDatabaseClient } from "@resume-forge/prisma-client";
 import type { GoogleProvider } from "./google.js";
+import { createActorRoute } from "./actor-route.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 const hash = (value: string) =>
@@ -22,11 +23,13 @@ export function createAuthApp({
   db,
   provider,
   appOrigin,
+  profileServiceKey,
   now = Date.now,
 }: {
   db: Database;
   provider?: GoogleProvider;
   appOrigin: string;
+  profileServiceKey?: string;
   now?: () => number;
 }) {
   const app = new Hono();
@@ -35,8 +38,12 @@ export function createAuthApp({
     { verifier: string; binding: string; expires: number }
   >();
   const access = new Map<string, { sessionId: string; expires: number }>();
+  const activeGrant = (token: string | undefined) => {
+    const grant = token ? access.get(hash(token)) : undefined;
+    return grant && grant.expires > now() ? grant : undefined;
+  };
   app.use(
-    "*",
+    "/api/v1/auth/*",
     cors({
       origin: appOrigin,
       credentials: true,
@@ -50,7 +57,11 @@ export function createAuthApp({
       if (value.expires <= now()) pending.delete(key);
     for (const [key, value] of access)
       if (value.expires <= now()) access.delete(key);
-    if (c.req.method === "POST" && c.req.header("Origin") !== appOrigin)
+    if (
+      c.req.path.startsWith("/api/v1/auth/") &&
+      c.req.method === "POST" &&
+      c.req.header("Origin") !== appOrigin
+    )
       return c.json({ error: "Untrusted origin" }, 403);
     await next();
   });
@@ -71,6 +82,51 @@ export function createAuthApp({
   );
   const failure = (reason: string) =>
     `${appOrigin}/sign-in?auth_error=${reason}`;
+  app.route(
+    "/",
+    createActorRoute({
+      key: profileServiceKey,
+      resolve: async (token) => {
+        const grant = activeGrant(token);
+        if (!grant) return null;
+        // Identity projection only: no login email/name, provider, professional or contact content.
+        const session = await db.session.findUnique({
+          where: { id: grant.sessionId },
+          select: {
+            userId: true,
+            revokedAt: true,
+            expiresAt: true,
+            user: {
+              select: {
+                personalWorkspace: {
+                  select: { id: true, type: true, personalOwnerUserId: true },
+                },
+              },
+            },
+          },
+        });
+        const workspace = session?.user.personalWorkspace;
+        const expiresAt = Math.min(
+          grant.expires,
+          session?.expiresAt.getTime() ?? 0,
+        );
+        if (
+          !session ||
+          session.revokedAt ||
+          expiresAt <= now() ||
+          !workspace ||
+          workspace.type !== "individual" ||
+          workspace.personalOwnerUserId !== session.userId
+        )
+          return null;
+        return {
+          userId: session.userId,
+          personalWorkspaceId: workspace.id,
+          expiresAt,
+        };
+      },
+    }),
+  );
   app.get("/api/v1/auth/google/url", (c) => {
     if (!provider)
       return c.json(
@@ -218,7 +274,7 @@ export function createAuthApp({
     const bearer = c.req
       .header("Authorization")
       ?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
-    const grant = bearer ? access.get(hash(bearer)) : undefined;
+    const grant = activeGrant(bearer);
     if (!grant) return c.json({ error: "Unauthorized" }, 401);
     const session = await db.session.findUnique({
       where: { id: grant.sessionId },
@@ -231,7 +287,12 @@ export function createAuthApp({
         },
       },
     });
-    if (!session || session.revokedAt || session.expiresAt.getTime() <= now())
+    if (
+      !session ||
+      session.revokedAt ||
+      session.expiresAt.getTime() <= now() ||
+      grant.expires <= now()
+    )
       return c.json({ error: "Unauthorized" }, 401);
     return c.json({
       data: {

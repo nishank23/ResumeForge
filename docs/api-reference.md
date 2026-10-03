@@ -1,6 +1,6 @@
 # Planned API Reference
 
-**Mostly planned contracts.** Local Google/session endpoints and the internal audit endpoint below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
+**Mostly planned contracts.** Local Google/session endpoints, professional profile GET/PUT, and the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
 
 ## Shared rules
 
@@ -13,6 +13,8 @@
 - Background endpoints return 202 with owned resource/run identifiers and sanitized status; never leak another actor's Trigger.dev token or raw task output.
 
 ## Auth service
+
+Implemented internal boundary (separate from `/api/v1`, never forwarded by the gateway): `POST /internal/auth/resolve`. Only the configured local profile-service caller may send a strict `{ accessToken }` body. Success contains `userId`, `personalWorkspaceId` and Unix-millisecond `expiresAt`; service keys/session credentials and private content are excluded. Session/scope invalidation returns 401; service/database failure returns fixed unavailable errors. Origin/CORS, body limits, no-cache behavior and consumer duties are detailed in [actor resolution](actor-resolution.md).
 
 | Method | Path                      | Contract                                                                                                                                            |
 | ------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,6 +29,8 @@
 Google local redirect lands directly on auth-service port 4001; no authorization code is forwarded through the frontend. LinkedIn callback remains planned. Verify the actual provider configuration and supported scopes during F02. OAuth login does not imply full LinkedIn profile-import access. Session transport/cookies and account linking depend on D08/D10.
 
 ## Profile service
+
+GET and PUT `/profile` are implemented locally on profile-service port 4002 for an existing owned master profile. The professional DTO contains only `id`, `fullName`, nullable `location`, nullable `professionalSummary` and `revision`. PUT requires these three professional fields plus `expectedRevision`; no client profile/user ID, contact data or unknown fields are accepted. All query parameters are rejected in this personal-only slice. The optional workspace header is a selector checked against verified ownership. The server-only actor adapter resolves each session afresh; profile use cases enforce action/resource/field checks and commit content-free audit capture before returning. Revision conflicts return 409; missing own profiles return 404 without creation. Contacts, sections, draft/setup and browser/gateway integration remain pending. See [profile contract and verification](profile-api.md).
 
 | Method       | Path                          | Contract / permission                                                               |
 | ------------ | ----------------------------- | ----------------------------------------------------------------------------------- |
@@ -143,6 +147,6 @@ F19 uses existing authorized storage presign with an import-specific purpose and
 
 `POST /internal/audit/events` on workspace-service at `127.0.0.1:4005` (no external `/api/v1` prefix and no gateway forwarding). Requires `X-Resume-Forge-Service: local-audit-relay` and `Authorization: Bearer <local server key>`. Unknown identity/bad credentials return 401 before parsing; Origin-bearing requests return 403. No CORS or public audit read API is enabled.
 
-Body: the existing AuditEventIntent fields (`eventId`, `actorUserId`, optional `targetUserId`, `workspaceType`, `workspaceId`, `action`, `resourceType`, `resourceId`, `outcome`, `occurredAt`, `correlationId`, optional allowlisted `metadata`), maximum 16 KiB. Unknown fields are rejected. This slice accepts only the approved successful individual-workspace intents whose actor owns the workspace; shared scope/denied events remain pending. The producer must already have verified the actor, action and resource when capturing the history.
+Body: the existing AuditEventIntent fields (`eventId`, `actorUserId`, optional `targetUserId`, `workspaceType`, `workspaceId`, `action`, `resourceType`, `resourceId`, `outcome`, `occurredAt`, `correlationId`, optional allowlisted `metadata`), maximum 16 KiB. Unknown fields are rejected. Local ingestion accepts approved successful individual-workspace intents whose actor owns the workspace, plus `authorization.denied`/`denied` intents whose resource is that owned workspace. Denied profile/foreign-workspace resource IDs, other failed outcomes and shared scope remain rejected. The producer must already have verified the actor, action and resource when capturing the history.
 
 Committed success: HTTP 200 `{ data: { eventId, duplicate } }`. Equivalent retries return the same event ID with `duplicate: true`; conflicting ID reuse returns 409. Errors are `{ error: { code } }`: 400 malformed JSON, 413 size, 415 media type, 422 invalid intent/scope, 503 temporary ingestion failure. Acknowledgement is sent only after SQL COMMIT. The client validates the bounded reply/event identity, rejects redirects, and retries authentication/unavailability failures through its durable outbox. This is a local credential and loopback policy only; production identity, scheduling and database privileges remain gated. See [setup and verification](database-foundation.md).

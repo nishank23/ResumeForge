@@ -38,6 +38,17 @@ export interface ApiError {
   };
 }
 
+// ── Professional profile boundary ────────────────────────────────────
+
+/** Base professional fields only. Protected contacts and auth identity are excluded. */
+export interface ProfessionalProfileDto {
+  readonly id: string;
+  readonly fullName: string;
+  readonly location: string | null;
+  readonly professionalSummary: string | null;
+  readonly revision: number;
+}
+
 // ── Resume & Task lifecycle statuses ──────────────────────────────────
 
 /** Resume lifecycle statuses from the data model. */

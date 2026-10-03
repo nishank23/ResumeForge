@@ -25,7 +25,10 @@
     "audit:local:init": "node scripts/init-local-audit.mjs",
     "audit:serve:local": "pnpm --filter @resume-forge/workspace-service... build && node scripts/start-local-audit.mjs",
     "db:runtime:init": "pnpm --filter @resume-forge/prisma-client... build && node scripts/init-runtime-db.mjs",
-    "db:test:roles": "pnpm --filter @resume-forge/workspace-service... build && node services/workspace-service/test/runtime-roles.test.mjs"
+    "db:test:roles": "pnpm --filter @resume-forge/workspace-service... build && node services/workspace-service/test/runtime-roles.test.mjs",
+    "audit:worker:local": "pnpm --filter @resume-forge/workspace-service... build && node scripts/work-local-audit.mjs",
+    "auth:local:init": "node scripts/init-local-auth.mjs",
+    "db:test:profile": "pnpm --filter @resume-forge/profile-service... build && pnpm --filter @resume-forge/auth-service build && pnpm --filter @resume-forge/workspace-service build && pnpm --filter @resume-forge/profile-service test:db"
   },
   "devDependencies": {
     "prettier": "^3.5.0",

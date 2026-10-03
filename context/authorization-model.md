@@ -2,6 +2,8 @@
 
 ## Enforcement contract
 
+Phase 1's local actor verification is implemented through the server-only [actor resolution boundary](../docs/actor-resolution.md). It verifies the caller service and live user session and returns only user/personal-workspace IDs plus expiry. This identity context grants no action, sharing or contact permission; consumer use cases still perform the remaining checks below. Shared-role proposals remain inactive. The local [professional profile API](../docs/profile-api.md) permits only owned `profile.read`/`profile.update` after scope/resource checks; contact and other actions remain inactive at that boundary.
+
 Authenticate actor → resolve workspace → verify active membership/personal ownership → resolve permitted target profile/resource → check action → project allowed fields → execute authorized use case → durably audit → serialize the allowed response.
 
 Repeat resource/access checks for downloads, resume versions, background jobs, task tokens, internal service reads, and MCP. UI capability flags are only hints. Unknown actions, workspace/role mismatches, suspended memberships, revoked grants, and absent policy mappings deny access.

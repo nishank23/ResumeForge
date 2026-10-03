@@ -52,4 +52,12 @@ The [data model](../data-model.md) adds proposed resume metadata/preferences, is
 - [x] Runtime entry points reject incorrect identities or missing/extra effective privileges; root/process database overrides cannot select administrative credentials.
 - [x] Verify scoped capture, duplicate rollback, real authenticated HTTP delivery, denied cross-service/DDL operations, future-object denial, column-grant drift and transactional/idempotent provisioning in disposable local PostgreSQL databases.
 
-Run `pnpm db:runtime:init` after local migrations and restart services. Profile capture uses INSERT-only outbox access; auth reads only onboarding columns from UserProfile. Full per-user policy, private repositories/routes, hosted provisioning and retention remain pending. The service grants are not row-level security or complete F03 acceptance. See [role setup and verification](../../docs/runtime-database-roles.md).
+Run `pnpm db:runtime:init` after local migrations and restart services. Profile capture uses INSERT-only outbox access; auth reads only onboarding columns from UserProfile. Professional-profile GET/PUT now have per-user policy and scoped queries; contacts/sections, shared policy, hosted provisioning and retention remain pending. The service grants are not row-level security or complete F03 acceptance. See [role setup and verification](../../docs/runtime-database-roles.md).
+
+## Private professional persistence — 2026-10-03
+
+- [x] Existing master-profile read/update uses verified actors and owned personal scope; shared role bundles remain inactive.
+- [x] Strict professional DTOs and write schemas exclude contacts, onboarding state, identities, embeddings and ownership fields. Concurrent writes use expected revision with one winner.
+- [x] Restricted profile queries, success capture and owned-workspace denial capture/delivery pass disposable database HTTP tests, including outbox COMMIT failure withholding reads and rolling back writes.
+
+Run `pnpm db:test:profile`: 13 passes. Creation/onboarding drafts, section/contact APIs and full F03 acceptance remain pending. See [API contract and checks](../../docs/profile-api.md).

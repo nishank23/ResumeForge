@@ -53,3 +53,12 @@ Shell session bootstrap, browser refresh/logout coordination and protected perso
 - [x] Send incomplete accounts to an authenticated setup entry; completed accounts enter their personal workspace. The entry explicitly states setup is not yet connected and offers the protected sample workspace. It does not save a profile or change onboarding status.
 
 These are browser navigation controls, not backend permission enforcement. No private profile/resume API is enabled; sample content remains unsaved. Standalone remotes remain synthetic previews without private service access. F02 stays in progress while LinkedIn, explicit linking, full provider verification and persisted onboarding remain incomplete.
+
+## P1.4 local server actor boundary — 2026-10-02
+
+- [x] Authenticate the local profile-service caller before parsing/lookup; separate its generated service credential from the actor access credential. Reject browser Origin requests and unknown body fields.
+- [x] Resolve the current persisted session and personal workspace with a minimal projection; never return identity email/name, provider data, profile/contact content, refresh/session identifiers or role bundles.
+- [x] Recheck expiry after database I/O and reject rotated/revoked/replayed/expired sessions or absent personal scope. Auth process restart invalidates old access grants. Database failure withholds identity and recovers on retry.
+- [x] Provide a server-only, noncached loopback adapter with bounded strict responses, timeout, redirect refusal and production guard. Preserve external browser CORS and refresh behavior.
+
+This completes the identity prerequisite for private profile use cases, not action/resource authorization or private route persistence. Hosted service identity/TLS/distributed session storage remain deferred. See [actor contract and verification](../../docs/actor-resolution.md).

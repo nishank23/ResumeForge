@@ -1,6 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client.js";
 export {
+  runAuditRelayWorker,
+  type AuditRelayWorkerOptions,
+} from "./audit-worker.js";
+export {
   runtimeRoleNames,
   RUNTIME_GRANTS,
   assertRuntimeDatabaseRole,
@@ -20,6 +24,26 @@ export {
 } from "./audit-delivery.js";
 
 /** Server-only client. Callers supply configuration; never export models to browser DTOs. */
-export function createDatabaseClient(connectionString: string): PrismaClient {
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+export function createDatabaseClient(
+  connectionString: string,
+  options: { timeoutMs?: number } = {},
+): PrismaClient {
+  const timeout = options.timeoutMs;
+  if (
+    timeout !== undefined &&
+    (!Number.isInteger(timeout) || timeout < 50 || timeout > 30_000)
+  )
+    throw new RangeError("Invalid database timeout");
+  return new PrismaClient({
+    adapter: new PrismaPg({
+      connectionString,
+      ...(timeout === undefined
+        ? {}
+        : {
+            connectionTimeoutMillis: timeout,
+            statement_timeout: timeout,
+            query_timeout: timeout + 1_000,
+          }),
+    }),
+  });
 }

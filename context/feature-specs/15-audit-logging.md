@@ -1,6 +1,6 @@
 # F15 — Audit Logging and Viewer
 
-**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; authenticated local HTTP transport implemented; scheduling/production identity/viewer pending
+**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; authenticated local HTTP transport implemented; local scheduling implemented; production identity/viewer pending
 
 ## Goal and dependencies
 
@@ -58,8 +58,18 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 
 `pnpm audit:deliver:local` now runs one bounded batch over authenticated loopback HTTP to workspace-service. The sole allowed local service identity is `local-audit-relay`, with a randomly generated server-only key stored in ignored `.local/audit-transport.env`; unknown service IDs, bad keys and browser-origin requests are rejected before ingestion. Requests are strictly validated and bounded to 16 KiB; replies to 1 KiB. Only a matching event acknowledgement after ledger COMMIT marks the outbox delivered.
 
-Automatic scheduling, production service identity/HTTPS policy, hosted privilege provisioning, denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
+Hosted supervision, production service identity/HTTPS policy, hosted privilege provisioning, broader denied-event capture, shared-workspace ingestion, service coverage, viewer and retention remain pending. The full Phase 4 acceptance checklist above is not complete.
 
 - [x] Local HTTP authentication/validation tests and disposable PostgreSQL HTTP recovery cases pass, including lost acknowledgement and ledger COMMIT failure. Manual commands and local-only limits are in [database notes](../../docs/database-foundation.md).
 
 - [x] Separate restricted local producer/relay/ingestor DB roles preserve capture→HTTP→ledger delivery while every normal runtime role is denied ledger UPDATE/DELETE/TRUNCATE. Producer outbox access is INSERT only; relay cannot modify intent payload/event identity. Hosted provisioning, viewer access and retention remain pending. See [runtime role verification](../../docs/runtime-database-roles.md).
+
+- [x] Automatic local relay scheduling uses the restricted role, fixed safe telemetry, bounded sequential passes and persisted retry/lease recovery; idle/active shutdown and restart after lost acknowledgements are verified. `pnpm audit:worker:local` starts the foreground worker; no hosted daemon/supervisor is installed. See [local worker](../../docs/database-foundation.md).
+
+## Private profile coverage — 2026-10-03
+
+- [x] Professional GET/PUT capture `profile.viewed`/`profile.updated` before a response escapes. Audit COMMIT failures withhold reads and roll back updates; no contact/professional text enters event metadata.
+- [x] Denied workspace selectors capture `authorization.denied` in the actor's verified own workspace. Restricted local HTTP ingestion accepts only those workspace-scoped denials alongside existing success intents; foreign/denied profile-resource IDs and conflicting identity reuse remain rejected.
+- [x] Verify capture→restricted relay→HTTP→ledger, retry/idempotency and rollback in `pnpm db:test:profile` (13 passes) and regress existing delivery in `pnpm db:test:audit` (12 passes).
+
+Contact/section routes, all-service denial coverage and the full Phase 4 viewer/retention acceptance remain pending. See [profile API](../../docs/profile-api.md).

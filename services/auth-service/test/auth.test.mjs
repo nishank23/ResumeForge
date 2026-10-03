@@ -5,6 +5,9 @@ import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { once } from "node:events";
+import { serve } from "@hono/node-server";
+import { createLocalActorResolver } from "@resume-forge/access-policy/server";
 import {
   createDatabaseClient,
   runtimeRoleNames,
@@ -65,6 +68,7 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
   const admin = new Client({ connectionString: url.href });
   let time = Date.now();
   let exchangeCalls = 0;
+  const profileServiceKey = randomBytes(32).toString("hex");
   let identity = {
     sub: "synthetic-google",
     email: "google@example.invalid",
@@ -87,6 +91,7 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
     provider,
     appOrigin: "http://localhost:3000",
     now: () => time,
+    profileServiceKey,
   });
   const request = (route, options) =>
     app.request(`http://localhost:4001/api/v1/auth/${route}`, options);
@@ -237,6 +242,258 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
         assert.equal((await request("me", { headers })).status, 401);
         assert.equal((await refresh(initial)).status, 401);
         assert.equal((await refresh(current)).status, 401);
+      },
+    );
+    await t.test(
+      "restricted real HTTP actor resolution is minimal and derives each user's personal scope",
+      async () => {
+        const signedIn = await finish(await begin());
+        const response = await refresh(cookie(signedIn, "refresh_token"));
+        const { data } = await response.json();
+        const me = await (
+          await request("me", {
+            headers: { Authorization: `Bearer ${data.accessToken}` },
+          })
+        ).json();
+        const revision = await db.session.count();
+        const server = serve({
+          fetch: app.fetch,
+          hostname: "127.0.0.1",
+          port: 0,
+        });
+        await once(server, "listening");
+        const endpoint = `http://127.0.0.1:${server.address().port}/internal/auth/resolve`;
+        try {
+          const resolve = createLocalActorResolver({
+            endpoint,
+            key: profileServiceKey,
+            now: () => time,
+          });
+          const result = await resolve(`Bearer ${data.accessToken}`);
+          assert.deepEqual(result, {
+            status: "authenticated",
+            actor: {
+              userId: me.data.id,
+              personalWorkspaceId: me.data.workspaceId,
+              expiresAt: time + 300000,
+            },
+          });
+          assert.equal(
+            await db.session.count(),
+            revision,
+            "Resolution must not rotate/create sessions",
+          );
+          const forged = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${profileServiceKey}`,
+              "X-Resume-Forge-Service": "local-profile-service",
+              "Content-Type": "application/json",
+              "X-User-Id": randomUUID(),
+              "X-Workspace-Id": randomUUID(),
+              "X-Role": "ORG_OWNER",
+            },
+            body: JSON.stringify({ accessToken: data.accessToken }),
+          });
+          assert.equal(forged.status, 200);
+          assert.deepEqual(await forged.json(), { data: result.actor });
+          identity = {
+            sub: "synthetic-google-bob",
+            email: "bob@example.invalid",
+            email_verified: true,
+            name: "Synthetic Bob",
+          };
+          const bobSignedIn = await finish(await begin());
+          const bobResponse = await refresh(
+            cookie(bobSignedIn, "refresh_token"),
+          );
+          const bobToken = (await bobResponse.json()).data.accessToken;
+          const bob = await resolve(`Bearer ${bobToken}`);
+          assert.equal(bob.status, "authenticated");
+          assert.notEqual(bob.actor.userId, result.actor.userId);
+          assert.notEqual(
+            bob.actor.personalWorkspaceId,
+            result.actor.personalWorkspaceId,
+          );
+          assert.deepEqual(await resolve(`Bearer ${data.accessToken}`), result);
+          const restarted = createAuthApp({
+            db: runtimeDb,
+            profileServiceKey,
+            appOrigin: "http://localhost:3000",
+            now: () => time,
+          });
+          const afterRestart = await restarted.request(
+            "/internal/auth/resolve",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${profileServiceKey}`,
+                "X-Resume-Forge-Service": "local-profile-service",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ accessToken: data.accessToken }),
+            },
+          );
+          assert.equal(
+            afterRestart.status,
+            401,
+            "Process-local access tokens are invalidated on auth restart",
+          );
+        } finally {
+          identity = {
+            sub: "synthetic-google",
+            email: "google@example.invalid",
+            email_verified: true,
+            name: "Synthetic User",
+          };
+          await new Promise((resolve) => {
+            server.close(resolve);
+            server.closeAllConnections();
+          });
+        }
+      },
+    );
+    await t.test(
+      "internal resolution rechecks expiry, refresh rotation, replay and logout",
+      async () => {
+        const internal = (token) =>
+          app.request("/internal/auth/resolve", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${profileServiceKey}`,
+              "X-Resume-Forge-Service": "local-profile-service",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ accessToken: token }),
+          });
+        const signIn = async () => {
+          const signedIn = await finish(await begin());
+          const response = await refresh(cookie(signedIn, "refresh_token"));
+          return {
+            credential: cookie(response, "refresh_token"),
+            token: (await response.json()).data.accessToken,
+          };
+        };
+        let current = await signIn();
+        assert.equal((await internal(current.token)).status, 200);
+        const rotated = await refresh(current.credential);
+        const next = {
+          credential: cookie(rotated, "refresh_token"),
+          token: (await rotated.json()).data.accessToken,
+        };
+        assert.equal((await internal(current.token)).status, 401);
+        assert.equal((await internal(next.token)).status, 200);
+        assert.equal((await refresh(current.credential)).status, 401);
+        assert.equal((await internal(next.token)).status, 401);
+        current = await signIn();
+        await request("logout", {
+          method: "POST",
+          headers: {
+            Cookie: current.credential,
+            Origin: "http://localhost:3000",
+          },
+        });
+        assert.equal((await internal(current.token)).status, 401);
+        current = await signIn();
+        time += 300001;
+        assert.equal((await internal(current.token)).status, 401);
+        current = await signIn();
+        const user = await db.user.findUniqueOrThrow({
+          where: { email: "google@example.invalid" },
+        });
+        await db.session.updateMany({
+          where: { userId: user.id },
+          data: { expiresAt: new Date(time - 1) },
+        });
+        assert.equal((await internal(current.token)).status, 401);
+      },
+    );
+    await t.test(
+      "database failure withholds actor identity and recovers on retry",
+      async () => {
+        const faultDb = createDatabaseClient(runtimeUrl.href);
+        const faultApp = createAuthApp({
+          db: faultDb,
+          provider,
+          profileServiceKey,
+          appOrigin: "http://localhost:3000",
+          now: () => time,
+        });
+        try {
+          const start = await faultApp.request("/api/v1/auth/google/url");
+          const state = new URL((await start.json()).url).searchParams.get(
+            "state",
+          );
+          const signedIn = await faultApp.request(
+            `/api/v1/auth/google/callback?state=${state}&code=synthetic-code`,
+            { headers: { Cookie: cookie(start, "oauth_binding") } },
+          );
+          const refreshed = await faultApp.request("/api/v1/auth/refresh", {
+            method: "POST",
+            headers: {
+              Cookie: cookie(signedIn, "refresh_token"),
+              Origin: "http://localhost:3000",
+            },
+          });
+          const accessToken = (await refreshed.json()).data.accessToken;
+          const original = faultDb.session.findUnique;
+          faultDb.session.findUnique = async () => {
+            throw new Error("private database/connection information");
+          };
+          const resolve = () =>
+            faultApp.request("/internal/auth/resolve", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${profileServiceKey}`,
+                "X-Resume-Forge-Service": "local-profile-service",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ accessToken }),
+            });
+          const failure = await resolve();
+          assert.equal(failure.status, 503);
+          assert.deepEqual(await failure.json(), {
+            error: { code: "auth_unavailable" },
+          });
+          faultDb.session.findUnique = original;
+          assert.equal((await resolve()).status, 200);
+          const owner = await db.user.findUniqueOrThrow({
+            where: { email: "google@example.invalid" },
+            include: { personalWorkspace: true },
+          });
+          const workspace = owner.personalWorkspace;
+          assert.ok(workspace);
+          await db.workspace.delete({ where: { id: workspace.id } });
+          try {
+            assert.equal(
+              (await resolve()).status,
+              401,
+              "Absent authoritative personal scope denies actor resolution",
+            );
+          } finally {
+            await db.workspace.create({
+              data: {
+                id: workspace.id,
+                type: "individual",
+                personalOwnerUserId: owner.id,
+              },
+            });
+          }
+          assert.equal((await resolve()).status, 200);
+          faultDb.session.findUnique = async (...args) => {
+            const value = await original(...args);
+            time += 300001;
+            return value;
+          };
+          assert.equal(
+            (await resolve()).status,
+            401,
+            "Access grant expiry is rechecked after database I/O",
+          );
+          faultDb.session.findUnique = original;
+        } finally {
+          await faultDb.$disconnect();
+        }
       },
     );
     await t.test(

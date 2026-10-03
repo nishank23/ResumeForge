@@ -33,6 +33,8 @@ Show initial loading, unsaved/saving/saved, validation errors, server/network fa
 
 AI resume creation is F06; editing a completed profile is F12; archive import is F16.
 
+2026-10-03 prerequisite: private professional GET/PUT now work for an existing owned master profile, with revisions and atomic audit capture. They do not create a missing profile, save a partial wizard draft, update contacts/sections or set completion state. This feature remains Not started; [profile API verification](../../docs/profile-api.md) covers the backend prerequisite only.
+
 ## Profile-first builder handoff — 2026-09-29 planning update
 
 Use the selected shared UI styling and purposeful step motion. Completing the wizard offers a future handoff to basic resume creation or JD tailoring; it does not call AI or fabricate profile facts. Resume-section prompts are F06/F08, not implicit AI writing into onboarding fields.

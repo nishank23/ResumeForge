@@ -1,6 +1,7 @@
 # Error and Fix Log
 
-**Last updated:** 2026-09-29  
+**Last updated:** 2026-10-02
+
 **Purpose:** Canonical register of technical, build, type, and runtime errors encountered during `resume-forge` implementation, their root causes, exact fixes applied, and current verification status.
 
 ---
@@ -130,3 +131,11 @@ Browser review found app-level utility classes missing from the shared Tailwind 
 ### E10 — Mobile creation button clipping and tablet wordmark wrap
 
 At 390px, the upstream inline PromptHero input/button overflowed its clipped panel. The shared wrapper stylesheet now stacks those controls on narrow screens. At 800px, the wordmark wrapped in the narrower sidebar; adjusted its spacing and prevented wrapping. See the latest [verification record](../docs/ui-redesign-review.md).
+
+### E11 — Optional telemetry skipped audit worker delivery
+
+- **Phase/task:** P1.3 automatic local audit relay.
+- **Symptom:** Workers without an onBatch callback polled without executing the delivery batch; a fake-clock database test stalled.
+- **Cause:** `onBatch?.(await runBatch())` skips argument evaluation when the optional callback is absent.
+- **Fix:** Await `runBatch()` unconditionally, then call the optional observer. Added an explicit no-observer regression case. Interrupted tests were stopped and the verified synthetic database/temporary roles were removed; no development data was reset.
+- **Verification:** Worker/unit tests pass; disposable restricted-role tests pass scheduled delivery and restart/lease recovery. `pnpm check` and `pnpm test` pass. **Fixed and verified.**

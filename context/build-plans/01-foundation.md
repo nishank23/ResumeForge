@@ -37,7 +37,10 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [x] Verify bounded local outbox delivery, persisted retry/lease recovery and workspace-owned idempotent personal ingestion.
 - [x] Verify authenticated local HTTP audit transport, bounded validation/acknowledgements, timeout/retry and ingestion COMMIT-failure recovery.
 - [x] Enforce and verify distinct restricted local auth/profile/relay/ingestor DB roles, minimal onboarding projection, append-only runtime ledger access and guarded startup without admin fallback.
-- [ ] Add automatic delivery scheduling and private-route capture integration; hosted runtime roles/production service identity remain deployment prerequisites.
+- [x] Verify automatic local audit relay passes with nonoverlap, bounded batches/IO waits, graceful shutdown and durable restart/retry/lease recovery.
+- [x] Resolve private-service actors through authenticated local HTTP with minimal session/workspace projection, expiry/revocation checks and unavailable-peer failure; no client identity/role claims or shared roles are trusted.
+- [x] Integrate private professional-profile GET/PUT with verified actors, scoped action/ownership checks, revision conflicts, contact-free DTOs and transactional audit; verify fail-closed reads, rollback and owned-workspace denial delivery.
+- [ ] Extend private-route policy/capture to contacts and sections; hosted scheduling supervision/runtime roles/production service identity remain deployment prerequisites.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)

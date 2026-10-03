@@ -18,6 +18,7 @@ The callback is now a GET handled by the auth service, replacing the unfinished 
 pnpm db:local:start
 pnpm db:migrate
 pnpm db:runtime:init
+pnpm auth:local:init
 pnpm dev
 ```
 
@@ -38,6 +39,8 @@ On 2026-10-01 the browser handoff reached Google, which returned `invalid_client
 Follow-up: the user updated the environment. The corrected ID format and live authorization endpoint were verified without printing credentials; the endpoint returned HTTP 200 with S256 PKCE and the documented callback. Google Console registration and successful consent remain manual checks.
 
 ## Manual session checks
+
+The local server-to-server actor boundary is now available independently of browser session summaries. See [actor resolution](actor-resolution.md) for service credential initialization, internal denial checks and restricted database verification. It does not enable profile persistence or change OAuth scopes.
 
 Protected-routing checks (2026-10-02):
 

@@ -8,7 +8,7 @@ import { createGoogleProvider } from "./google.js";
 import { createAuthApp } from "./app.js";
 
 const config = loadConfig();
-const db = createDatabaseClient(config.DATABASE_URL);
+const db = createDatabaseClient(config.DATABASE_URL, { timeoutMs: 3_000 });
 try {
   await assertRuntimeDatabaseRole(db, "auth");
 } catch {
@@ -26,7 +26,12 @@ const provider =
         `${origin}/api/v1/auth/google/callback`,
       )
     : undefined;
-const app = createAuthApp({ db, provider, appOrigin: "http://localhost:3000" });
+const app = createAuthApp({
+  db,
+  provider,
+  appOrigin: "http://localhost:3000",
+  profileServiceKey: config.profileServiceKey,
+});
 serve(
   { fetch: app.fetch, port: config.AUTH_SERVICE_PORT, hostname: "127.0.0.1" },
   () => {

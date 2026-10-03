@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { PERMISSION_NAMES, authorizePersonalScope } from "../dist/index.js";
+import {
+  PERMISSION_NAMES,
+  authorizePersonalScope,
+  authorizePersonalProfileAction,
+} from "../dist/index.js";
 
 const ownWorkspace = {
   id: "ws-personal-alice",
@@ -109,4 +113,57 @@ test("fails closed for blank authoritative identifiers", () => {
     }),
     { allowed: false, code: "invalid_scope" },
   );
+});
+
+test("only professional read/update actions are enabled for the personal owner", () => {
+  for (const permission of ["profile.read", "profile.update"])
+    assert.equal(
+      authorizePersonalProfileAction({
+        permission,
+        actorUserId: "user-alice",
+        workspace: ownWorkspace,
+        resource: ownResource,
+      }).allowed,
+      true,
+    );
+  for (const permission of [
+    "profile.create",
+    "profile.contact.read",
+    "profile.delete",
+    "coverletter.read",
+    "audit.view",
+    "unknown",
+  ])
+    assert.deepEqual(
+      authorizePersonalProfileAction({
+        permission,
+        actorUserId: "user-alice",
+        workspace: ownWorkspace,
+      }),
+      { allowed: false, code: "action_not_allowed" },
+    );
+});
+
+test("an enabled action never bypasses owner/resource or shared-workspace scope checks", () => {
+  for (const request of [
+    { actorUserId: "user-bob", workspace: ownWorkspace },
+    {
+      actorUserId: "user-alice",
+      workspace: { ...ownWorkspace, type: "organization" },
+    },
+    {
+      actorUserId: "user-alice",
+      workspace: { ...ownWorkspace, type: "vendor" },
+    },
+    {
+      actorUserId: "user-alice",
+      workspace: ownWorkspace,
+      resource: { ...ownResource, ownerUserId: "user-bob" },
+    },
+  ])
+    assert.equal(
+      authorizePersonalProfileAction({ permission: "profile.read", ...request })
+        .allowed,
+      false,
+    );
 });

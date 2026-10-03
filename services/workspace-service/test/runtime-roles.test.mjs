@@ -13,6 +13,7 @@ import {
   withPersonalAuditTransaction,
   deliverAuditOutbox,
   createLocalAuditHttpTransport,
+  runAuditRelayWorker,
 } from "@resume-forge/prisma-client";
 import {
   Client,
@@ -420,6 +421,165 @@ test("restricted runtime roles enforce ownership and append-only audit boundarie
           );
         } finally {
           await admin.query(`DROP ROLE "${collision.auth}"`);
+        }
+      },
+    );
+    await t.test(
+      "scheduled passes preserve retry/leases across worker restart without replaying domain work",
+      async () => {
+        const events = Array.from({ length: 7 }, () => intent());
+        for (const event of events)
+          await withPersonalAuditTransaction(
+            databases.profile,
+            user.id,
+            event,
+            (tx) =>
+              tx.userProfile.update({
+                where: { id: profile.id },
+                data: { revision: { increment: 1 } },
+              }),
+          );
+        const revision = (
+          await owner.userProfile.findUniqueOrThrow({
+            where: { id: profile.id },
+          })
+        ).revision;
+        const key = randomBytes(32).toString("hex");
+        const app = createWorkspaceAuditApp({
+          db: databases.auditIngest,
+          relayKey: key,
+        });
+        let loseReply = true;
+        const server = serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          fetch: async (request) => {
+            const response = await app.fetch(request);
+            if (loseReply && response.status === 200) {
+              loseReply = false;
+              return new Response("synthetic lost acknowledgement");
+            }
+            return response;
+          },
+        });
+        await once(server, "listening");
+        try {
+          const send = createLocalAuditHttpTransport({
+            endpoint: `http://127.0.0.1:${server.address().port}/internal/audit/events`,
+            key,
+          });
+          let time = Date.now() + 86400000;
+          const now = () => new Date(time);
+          const options = { batchSize: 5, leaseMs: 120000, now };
+          const stop = new AbortController();
+          let first;
+          await runAuditRelayWorker(
+            () => deliverAuditOutbox(databases.auditRelay, send, options),
+            {
+              signal: stop.signal,
+              onBatch: (result) => {
+                first = result;
+                stop.abort();
+              },
+              wait: async () => assert.fail("No new poll after stop"),
+            },
+          );
+          assert.equal(first.claimed, 5);
+          assert.equal(first.retried, 1);
+          const crashed = await owner.auditOutbox.findFirstOrThrow({
+            where: { deliveryState: "pending", attempts: 0 },
+          });
+          await owner.auditOutbox.update({
+            where: { id: crashed.id },
+            data: {
+              deliveryState: "delivering",
+              leaseToken: randomUUID(),
+              leaseExpiresAt: new Date(time + 3000),
+              attempts: 1,
+            },
+          });
+          const retry = new AbortController();
+          const counts = [];
+          await runAuditRelayWorker(
+            async () => {
+              const result = await deliverAuditOutbox(
+                databases.auditRelay,
+                send,
+                options,
+              );
+              counts.push(result.claimed);
+              if (counts.length > 5) {
+                retry.abort();
+                assert.fail("Worker must recover within bounded passes");
+              }
+              const remaining = await owner.auditOutbox.count({
+                where: { deliveryState: { in: ["pending", "delivering"] } },
+              });
+              if (remaining === 0) retry.abort();
+              return result;
+            },
+            {
+              signal: retry.signal,
+              wait: async (ms) => {
+                time += ms;
+              },
+            },
+          );
+          assert.ok(counts.every((count) => count <= 5));
+          assert.equal(counts.length, 2);
+          assert.equal(
+            await owner.auditEvent.count({
+              where: { id: { in: events.map((event) => event.eventId) } },
+            }),
+            events.length,
+          );
+          assert.equal(
+            await owner.auditOutbox.count({
+              where: { deliveryState: { in: ["pending", "delivering"] } },
+            }),
+            0,
+          );
+          assert.equal(
+            (
+              await owner.userProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).revision,
+            revision,
+          );
+          assert.equal(
+            (
+              await owner.auditOutbox.findUniqueOrThrow({
+                where: { id: crashed.id },
+              })
+            ).attempts,
+            2,
+          );
+        } finally {
+          await new Promise((resolve) => {
+            server.close(resolve);
+            server.closeAllConnections();
+          });
+        }
+      },
+    );
+    await t.test(
+      "worker database deadlines cancel slow SQL and leave the connection usable",
+      async () => {
+        const runtime = new URL(url);
+        runtime.username = names.auditRelay;
+        runtime.password = passwords.auditRelay;
+        const timed = createDatabaseClient(runtime.href, { timeoutMs: 250 });
+        try {
+          await timed.$queryRaw`SELECT 1 AS ready`;
+          const settings = await timed.$queryRaw`SHOW statement_timeout`;
+          assert.equal(settings[0].statement_timeout, "250ms");
+          await assert.rejects(timed.$queryRaw`SELECT 1 FROM pg_sleep(1)`);
+          assert.deepEqual(await timed.$queryRaw`SELECT 1 AS healthy`, [
+            { healthy: 1 },
+          ]);
+        } finally {
+          await timed.$disconnect();
         }
       },
     );
