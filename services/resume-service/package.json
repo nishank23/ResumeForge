@@ -8,8 +8,8 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "node --test test/extractor.test.mjs test/parser.test.mjs test/route.test.mjs test/jd-parser.test.mjs",
-    "test:db": "node --test test/resume.test.mjs test/jd.test.mjs"
+    "test": "node --test test/extractor.test.mjs test/parser.test.mjs test/route.test.mjs test/jd-parser.test.mjs test/generator.test.mjs",
+    "test:db": "node --test test/resume.test.mjs test/jd.test.mjs test/generator.db.test.mjs"
   },
   "dependencies": {
     "@resume-forge/access-policy": "workspace:*",

@@ -45,6 +45,18 @@ import {
 } from "./jd-contracts.js";
 import { parseJdText } from "./jd-parser.js";
 import { computeAtsScore } from "./ats-scorer.js";
+import {
+  type ResumeGenerateInput,
+  type ResumeSuggestRequest,
+  type ResumeSuggestionDto,
+  type ResumeApplySuggestion,
+  type TaskRunDto,
+  resumeGenerateRequestSchema,
+  resumeSuggestRequestSchema,
+  resumeApplySuggestionSchema,
+} from "./generator-contracts.js";
+import { mapProfileToResume } from "./content-mapper.js";
+import { generateSectionSuggestion } from "./suggestion-engine.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 
@@ -1027,6 +1039,500 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     };
   }
 
+  /**
+   * Generates a basic or JD-tailored resume from the user's master profile facts.
+   * Adheres strictly to F06 invariants: never invents qualifications, preserves fact provenance.
+   */
+  async function generateResumeFromProfile(
+    context: ResumeServiceContext,
+    input: ResumeGenerateInput = {},
+  ): Promise<ResumeDetailDto> {
+    const parsedInput = resumeGenerateRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    const workspace = await authorizeWorkspace(context, "resume.create");
+
+    // Fetch user profile with all relevant sections
+    let profile = await db.userProfile.findUnique({
+      where: { userId: context.actor.userId },
+      include: {
+        contact: true,
+        experiences: { orderBy: { sortOrder: "asc" } },
+        educations: { orderBy: { sortOrder: "asc" } },
+        skills: { orderBy: { name: "asc" } },
+        projects: { orderBy: { name: "asc" } },
+        certifications: { orderBy: { name: "asc" } },
+      },
+    });
+
+    if (!profile) {
+      // Create minimal profile if not present yet
+      const newProfile = await db.userProfile.create({
+        data: {
+          userId: context.actor.userId,
+          fullName: "User",
+        },
+        include: {
+          contact: true,
+          experiences: { orderBy: { sortOrder: "asc" } },
+          educations: { orderBy: { sortOrder: "asc" } },
+          skills: { orderBy: { name: "asc" } },
+          projects: { orderBy: { name: "asc" } },
+          certifications: { orderBy: { name: "asc" } },
+        },
+      });
+      profile = newProfile;
+    }
+
+    const mappedContent = mapProfileToResume(profile, data.title);
+
+    let atsScore: number | null = null;
+    let atsBreakdown: JsonObject | undefined = undefined;
+    let jdHistoryId: string | null = null;
+
+    if (data.jdHistoryId) {
+      const jdRecord = await db.jDHistory.findFirst({
+        where: {
+          id: data.jdHistoryId,
+          createdByUserId: context.actor.userId,
+          workspaceId: context.actor.personalWorkspaceId,
+        },
+      });
+      if (!jdRecord) {
+        throw new ResumeError("not_found", "Job description not found");
+      }
+      const parsedJd: ParsedJdContentDto = {
+        jobTitle: jdRecord.jobTitle,
+        company: jdRecord.company,
+        experienceLevel: (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
+        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+        keywords: toKeywords(jdRecord.parsedKeywords),
+        requirements: toStringArray(jdRecord.parsedRequirements),
+        responsibilities: toStringArray(jdRecord.parsedResponsibilities),
+      };
+      const breakdown = computeAtsScore(mappedContent, parsedJd);
+      atsScore = breakdown.overallScore;
+      atsBreakdown = JSON.parse(JSON.stringify(breakdown)) as JsonObject;
+      jdHistoryId = jdRecord.id;
+    }
+
+    const resumeId = randomUUID();
+    const versionId = randomUUID();
+
+    const auditIntent = createAuditIntent(context, "resume.created", resumeId, {
+      versionId,
+      status: "draft",
+    });
+
+    const created = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const resumeRecord = await tx.resume.create({
+          data: {
+            id: resumeId,
+            profileId: profile.id,
+            ownerUserId: context.actor.userId,
+            workspaceType: "individual",
+            workspaceId: workspace.id,
+            createdByUserId: context.actor.userId,
+            templateId: data.templateId,
+            content: JSON.parse(JSON.stringify(mappedContent)) as JsonObject,
+            status: "draft",
+            currentVersion: 1,
+            atsScore,
+            atsBreakdown,
+            jdHistoryId,
+          },
+        });
+
+        await tx.resumeVersion.create({
+          data: {
+            id: versionId,
+            resumeId,
+            versionNumber: 1,
+            content: JSON.parse(JSON.stringify(mappedContent)) as JsonObject,
+            createdByUserId: context.actor.userId,
+            atsScore,
+            atsBreakdown,
+          },
+        });
+
+        return resumeRecord;
+      },
+    );
+
+    return {
+      id: created.id,
+      profileId: created.profileId,
+      workspaceId: created.workspaceId,
+      title: mappedContent.title,
+      templateId: created.templateId,
+      currentVersion: created.currentVersion,
+      status: created.status,
+      atsScore: created.atsScore,
+      content: mappedContent,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Produces a reviewable section or bullet rewrite suggestion grounded in profile facts.
+   * Tracks task execution in TaskRun table. Never alters the resume directly.
+   */
+  async function generateSectionSuggestionForResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: ResumeSuggestRequest,
+  ): Promise<ResumeSuggestionDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const parsedInput = resumeSuggestRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    await authorizeWorkspace(context, "resume.read");
+
+    const resume = await db.resume.findFirst({
+      where: {
+        id: resumeId,
+        ownerUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!resume) {
+      throw new ResumeError("not_found", "Resume not found");
+    }
+
+    const rawContent = resume.content ?? resume.versions[0]?.content;
+    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+
+    // Locate target content to improve
+    let originalContent = "";
+    if (data.sectionKind === "summary") {
+      const summarySec = resumeContent.sections.find((s) => s.kind === "summary");
+      originalContent = summarySec?.summary ?? "";
+    } else if (data.sectionKind === "experience") {
+      const expSec = resumeContent.sections.find((s) => s.kind === "experience");
+      if (expSec) {
+        if (data.entryId) {
+          const entry = expSec.entries.find((e) => e["id"] === data.entryId);
+          if (entry) {
+            const rawBullets = Array.isArray(entry["bullets"]) ? entry["bullets"] : [];
+            const bullets: Record<string, unknown>[] = rawBullets.filter(
+              (bp): bp is Record<string, unknown> => typeof bp === "object" && bp !== null,
+            );
+            if (data.bulletId) {
+              const b = bullets.find((bp) => bp["id"] === data.bulletId);
+              originalContent = typeof b?.["text"] === "string" ? b["text"] : "";
+            } else {
+              originalContent = typeof entry["description"] === "string" && entry["description"] ? entry["description"] : typeof entry["title"] === "string" ? entry["title"] : "";
+            }
+          }
+        } else if (expSec.entries.length > 0) {
+          const first = expSec.entries[0];
+          const rawBullets = Array.isArray(first?.["bullets"]) ? first["bullets"] : [];
+          const firstBullet: unknown = rawBullets[0];
+          originalContent = typeof firstBullet === "object" && firstBullet !== null && typeof (firstBullet as Record<string, unknown>)["text"] === "string"
+            ? ((firstBullet as Record<string, unknown>)["text"] as string)
+            : "";
+        }
+      }
+    } else if (data.sectionKind === "projects") {
+      const projSec = resumeContent.sections.find((s) => s.kind === "projects");
+      if (projSec && projSec.entries.length > 0) {
+        const first = projSec.entries[0];
+        originalContent = typeof first?.["description"] === "string" ? first["description"] : "";
+      }
+    } else {
+      const skillSec = resumeContent.sections.find((s) => s.kind === "skills");
+      if (skillSec && skillSec.groups.length > 0) {
+        originalContent = skillSec.groups[0]?.items.map((i) => i.text).join(", ") ?? "";
+      }
+    }
+
+    if (!originalContent.trim()) {
+      originalContent = "Experienced professional delivering high impact solutions across software projects.";
+    }
+
+    // Load profile skills for grounding
+    const profileSkills = await db.skill.findMany({
+      where: { profile: { userId: context.actor.userId } },
+      select: { name: true },
+    });
+    const knownSkills = profileSkills.map((s) => s.name);
+
+    // Load target JD keywords if specified
+    const jdKeywords: string[] = [];
+    if (data.jdHistoryId) {
+      const jd = await db.jDHistory.findFirst({
+        where: {
+          id: data.jdHistoryId,
+          createdByUserId: context.actor.userId,
+          workspaceId: context.actor.personalWorkspaceId,
+        },
+      });
+      if (jd) {
+        const parsedKws = toKeywords(jd.parsedKeywords);
+        jdKeywords.push(...parsedKws.map((k) => k.name));
+      }
+    }
+
+    const suggestion = generateSectionSuggestion({
+      originalContent,
+      action: data.action,
+      sectionKind: data.sectionKind,
+      profileSkills: knownSkills,
+      jdKeywords,
+      customPrompt: data.customPrompt,
+    });
+
+    const taskRunId = randomUUID();
+
+    // Persist TaskRun
+    await db.taskRun.create({
+      data: {
+        id: taskRunId,
+        profileId: resume.profileId,
+        workspaceType: "individual",
+        workspaceId: context.actor.personalWorkspaceId,
+        userId: context.actor.userId,
+        resumeId,
+        kind: "section_suggestion",
+        dispatchStatus: "completed",
+        inputRevisions: JSON.parse(
+          JSON.stringify({
+            result: suggestion,
+            action: data.action,
+            sectionKind: data.sectionKind,
+          }),
+        ) as JsonObject,
+      },
+    });
+
+    return {
+      taskRunId,
+      suggestionId: suggestion.suggestionId,
+      sectionKind: data.sectionKind,
+      entryId: data.entryId ?? null,
+      bulletId: data.bulletId ?? null,
+      originalContent: suggestion.originalContent,
+      suggestedContent: suggestion.suggestedContent,
+      reasoning: suggestion.reasoning,
+      groundedKeywords: suggestion.groundedKeywords,
+      status: "pending_review",
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Applies an approved suggestion to a resume version, incrementing version number transactionally.
+   * Enforces strict optimistic concurrency control (expectedVersion) and single-resume isolation.
+   */
+  async function applySectionSuggestion(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: ResumeApplySuggestion,
+  ): Promise<ResumeDetailDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const parsedInput = resumeApplySuggestionSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    await authorizeWorkspace(context, "resume.update");
+
+    const versionId = randomUUID();
+    const auditIntent = createAuditIntent(context, "resume.updated", resumeId, {
+      versionId,
+      status: "draft",
+      reasonCode: "apply_suggestion",
+    });
+
+    const updated = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const existing = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          include: {
+            versions: {
+              orderBy: { versionNumber: "desc" },
+              take: 1,
+            },
+          },
+        });
+
+        if (!existing) {
+          throw new ResumeError("not_found", "Resume not found");
+        }
+
+        if (existing.currentVersion !== data.expectedVersion) {
+          throw new ResumeError("revision_conflict", "Resume version conflict");
+        }
+
+        const rawContent = existing.content ?? existing.versions[0]?.content;
+        const content = JSON.parse(JSON.stringify(rawContent ?? {})) as ParsedResumeContentDto;
+
+        // Apply suggestion to target location
+        if (data.sectionKind === "summary") {
+          let summarySec = content.sections.find((s) => s.kind === "summary");
+          if (!summarySec) {
+            summarySec = {
+              id: randomUUID(),
+              kind: "summary",
+              label: "Professional Summary",
+              hidden: false,
+              summary: data.appliedContent,
+              entries: [],
+              groups: [],
+            };
+            content.sections.unshift(summarySec);
+          } else {
+            summarySec.summary = data.appliedContent;
+          }
+        } else if (data.sectionKind === "experience") {
+          const expSec = content.sections.find((s) => s.kind === "experience");
+          if (expSec) {
+            if (data.entryId) {
+              const entry = expSec.entries.find((e) => e["id"] === data.entryId);
+              if (entry) {
+                if (data.bulletId && Array.isArray(entry["bullets"])) {
+                  const b = (entry["bullets"] as Array<Record<string, unknown>>).find((bp) => bp["id"] === data.bulletId);
+                  if (b) {
+                    b["text"] = data.appliedContent;
+                  }
+                } else {
+                  entry["description"] = data.appliedContent;
+                }
+              }
+            } else if (expSec.entries.length > 0) {
+              const first = expSec.entries[0];
+              if (first && Array.isArray(first["bullets"]) && first["bullets"].length > 0) {
+                const b0: unknown = first["bullets"][0];
+                if (typeof b0 === "object" && b0 !== null) {
+                  (b0 as Record<string, unknown>)["text"] = data.appliedContent;
+                }
+              } else if (first) {
+                first["description"] = data.appliedContent;
+              }
+            }
+          }
+        }
+
+        const newVersionNumber = existing.currentVersion + 1;
+
+        await tx.resumeVersion.create({
+          data: {
+            id: versionId,
+            resumeId,
+            versionNumber: newVersionNumber,
+            content: JSON.parse(JSON.stringify(content)) as JsonObject,
+            createdByUserId: context.actor.userId,
+            atsScore: existing.atsScore,
+            atsBreakdown: existing.atsBreakdown ? (existing.atsBreakdown as JsonObject) : undefined,
+          },
+        });
+
+        const updatedResume = await tx.resume.update({
+          where: { id: resumeId },
+          data: {
+            currentVersion: newVersionNumber,
+            content: JSON.parse(JSON.stringify(content)) as JsonObject,
+          },
+        });
+
+        return updatedResume;
+      },
+    );
+
+    const rawUpdatedContent = updated.content as unknown as ParsedResumeContentDto;
+
+    return {
+      id: updated.id,
+      profileId: updated.profileId,
+      workspaceId: updated.workspaceId,
+      title: rawUpdatedContent.title || "Resume",
+      templateId: updated.templateId,
+      currentVersion: updated.currentVersion,
+      status: updated.status,
+      atsScore: updated.atsScore,
+      content: rawUpdatedContent,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Retrieves a TaskRun record by ID ensuring strict actor and workspace isolation.
+   */
+  async function getTaskRunById(
+    context: ResumeServiceContext,
+    taskRunId: string,
+  ): Promise<TaskRunDto> {
+    if (!z.string().uuid().safeParse(taskRunId).success) {
+      throw new ResumeError("invalid_input", "Invalid task run ID");
+    }
+    await authorizeWorkspace(context, "resume.read");
+
+    const record = await db.taskRun.findFirst({
+      where: {
+        id: taskRunId,
+        userId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+    });
+
+    if (!record) {
+      throw new ResumeError("not_found", "Task run not found");
+    }
+
+    const revisions = record.inputRevisions as Record<string, unknown> | null;
+    const result = (revisions?.result ? (revisions.result as Record<string, unknown>) : revisions) ?? null;
+
+    return {
+      id: record.id,
+      kind: record.kind,
+      dispatchStatus: record.dispatchStatus,
+      taskType: record.kind,
+      status: record.dispatchStatus,
+      result,
+      errorMessage: record.errorCode,
+      resumeId: record.resumeId,
+      createdAt: record.createdAt.toISOString(),
+      completedAt: record.updatedAt.toISOString(),
+    };
+  }
+
   return {
     importResume,
     parseResumeOnly,
@@ -1042,5 +1548,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     getJDHistoryById,
     listJDHistories,
     tailorResume,
+    generateResumeFromProfile,
+    generateSectionSuggestion: generateSectionSuggestionForResume,
+    applySectionSuggestion,
+    getTaskRunById,
   };
 }

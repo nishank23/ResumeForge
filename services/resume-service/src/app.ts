@@ -27,6 +27,8 @@ export function createResumeApp(config: {
   app.use("/api/v1/resume", localCors);
   app.use("/api/v1/jd/*", localCors);
   app.use("/api/v1/jd", localCors);
+  app.use("/api/v1/task-run/*", localCors);
+  app.use("/api/v1/task-run", localCors);
 
   app.onError((_error, c) =>
     c.json(
@@ -502,6 +504,111 @@ export function createResumeApp(config: {
 
   app.get("/api/v1/jd/:id", handleGetJdById);
   app.get("/api/v1/jd/history/:id", handleGetJdById);
+
+  // Generate a basic or tailored resume from master profile facts
+  app.post("/api/v1/resume/generate", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    try {
+      let body: unknown = {};
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (contentType.includes("application/json")) {
+        body = await c.req.json().catch(() => ({}));
+      }
+      const result = await config.resumes.generateResumeFromProfile(
+        auth.context,
+        body as Parameters<typeof config.resumes.generateResumeFromProfile>[1],
+      );
+      return c.json({ data: result, requestId }, 201);
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to generate resume from profile", 503, requestId);
+    }
+  });
+
+  // Generate grounded section rewrite suggestion
+  app.post("/api/v1/resume/:id/suggest", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.generateSectionSuggestion(
+        auth.context,
+        id,
+        body as Parameters<typeof config.resumes.generateSectionSuggestion>[2],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to generate suggestion", 503, requestId);
+    }
+  });
+
+  // Apply suggestion to resume (increments version)
+  app.post("/api/v1/resume/:id/apply-suggestion", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.applySectionSuggestion(
+        auth.context,
+        id,
+        body as Parameters<typeof config.resumes.applySectionSuggestion>[2],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to apply suggestion", 503, requestId);
+    }
+  });
+
+  // Get TaskRun status
+  app.get("/api/v1/task-run/:id", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const result = await config.resumes.getTaskRunById(auth.context, id);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to get task run", 503, requestId);
+    }
+  });
 
   return app;
 }

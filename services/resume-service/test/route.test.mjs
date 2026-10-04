@@ -223,6 +223,67 @@ function createMockService() {
         recommendations: ["Great match"],
       },
     }),
+    generateResumeFromProfile: async (_context, input) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: input?.title || "Generated Resume",
+      templateId: input?.templateId || "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: input?.title || "Generated Resume",
+        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        sampleContact: { email: "jane@example.com", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    generateSectionSuggestion: async (_context, id, input) => ({
+      taskRunId: randomUUID(),
+      suggestionId: randomUUID(),
+      sectionKind: input.sectionKind,
+      entryId: input.entryId ?? null,
+      bulletId: input.bulletId ?? null,
+      originalContent: "Original content",
+      suggestedContent: "Improved action-oriented content",
+      reasoning: "Strengthened phrasing",
+      groundedKeywords: ["TypeScript"],
+      status: "pending_review",
+      createdAt: new Date().toISOString(),
+    }),
+    applySectionSuggestion: async (_context, id, input) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: "Updated Resume",
+      templateId: "default",
+      currentVersion: input.expectedVersion + 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: "Updated Resume",
+        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        sampleContact: { email: "jane@example.com", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    getTaskRunById: async (_context, id) => ({
+      id,
+      taskType: "section_suggestion",
+      status: "completed",
+      kind: "section_suggestion",
+      dispatchStatus: "completed",
+      result: { suggestedContent: "Improved action-oriented content" },
+      errorMessage: null,
+      resumeId: randomUUID(),
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+    }),
   };
 
   const resolveActor = async (auth) => {
@@ -531,3 +592,99 @@ test("POST /api/v1/resume/:id/tailor computes ATS score and returns breakdown", 
   assert.equal(body.data.atsScore, 88);
   assert.equal(body.data.atsBreakdown.rubricVersion, "1.0.0");
 });
+
+test("POST /api/v1/resume/generate generates resume from master profile and returns 201", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      title: "Generated Resume Title",
+      templateId: "default",
+    }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.ok(body.data.id);
+  assert.equal(body.data.currentVersion, 1);
+});
+
+test("POST /api/v1/resume/generate returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  assert.equal(res.status, 401);
+});
+
+test("POST /api/v1/resume/:id/suggest returns 200 with reviewable suggestion", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/suggest`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      sectionKind: "experience",
+      action: "improve_impact",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.data.taskRunId);
+  assert.ok(body.data.suggestionId);
+  assert.equal(body.data.status, "pending_review");
+  assert.equal(body.data.suggestedContent, "Improved action-oriented content");
+});
+
+test("POST /api/v1/resume/:id/apply-suggestion increments version and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/apply-suggestion`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      expectedVersion: 1,
+      sectionKind: "experience",
+      appliedContent: "Updated bullet content",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, resumeId);
+  assert.equal(body.data.currentVersion, 2);
+});
+
+test("GET /api/v1/task-run/:id returns 200 with task status", async () => {
+  const { app } = createMockService();
+  const taskRunId = randomUUID();
+  const res = await app.request(`/api/v1/task-run/${taskRunId}`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, taskRunId);
+  assert.equal(body.data.status, "completed");
+  assert.ok(body.data.result);
+});
+
