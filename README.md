@@ -9,8 +9,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-04T08:34:21.513Z",
-  "lastResult": "Editor rail and panels verified: local formatting/history, 20 tests and desktop/mobile/keyboard pass. Saves temporary; AI/ATS/PDF pending. Education next."
+  "updatedAt": "2026-10-04T11:17:30.726Z",
+  "lastResult": "Sidebar folds to 72px; builds, shell checks, 8 tests and desktop/mobile/keyboard pass. State resets on reload; Education next."
 }
 ```
 <!-- END:CURRENT_TASK -->
@@ -28,6 +28,8 @@ A planned multi-tenant resume and professional-profile platform for individuals,
 **Current stage: Phase 1 in progress — P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) complete.** Next task: P1.3 persistence and access foundations (F03). The tracker records the current gate and supersedes earlier planning-stage status notes.
 
 **Editor tools — 2026-10-04:** Added Back to all resumes and Edit Content, Customize Template, ATS Score and Optimize for JD panels. Typography/spacing previews share local checkpoints/history; ATS/JD services and PDF remain pending. [Results and manual checks](docs/editor-panels-verification.md).
+
+**Workspace sidebar — 2026-10-04:** Collapse sidebar below the logo folds the first column into a 72px icon rail. Expand restores its labels; mobile keeps the existing navigation menu. The choice resets on reload. [Screenshots and manual checks](docs/workspace-sidebar-verification.md).
 
 ## Start here
 
