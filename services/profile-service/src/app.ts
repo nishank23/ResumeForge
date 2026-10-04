@@ -30,6 +30,8 @@ export function createProfileApp(config: {
   app.use("/api/v1/profile/skills/:id", localCors);
   app.use("/api/v1/profile/projects", localCors);
   app.use("/api/v1/profile/projects/:id", localCors);
+  app.use("/api/v1/profile/certifications", localCors);
+  app.use("/api/v1/profile/certifications/:id", localCors);
   app.onError((_error, c) =>
     c.json(
       {
@@ -76,6 +78,7 @@ export function createProfileApp(config: {
       const education = c.req.path === "/api/v1/profile/education";
       const skills = c.req.path === "/api/v1/profile/skills";
       const projects = c.req.path === "/api/v1/profile/projects";
+      const certifications = c.req.path === "/api/v1/profile/certifications";
       if (c.req.method === "GET")
         return c.json({
           data: await (experience
@@ -86,7 +89,9 @@ export function createProfileApp(config: {
                 ? config.profiles.listSkills(context)
                 : projects
                   ? config.profiles.listProjects(context)
-                  : config.profiles.read(context)),
+                  : certifications
+                    ? config.profiles.listCertifications(context)
+                    : config.profiles.read(context)),
           requestId,
         });
       if (
@@ -144,6 +149,9 @@ export function createProfileApp(config: {
       const isProjectEntry =
         entryId !== undefined &&
         c.req.path.startsWith("/api/v1/profile/projects/");
+      const isCertificationEntry =
+        entryId !== undefined &&
+        c.req.path.startsWith("/api/v1/profile/certifications/");
 
       return c.json(
         {
@@ -156,7 +164,9 @@ export function createProfileApp(config: {
                   ? config.profiles.addSkill(context, input)
                   : projects
                     ? config.profiles.addProject(context, input)
-                    : config.profiles.create(context, input)
+                    : certifications
+                      ? config.profiles.addCertification(context, input)
+                      : config.profiles.create(context, input)
             : isExperienceEntry
               ? config.profiles.updateExperience(context, entryId, input)
               : isEducationEntry
@@ -165,9 +175,11 @@ export function createProfileApp(config: {
                   ? config.profiles.updateSkill(context, entryId, input)
                   : isProjectEntry
                     ? config.profiles.updateProject(context, entryId, input)
-                    : c.req.path === "/api/v1/profile/draft"
-                      ? config.profiles.saveDraft(context, input)
-                      : config.profiles.update(context, input)),
+                    : isCertificationEntry
+                      ? config.profiles.updateCertification(context, entryId, input)
+                      : c.req.path === "/api/v1/profile/draft"
+                        ? config.profiles.saveDraft(context, input)
+                        : config.profiles.update(context, input)),
           requestId,
         },
         creating ? 201 : 200,
@@ -205,6 +217,9 @@ export function createProfileApp(config: {
   app.get("/api/v1/profile/projects", handler);
   app.post("/api/v1/profile/projects", handler);
   app.put("/api/v1/profile/projects/:id", handler);
+  app.get("/api/v1/profile/certifications", handler);
+  app.post("/api/v1/profile/certifications", handler);
+  app.put("/api/v1/profile/certifications/:id", handler);
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: "Route not found." } }, 404),
   );

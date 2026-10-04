@@ -57,6 +57,15 @@ import {
   type ProjectListDto,
   type ProjectAddedDto,
 } from "./project-contracts.js";
+import {
+  MAX_CERTIFICATIONS,
+  certificationCreateSchema,
+  certificationListSchema,
+  certificationAddedSchema,
+  certificationUpdateSchema,
+  type CertificationListDto,
+  type CertificationAddedDto,
+} from "./certification-contracts.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 type Context = {
@@ -107,6 +116,14 @@ const projectProjection = {
   technologies: true,
   startDate: true,
   endDate: true,
+} as const;
+const certificationProjection = {
+  id: true,
+  name: true,
+  issuer: true,
+  issueDate: true,
+  expiryDate: true,
+  credentialUrl: true,
 } as const;
 
 /** Server composition supplies a freshly verified actor; context from request bodies is never accepted. */
@@ -943,6 +960,154 @@ export function createProfileUseCases(db: Database, now = Date.now) {
                 ? entry.technologies
                 : [],
             },
+          });
+        },
+      );
+    },
+    listCertifications: async (
+      context: Context,
+    ): Promise<CertificationListDto> => {
+      assertContext(context);
+      const id = await authorize(context, "profile.read");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.viewed", id),
+          metadata: {
+            permission: "profile.read",
+            status: "certifications_read",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const [parent] = await tx.$queryRaw<
+            { id: string; revision: number }[]
+          >`
+            SELECT "id", "revision" FROM "UserProfile"
+            WHERE "id" = ${id}::uuid AND "userId" = ${context.actor.userId}::uuid
+            FOR SHARE`;
+          if (!parent) throw new ProfileError("not_found");
+          const entries = await tx.certification.findMany({
+            where: { profileId: id, profile: { userId: context.actor.userId } },
+            select: certificationProjection,
+            orderBy: [{ issueDate: "desc" }, { name: "asc" }, { id: "asc" }],
+            take: MAX_CERTIFICATIONS + 1,
+          });
+          assertContext(context);
+          return certificationListSchema.parse({
+            profileId: id,
+            revision: parent.revision,
+            entries,
+          });
+        },
+      );
+    },
+    addCertification: async (
+      context: Context,
+      input: unknown,
+    ): Promise<CertificationAddedDto> => {
+      assertContext(context);
+      const parsed = certificationCreateSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "certification_added",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const updated = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (updated.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          if ((await tx.certification.count({ where })) >= MAX_CERTIFICATIONS)
+            throw new ProfileError("section_limit");
+          const entry = await tx.certification.create({
+            data: {
+              id: randomUUID(),
+              profileId,
+              ...fields,
+            },
+            select: certificationProjection,
+          });
+          assertContext(context);
+          return certificationAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
+          });
+        },
+      );
+    },
+    updateCertification: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<CertificationAddedDto> => {
+      assertContext(context);
+      const parsed = certificationUpdateSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "certification_updated",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            id: entryId,
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          const updated = await tx.certification.updateMany({
+            where,
+            data: fields,
+          });
+          if (updated.count !== 1) throw new ProfileError("not_found");
+          const entry = await tx.certification.findFirst({
+            where,
+            select: certificationProjection,
+          });
+          if (!entry) throw new ProfileError("not_found");
+          assertContext(context);
+          return certificationAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
           });
         },
       );

@@ -28,6 +28,8 @@ const writeRoutes = [
   [`/api/v1/profile/skills/${randomUUID()}`, "PUT"],
   ["/api/v1/profile/projects", "POST"],
   [`/api/v1/profile/projects/${randomUUID()}`, "PUT"],
+  ["/api/v1/profile/certifications", "POST"],
+  [`/api/v1/profile/certifications/${randomUUID()}`, "PUT"],
 ];
 function setup(
   resolveActor = async () => ({ status: "authenticated", actor }),
@@ -71,6 +73,13 @@ function setup(
       addProject: operation("addProject"),
       updateProject: async (context, id, input) => {
         calls.push({ kind: "updateProject", context, id, input });
+        if (error) throw error;
+        return dto;
+      },
+      listCertifications: operation("listCertifications"),
+      addCertification: operation("addCertification"),
+      updateCertification: async (context, id, input) => {
+        calls.push({ kind: "updateCertification", context, id, input });
         if (error) throw error;
         return dto;
       },
@@ -538,4 +547,47 @@ test("projects routes dispatch with local CORS and authentic context", async () 
     ["listProjects", "addProject", "updateProject"],
   );
 });
+
+test("certifications routes dispatch with local CORS and authentic context", async () => {
+  const { app, calls } = setup();
+  const path = "/api/v1/profile/certifications";
+  const headers = {
+    Authorization: "Bearer token",
+    "Content-Type": "application/json",
+    Origin: "http://localhost:3000",
+    "X-Workspace-Id": actor.personalWorkspaceId,
+  };
+  const certInput = {
+    expectedRevision: 1,
+    name: "AWS Certified Solutions Architect",
+    issuer: "Amazon Web Services",
+    issueDate: "2023-05",
+    expiryDate: "2026-05",
+  };
+  // GET
+  assert.equal((await app.request(path, { headers })).status, 200);
+
+  // POST
+  const added = await app.request(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(certInput),
+  });
+  assert.equal(added.status, 201);
+
+  // PUT /api/v1/profile/certifications/:id
+  const certId = randomUUID();
+  const updated = await app.request(`${path}/${certId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(certInput),
+  });
+  assert.equal(updated.status, 200);
+
+  assert.deepEqual(
+    calls.map((c) => c.kind),
+    ["listCertifications", "addCertification", "updateCertification"],
+  );
+});
+
 
