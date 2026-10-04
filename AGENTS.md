@@ -8,6 +8,14 @@ The user confirmed the context on 2026-09-29 ("I confirm everything"). **The con
 
 This project uses **Vite + React** microfrontends and **Hono** services. Follow the package boundaries, routing conventions, authentication model, and storage choices documented for resume-forge.
 
+## Frontend worktree — 2026-10-04
+
+The user requests all new frontend work in the managed worktree named `frontend`: `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`, on `codex/frontend`. Use this absolute working directory for subsequent repository commands, edits, task claims and verification, including scheduled runs whose launcher still starts in the original folder. The original `/Users/nishankbansal/Downloads/ResumeBuilderv2` is detached at `0dc79ec` and retained for its existing local services; do not implement new work there. The backend checkout remains separate and untouched. This changes work location only, not feature scope or authorization gates.
+
+## Frontend/backend branch ownership — 2026-10-04
+
+The user selected separate frontend/backend branches after committing the current baseline. Follow [parallel development](docs/parallel-development.md) before work in either checkout. `codex/frontend` is the Codex frontend/integration lane; `codex/backend` is the external backend agent lane. Each checkout uses its own existing task marker/lock. A scheduled run on the frontend branch must not fall back to backend foundation work; leave idle when no approved frontend slice is unblocked. Never implement in `main`, switch another agent's checkout, or infer that worktrees remove API/database conflicts. Shared contracts, dependencies, migrations, the canonical tracker and integration remain single-owner Codex work. Backend agents record results in their own handoff document for integration into the tracker.
+
 ## Read before working
 
 1. [Project overview](context/project-overview.md).

@@ -1,5 +1,9 @@
 # UI Context
 
+## Foldable workspace navigation — 2026-10-04
+
+The first workspace column (My resumes, My profile, Job descriptions and Preferences) now folds independently of the editor tools. Collapse sidebar below the Forge logo changes the desktop column to a 72px icon rail; Expand sidebar restores its labels. Icons retain accessible names, native hover titles, active-route indication and 44px navigation targets. The choice stays during workspace navigation and resets on reload. At 760px and below, the existing labeled mobile menu remains authoritative. Short desktop windows scroll the sidebar to keep account navigation reachable. [Actual verification and manual checks](../docs/workspace-sidebar-verification.md).
+
 ## Latest editor tools — 2026-10-04
 
 The user requests a left tool rail with Back to all resumes, Edit Content, Customize Template, ATS Score and Optimize for JD. This explicitly supersedes the earlier panel-removal direction for navigation and section shortcuts; the canvas and existing dialogs remain the content editors. Preserve Forge tokens (#f7f8fa background, #ffffff paper/surface, #172033 ink, #536079 secondary ink, #e0e4ec rules, #4338ca accent), system sans UI and Georgia document hierarchy. A narrow rail, collapsible companion panel and generous paper stage encode distinct navigation/editing/document roles without extra decorative effects. Mobile uses horizontal tools and a scrollable panel.

@@ -50,6 +50,8 @@ import {
 import { createSampleDraft } from "./sample-draft";
 import type { SampleResumeDocument } from "./sample-resume";
 import { EditResumeDialog } from "./EditResumeDialog";
+import { ImproveWithAiDialog } from "./ImproveWithAiDialog";
+import { acceptLocalAiPreview } from "./editor-ai-preview";
 import { ResumeDocument } from "./ResumeDocument";
 import {
   EditorRail,
@@ -98,6 +100,10 @@ export function ManualResumeEditor({
     sectionId: "sec-summary",
   });
   const [session, setSession] = useState<EditSession | null>(null);
+  const [aiSession, setAiSession] = useState<{
+    base: ResumeDraft;
+    target: DraftTarget;
+  } | null>(null);
   const [deleting, setDeleting] = useState<DraftTarget | null>(null);
   const [notice, setNotice] = useState<{
     message: string;
@@ -134,6 +140,18 @@ export function ManualResumeEditor({
   const change = (action: HistoryAction<ResumeDraft>, message: string) => {
     dispatch(action);
     announce(message);
+  };
+  const closeAiPreview = () => {
+    if (!aiSession) return;
+    const target = aiSession.target;
+    setAiSession(null);
+    // Closing can expose another region beneath the pointer. Restore the reviewed target first.
+    requestAnimationFrame(() => {
+      setSelected(target);
+      requestAnimationFrame(() => {
+        toolbarRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      });
+    });
   };
   const select = (target: DraftTarget) => {
     setSelected((current) =>
@@ -182,7 +200,7 @@ export function ManualResumeEditor({
     );
   }, []);
   const editRich = (target: DraftTarget, value: SummaryDocument) => {
-    if (session) return;
+    if (session || aiSession) return;
     const next = structuredClone(history.current);
     const match = targetValue(next, target);
     if (!match || match.hidden) return;
@@ -202,7 +220,7 @@ export function ManualResumeEditor({
     field: InlineField,
     value: string,
   ) => {
-    if (session) return false;
+    if (session || aiSession) return false;
     const result = updateInlineDraft(history.current, target, field, value);
     if (!result.ok) {
       error(result.error);
@@ -320,6 +338,7 @@ export function ManualResumeEditor({
     const shortcut = (event: KeyboardEvent) => {
       if (
         session ||
+        aiSession ||
         deleting ||
         leaving ||
         !(event.ctrlKey || event.metaKey) ||
@@ -353,7 +372,7 @@ export function ManualResumeEditor({
     return () => {
       document.removeEventListener("keydown", shortcut);
     };
-  }, [session, deleting, leaving, mode, announce]);
+  }, [session, aiSession, deleting, leaving, mode, announce]);
   const itemArrows =
     selection.type !== "header" && selection.type !== "section";
   const changeAppearance = (value: EditorAppearance) => {
@@ -557,7 +576,7 @@ export function ManualResumeEditor({
               <ResumeDocument
                 draft={draft}
                 selected={selection}
-                editable={mode === "editor" && !session}
+                editable={mode === "editor" && !session && !aiSession}
                 onPending={setInlinePending}
                 onSelect={select}
                 onEdit={(target) => {
@@ -572,7 +591,7 @@ export function ManualResumeEditor({
               {mode === "editor" && section?.kind !== "skills" ? (
                 <div
                   ref={toolbarRef}
-                  hidden={!!session}
+                  hidden={!!session || !!aiSession}
                   className="rf-floating-actions"
                   aria-label="Selected content actions"
                   style={{ top: anchor.top, left: anchor.left }}
@@ -588,9 +607,10 @@ export function ManualResumeEditor({
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        announce(
-                          "AI improvement is not connected. It needs a configured provider, grounded facts and saved version review.",
-                        );
+                        setAiSession({
+                          base: structuredClone(historyRef.current.current),
+                          target: structuredClone(selection),
+                        });
                       }}
                     >
                       <Sparkles size={14} /> Improve with AI
@@ -672,7 +692,7 @@ export function ManualResumeEditor({
           </div>
         </div>
       </div>
-      {notice && !session && !deleting && !leaving ? (
+      {notice && !session && !aiSession && !deleting && !leaving ? (
         <div className="rf-editor-toast" key={noticeKey}>
           <StatusBanner
             tone={notice.error ? "error" : "info"}
@@ -682,6 +702,23 @@ export function ManualResumeEditor({
             }}
           />
         </div>
+      ) : null}
+      {aiSession ? (
+        <ImproveWithAiDialog
+          base={aiSession.base}
+          target={aiSession.target}
+          onClose={closeAiPreview}
+          onAccept={(preview) => {
+            const result = acceptLocalAiPreview(
+              historyRef.current.current,
+              preview,
+            );
+            if (!result.ok) return result.error;
+            dispatch({ type: "edit", value: result.draft });
+            closeAiPreview();
+            announce("Suggested changes accepted locally. Undo is available.");
+          }}
+        />
       ) : null}
       {session ? (
         <EditResumeDialog

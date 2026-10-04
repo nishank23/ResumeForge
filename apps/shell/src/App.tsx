@@ -16,6 +16,8 @@ import {
   FolderOpen,
   Menu,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Sun,
   UserRound,
@@ -89,6 +91,7 @@ function WorkspaceShell() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [quietMotion, setQuietMotion] = useState(false);
   const [simulateFailure, setSimulateFailure] = useState(false);
   const reducedMotion = useReducedMotion() || quietMotion;
@@ -164,21 +167,46 @@ function WorkspaceShell() {
   );
   return (
     <div
-      className={`rf-workspace ${isResumeEditor ? "rf-workspace-editor" : ""}`}
+      className={`rf-workspace ${isResumeEditor ? "rf-workspace-editor" : ""} ${sidebarCollapsed ? "rf-workspace-collapsed" : ""}`}
       data-shell-root="resume-forge"
       data-react-version={React.version}
     >
       <a href="#main-content" className="rf-skip">
         Skip to main content
       </a>
-      <aside className="rf-sidebar rf-app-chrome">
-        <Link className="rf-brand" to="/">
+      <aside id="workspace-sidebar" className="rf-sidebar rf-app-chrome">
+        <Link
+          className="rf-brand"
+          to="/"
+          aria-label="resume-forge home"
+          title={sidebarCollapsed ? "resume-forge home" : undefined}
+        >
           <span className="rf-brand-mark">
             <FileText size={21} aria-hidden="true" />
           </span>
-          resume-forge<span className="rf-brand-dot">.</span>
+          <span className="rf-brand-text">
+            resume-forge<span className="rf-brand-dot">.</span>
+          </span>
         </Link>
-        <div className="rf-workspace-label">
+        <Button
+          variant="ghost"
+          className="rf-sidebar-toggle"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="workspace-sidebar"
+          onClick={() => {
+            setSidebarCollapsed((value) => !value);
+          }}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen size={19} aria-hidden="true" />
+          ) : (
+            <PanelLeftClose size={19} aria-hidden="true" />
+          )}
+          <span className="rf-sidebar-toggle-label">Collapse sidebar</span>
+        </Button>
+        <div className="rf-workspace-label" title="Personal workspace">
           <span className="rf-avatar">P</span>
           <div>
             <strong>Personal workspace</strong>
@@ -209,27 +237,35 @@ function WorkspaceShell() {
                   setMenuOpen(false);
                 }}
                 to={item.path}
+                aria-label={item.label}
+                title={sidebarCollapsed ? item.label : undefined}
                 aria-current={
                   location.pathname.startsWith(item.path) ? "page" : undefined
                 }
               >
                 <item.icon size={19} aria-hidden="true" />
-                {item.label}
+                <span className="rf-nav-label">{item.label}</span>
               </Link>
             ))
           ) : (
-            <Link to="/sign-in">
+            <Link
+              to="/sign-in"
+              aria-label="Sign in"
+              title={sidebarCollapsed ? "Sign in" : undefined}
+            >
               <UserRound size={19} aria-hidden="true" />
-              Sign in
+              <span className="rf-nav-label">Sign in</span>
             </Link>
           )}
           {session.status === "authenticated" ? (
             <Link
               to={`${prefix}/settings`}
+              aria-label="Preferences"
+              title={sidebarCollapsed ? "Preferences" : undefined}
               aria-current={current === "Preferences" ? "page" : undefined}
             >
               <Settings size={19} aria-hidden="true" />
-              Preferences
+              <span className="rf-nav-label">Preferences</span>
             </Link>
           ) : null}
         </nav>
@@ -239,7 +275,12 @@ function WorkspaceShell() {
             Design preview
             <p>Explore with sample content. Changes stay in this session.</p>
           </div>
-          <Link className="rf-account" to="/sign-in">
+          <Link
+            className="rf-account"
+            to="/sign-in"
+            aria-label="Account and sign-in"
+            title={sidebarCollapsed ? "Account and sign-in" : undefined}
+          >
             <span className="rf-avatar">
               {session.status === "authenticated" ? "✓" : "G"}
             </span>
