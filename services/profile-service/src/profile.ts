@@ -66,6 +66,17 @@ import {
   type CertificationListDto,
   type CertificationAddedDto,
 } from "./certification-contracts.js";
+import {
+  userContactSchema,
+  userContactUpdateSchema,
+  sectionDeleteInputSchema,
+  sectionDeleteResultSchema,
+  profileCompleteInputSchema,
+  profileCompleteResultSchema,
+  type UserContactDto,
+  type SectionDeleteResultDto,
+  type ProfileCompleteResultDto,
+} from "./contact-contracts.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 type Context = {
@@ -1108,6 +1119,406 @@ export function createProfileUseCases(db: Database, now = Date.now) {
             profileId,
             revision: expectedRevision + 1,
             entry,
+          });
+        },
+      );
+    },
+    getContact: async (context: Context): Promise<UserContactDto> => {
+      assertContext(context);
+      const id = await authorize(context, "profile.read");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.viewed", id),
+          metadata: { permission: "profile.read", status: "contact_read" },
+        },
+        async (tx) => {
+          assertContext(context);
+          const contact = await tx.userContact.findUnique({
+            where: { profileId: id },
+          });
+          if (!contact) {
+            return userContactSchema.parse({
+              id: randomUUID(),
+              profileId: id,
+              email: null,
+              phone: null,
+              address: null,
+              linkedinUrl: null,
+              githubUrl: null,
+              portfolioUrl: null,
+              updatedAt: new Date(now()).toISOString(),
+            });
+          }
+          return userContactSchema.parse({
+            id: contact.id,
+            profileId: contact.profileId,
+            email: contact.email,
+            phone: contact.phone,
+            address: contact.address,
+            linkedinUrl: contact.linkedinUrl,
+            githubUrl: contact.githubUrl,
+            portfolioUrl: contact.portfolioUrl,
+            updatedAt: contact.updatedAt.toISOString(),
+          });
+        },
+      );
+    },
+    updateContact: async (
+      context: Context,
+      input: unknown,
+    ): Promise<UserContactDto> => {
+      assertContext(context);
+      const parsed = userContactUpdateSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const id = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", id),
+          metadata: { permission: "profile.update", status: "contact_updated" },
+        },
+        async (tx) => {
+          assertContext(context);
+          const data = parsed.data;
+          const contact = await tx.userContact.upsert({
+            where: { profileId: id },
+            create: {
+              id: randomUUID(),
+              profileId: id,
+              email: data.email ?? null,
+              phone: data.phone ?? null,
+              address: data.address ?? null,
+              linkedinUrl: data.linkedinUrl ?? null,
+              githubUrl: data.githubUrl ?? null,
+              portfolioUrl: data.portfolioUrl ?? null,
+            },
+            update: {
+              ...(data.email !== undefined && { email: data.email }),
+              ...(data.phone !== undefined && { phone: data.phone }),
+              ...(data.address !== undefined && { address: data.address }),
+              ...(data.linkedinUrl !== undefined && { linkedinUrl: data.linkedinUrl }),
+              ...(data.githubUrl !== undefined && { githubUrl: data.githubUrl }),
+              ...(data.portfolioUrl !== undefined && { portfolioUrl: data.portfolioUrl }),
+            },
+          });
+          return userContactSchema.parse({
+            id: contact.id,
+            profileId: contact.profileId,
+            email: contact.email,
+            phone: contact.phone,
+            address: contact.address,
+            linkedinUrl: contact.linkedinUrl,
+            githubUrl: contact.githubUrl,
+            portfolioUrl: contact.portfolioUrl,
+            updatedAt: contact.updatedAt.toISOString(),
+          });
+        },
+      );
+    },
+    deleteExperience: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SectionDeleteResultDto> => {
+      assertContext(context);
+      const parsed = sectionDeleteInputSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "experience_deleted",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const deleted = await tx.experience.deleteMany({
+            where: {
+              id: entryId,
+              profileId,
+              profile: { userId: context.actor.userId },
+            },
+          });
+          if (deleted.count !== 1) throw new ProfileError("not_found");
+          assertContext(context);
+          return sectionDeleteResultSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            deletedEntryId: entryId,
+          });
+        },
+      );
+    },
+    deleteEducation: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SectionDeleteResultDto> => {
+      assertContext(context);
+      const parsed = sectionDeleteInputSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "education_deleted",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const deleted = await tx.education.deleteMany({
+            where: {
+              id: entryId,
+              profileId,
+              profile: { userId: context.actor.userId },
+            },
+          });
+          if (deleted.count !== 1) throw new ProfileError("not_found");
+          assertContext(context);
+          return sectionDeleteResultSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            deletedEntryId: entryId,
+          });
+        },
+      );
+    },
+    deleteSkill: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SectionDeleteResultDto> => {
+      assertContext(context);
+      const parsed = sectionDeleteInputSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "skill_deleted",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const deleted = await tx.skill.deleteMany({
+            where: {
+              id: entryId,
+              profileId,
+              profile: { userId: context.actor.userId },
+            },
+          });
+          if (deleted.count !== 1) throw new ProfileError("not_found");
+          assertContext(context);
+          return sectionDeleteResultSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            deletedEntryId: entryId,
+          });
+        },
+      );
+    },
+    deleteProject: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SectionDeleteResultDto> => {
+      assertContext(context);
+      const parsed = sectionDeleteInputSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "project_deleted",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const deleted = await tx.userProject.deleteMany({
+            where: {
+              id: entryId,
+              profileId,
+              profile: { userId: context.actor.userId },
+            },
+          });
+          if (deleted.count !== 1) throw new ProfileError("not_found");
+          assertContext(context);
+          return sectionDeleteResultSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            deletedEntryId: entryId,
+          });
+        },
+      );
+    },
+    deleteCertification: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SectionDeleteResultDto> => {
+      assertContext(context);
+      const parsed = sectionDeleteInputSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "certification_deleted",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const deleted = await tx.certification.deleteMany({
+            where: {
+              id: entryId,
+              profileId,
+              profile: { userId: context.actor.userId },
+            },
+          });
+          if (deleted.count !== 1) throw new ProfileError("not_found");
+          assertContext(context);
+          return sectionDeleteResultSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            deletedEntryId: entryId,
+          });
+        },
+      );
+    },
+    completeOnboarding: async (
+      context: Context,
+      input: unknown,
+    ): Promise<ProfileCompleteResultDto> => {
+      assertContext(context);
+      const parsed = profileCompleteInputSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "onboarding_completed",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision } = parsed.data;
+          const existing = await tx.userProfile.findFirst({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+            },
+            select: {
+              id: true,
+              revision: true,
+              onboardingCompletedAt: true,
+            },
+          });
+          if (!existing) throw new ProfileError("not_found");
+          if (existing.onboardingCompletedAt !== null)
+            throw new ProfileError("onboarding_complete");
+          if (existing.revision !== expectedRevision)
+            throw new ProfileError("revision_conflict");
+
+          const updated = await tx.userProfile.update({
+            where: { id: profileId },
+            data: {
+              onboardingCompletedAt: new Date(now()),
+              revision: { increment: 1 },
+            },
+            select: {
+              id: true,
+              onboardingCompletedAt: true,
+              revision: true,
+            },
+          });
+          return profileCompleteResultSchema.parse({
+            id: updated.id,
+            onboardingCompletedAt:
+              updated.onboardingCompletedAt?.toISOString() ??
+              new Date(now()).toISOString(),
+            revision: updated.revision,
           });
         },
       );
