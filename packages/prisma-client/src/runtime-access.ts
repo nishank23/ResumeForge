@@ -3,7 +3,7 @@ import type { PrismaClient } from "./generated/client.js";
 export type RuntimeService = "auth" | "profile" | "auditRelay" | "auditIngest";
 export interface RuntimeGrant {
   table: string;
-  privilege: "SELECT" | "INSERT" | "UPDATE";
+  privilege: "SELECT" | "INSERT" | "UPDATE" | "DELETE";
   columns?: readonly string[];
 }
 export function runtimeRoleNames(
@@ -43,16 +43,20 @@ export const RUNTIME_GRANTS: Readonly<
     },
   ],
   profile: [
+    ...["UserProfile", "UserContact"].flatMap((table) =>
+      (["SELECT", "INSERT", "UPDATE"] as const).map((privilege) => ({
+        table,
+        privilege,
+      })),
+    ),
     ...[
-      "UserProfile",
-      "UserContact",
       "Education",
       "Experience",
       "Skill",
       "UserProject",
       "Certification",
     ].flatMap((table) =>
-      (["SELECT", "INSERT", "UPDATE"] as const).map((privilege) => ({
+      (["SELECT", "INSERT", "UPDATE", "DELETE"] as const).map((privilege) => ({
         table,
         privilege,
       })),
@@ -121,12 +125,15 @@ export async function assertRuntimeDatabaseRole(
     WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f')
   `;
   const grants = RUNTIME_GRANTS[service];
+  const columnGrants = grants.filter((grant) => grant.privilege !== "DELETE");
   if (
-    grants.some((grant) => !rights.some((right) => right.table === grant.table))
+    columnGrants.some(
+      (grant) => !rights.some((right) => right.table === grant.table),
+    )
   )
     throw new Error("Unsafe runtime database access");
   for (const right of rights) {
-    const expected = grants.some(
+    const expected = columnGrants.some(
       (grant) =>
         grant.table === right.table &&
         grant.privilege === right.privilege &&
@@ -135,11 +142,27 @@ export async function assertRuntimeDatabaseRole(
     if (right.allowed !== expected)
       throw new Error("Unsafe runtime database access");
   }
+
+  const deleteRights = await db.$queryRaw<
+    { table: string; allowed: boolean }[]
+  >`
+    SELECT c.relname::text AS "table",
+      has_table_privilege(current_user, c.oid, 'DELETE') AS allowed
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f')
+  `;
+  const deleteGrants = grants.filter((grant) => grant.privilege === "DELETE");
+  for (const right of deleteRights) {
+    const expected = deleteGrants.some((grant) => grant.table === right.table);
+    if (right.allowed !== expected)
+      throw new Error("Unsafe runtime database access");
+  }
+
   const [extra] = await db.$queryRaw<{ forbidden: boolean }[]>`
     SELECT (
       EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f') AND
-          (has_table_privilege(current_user, c.oid, 'DELETE,TRUNCATE,TRIGGER,MAINTAIN'))) OR
+          (has_table_privilege(current_user, c.oid, 'TRUNCATE,TRIGGER,MAINTAIN'))) OR
       EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'public' AND has_function_privilege(current_user, p.oid, 'EXECUTE')) OR
       EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace

@@ -1,0 +1,833 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { createResumeApp } from "../dist/app.js";
+
+const mockActor = {
+  userId: randomUUID(),
+  personalWorkspaceId: randomUUID(),
+  expiresAt: Date.now() + 60_000,
+};
+
+function createMockService() {
+  const resumes = {
+    importResume: async (_context, input) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: input.title || "Imported Resume",
+      templateId: input.templateId || "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: input.title || "Imported Resume",
+        header: {
+          fullName: "Test User",
+          firstName: "Test",
+          lastName: "User",
+          headline: "Engineer",
+          city: "SF",
+          state: "CA",
+          country: "",
+          email: "test@example.com",
+          phone: "555-1234",
+          links: [],
+        },
+        sampleContact: { email: "test@example.com", phone: "555-1234" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    parseResumeOnly: async (input) => ({
+      title: input.fileName,
+      header: {
+        fullName: "Test Candidate",
+        firstName: "Test",
+        lastName: "Candidate",
+        headline: "Developer",
+        city: "",
+        state: "",
+        country: "",
+        email: "candidate@example.com",
+        phone: "",
+        links: [],
+      },
+      sampleContact: { email: "candidate@example.com", phone: "" },
+      sections: [],
+    }),
+    getResumeById: async (_context, id) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: "My Saved Resume",
+      templateId: "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: "My Saved Resume",
+        header: {
+          fullName: "Test User",
+          firstName: "Test",
+          lastName: "User",
+          headline: "Engineer",
+          city: "",
+          state: "",
+          country: "",
+          email: "test@example.com",
+          phone: "",
+          links: [],
+        },
+        sampleContact: { email: "test@example.com", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    listResumes: async () => [
+      {
+        id: randomUUID(),
+        profileId: randomUUID(),
+        workspaceId: mockActor.personalWorkspaceId,
+        title: "My Saved Resume",
+        templateId: "default",
+        currentVersion: 1,
+        status: "draft",
+        atsScore: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    updateResume: async (_context, id, input) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: input.title || "Updated Resume",
+      templateId: input.templateId || "default",
+      currentVersion: input.expectedVersion + 1,
+      status: input.status || "draft",
+      atsScore: null,
+      content: input.content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    deleteResume: async (_context, id) => ({
+      deleted: true,
+      id,
+    }),
+    downloadResume: async (_context, id, format) => ({
+      content: `# Resume ${id}\nFormat: ${format}`,
+      mimeType: format === "json" ? "application/json" : "text/markdown",
+      fileName: `resume_${id}.${format === "json" ? "json" : "md"}`,
+    }),
+    listResumeVersions: async (_context, id) => [
+      {
+        id: randomUUID(),
+        resumeId: id,
+        versionNumber: 1,
+        content: {
+          title: "Version 1",
+          header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+          sampleContact: { email: "", phone: "" },
+          sections: [],
+        },
+        createdAt: new Date().toISOString(),
+        createdByUserId: mockActor.userId,
+      },
+    ],
+    cloneResume: async (_context, id, title) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: title || "Cloned Resume",
+      templateId: "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: title || "Cloned Resume",
+        header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+        sampleContact: { email: "", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    parseJdOnly: async (input) => ({
+      jobTitle: input.jobTitle || "Parsed Position",
+      company: input.company || "Parsed Company",
+      experienceLevel: "senior",
+      roleType: "full-time",
+      keywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript required" }],
+      requirements: ["5+ years experience"],
+      responsibilities: ["Build systems"],
+    }),
+    parseAndSaveJD: async (_context, input) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      jobTitle: input.jobTitle || "Saved Position",
+      company: input.company || "Saved Company",
+      rawJD: input.rawJD,
+      parsedKeywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript" }],
+      parsedRequirements: ["5+ years experience"],
+      parsedResponsibilities: ["Build systems"],
+      experienceLevel: "senior",
+      roleType: "full-time",
+      createdAt: new Date().toISOString(),
+    }),
+    getJDHistoryById: async (_context, id) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      jobTitle: "Saved Position",
+      company: "Saved Company",
+      rawJD: "Job details here...",
+      parsedKeywords: [],
+      parsedRequirements: [],
+      parsedResponsibilities: [],
+      experienceLevel: "senior",
+      roleType: "full-time",
+      createdAt: new Date().toISOString(),
+    }),
+    listJDHistories: async () => [
+      {
+        id: randomUUID(),
+        profileId: randomUUID(),
+        workspaceId: mockActor.personalWorkspaceId,
+        jobTitle: "Saved Position",
+        company: "Saved Company",
+        rawJD: "Job details here...",
+        parsedKeywords: [],
+        parsedRequirements: [],
+        parsedResponsibilities: [],
+        experienceLevel: "senior",
+        roleType: "full-time",
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    deleteJDHistory: async (_context, id) => ({
+      deleted: true,
+      id,
+    }),
+    analyzeResumeGap: async (_context, resumeId, input) => ({
+      resumeId,
+      resumeTitle: "Mock Resume",
+      resumeVersion: 1,
+      profileRevision: 1,
+      jdHistoryId: input?.jdHistoryId || null,
+      jobTitle: "Software Engineer",
+      company: "Acme",
+      matchPercentage: 75,
+      totalKeywordsCount: 4,
+      matchedCount: 3,
+      supportedMissingCount: 1,
+      unsupportedMissingCount: 0,
+      requiredMissingCount: 0,
+      matched: [
+        {
+          keyword: "TypeScript",
+          category: "technical",
+          required: true,
+          matchType: "exact",
+          matchedText: "TypeScript",
+          resumeSection: "skills",
+          explanation: "Matches in skills",
+        },
+      ],
+      supportedMissing: [
+        {
+          keyword: "PostgreSQL",
+          category: "technical",
+          required: false,
+          supportingSourceSection: "skills",
+          supportingEvidence: "PostgreSQL in master profile",
+          profileRevision: 1,
+          suggestedTargetSection: "skills",
+          suggestedAction: "Add PostgreSQL to resume",
+          explanation: "Supported in master profile",
+        },
+      ],
+      unsupportedMissing: [],
+      model: "deterministic-hybrid-v1",
+      semanticEngineStatus: "fallback_exact_synonyms",
+      analyzedAt: new Date().toISOString(),
+    }),
+    tailorResume: async (_context, id, input) => ({
+      resumeId: id,
+      jdHistoryId: input.jdHistoryId || randomUUID(),
+      atsScore: 88,
+      atsBreakdown: {
+        overallScore: 88,
+        rubricVersion: "1.0.0",
+        keywordMatch: { matched: ["TypeScript"], missing: [], score: 100 },
+        experienceRelevance: { score: 90, feedback: "Senior match" },
+        skillsCoverage: { matched: ["TypeScript"], missing: [], score: 100 },
+        completenessScore: 100,
+        readabilityScore: 80,
+        recommendations: ["Great match"],
+      },
+    }),
+    generateResumeFromProfile: async (_context, input) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: input?.title || "Generated Resume",
+      templateId: input?.templateId || "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: input?.title || "Generated Resume",
+        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        sampleContact: { email: "jane@example.com", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    generateSectionSuggestion: async (_context, id, input) => ({
+      taskRunId: randomUUID(),
+      suggestionId: randomUUID(),
+      sectionKind: input.sectionKind,
+      entryId: input.entryId ?? null,
+      bulletId: input.bulletId ?? null,
+      originalContent: "Original content",
+      suggestedContent: "Improved action-oriented content",
+      reasoning: "Strengthened phrasing",
+      groundedKeywords: ["TypeScript"],
+      status: "pending_review",
+      createdAt: new Date().toISOString(),
+    }),
+    applySectionSuggestion: async (_context, id, input) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: "Updated Resume",
+      templateId: "default",
+      currentVersion: input.expectedVersion + 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: "Updated Resume",
+        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        sampleContact: { email: "jane@example.com", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    getTaskRunById: async (_context, id) => ({
+      id,
+      taskType: "section_suggestion",
+      status: "completed",
+      kind: "section_suggestion",
+      dispatchStatus: "completed",
+      result: { suggestedContent: "Improved action-oriented content" },
+      errorMessage: null,
+      resumeId: randomUUID(),
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+    }),
+  };
+
+  const resolveActor = async (auth) => {
+    if (auth === "Bearer valid-token") {
+      return { status: "authenticated", actor: mockActor };
+    }
+    return { status: "unauthenticated" };
+  };
+
+  const app = createResumeApp({ resolveActor, resumes });
+  return { app, resumes };
+}
+
+test("unauthenticated import requests return 401 with no-store", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: "test.txt", rawText: "Some resume text" }),
+  });
+
+  assert.equal(res.status, 401);
+  assert.equal(res.headers.get("Cache-Control"), "no-store");
+  assert.equal(res.headers.get("Referrer-Policy"), "no-referrer");
+  assert.ok(res.headers.get("X-Request-Id"));
+
+  const body = await res.json();
+  assert.equal(body.error.code, "unauthenticated");
+});
+
+test("unsupported content-type returns 415", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/parse", {
+    method: "POST",
+    headers: { "Content-Type": "text/html" },
+    body: "<h1>Resume</h1>",
+  });
+
+  assert.equal(res.status, 415);
+  const body = await res.json();
+  assert.equal(body.error.code, "unsupported_media_type");
+});
+
+test("POST /api/v1/resume/parse succeeds with valid JSON", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/parse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: "resume.txt", rawText: "John Doe\nDeveloper" }),
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("Cache-Control"), "no-store");
+  const body = await res.json();
+  assert.ok(body.data);
+  assert.equal(body.data.title, "resume.txt");
+  assert.ok(body.requestId);
+});
+
+test("POST /api/v1/resume/import succeeds with valid token and returns 201", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/import", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      fileName: "resume.pdf",
+      rawText: "Jane Doe\nArchitect\njane@example.com",
+      title: "Custom Title",
+    }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.ok(body.data);
+  assert.equal(body.data.title, "Custom Title");
+  assert.equal(body.data.currentVersion, 1);
+  assert.equal(body.data.status, "draft");
+});
+
+test("GET /api/v1/resume/:id returns resume details", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, targetId);
+  assert.equal(body.data.title, "My Saved Resume");
+});
+
+test("GET /api/v1/resume lists user resumes", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume", {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data));
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].title, "My Saved Resume");
+});
+
+test("PUT /api/v1/resume/:id updates resume and returns 200", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      expectedVersion: 1,
+      title: "Updated Title",
+      content: {
+        title: "Updated Title",
+        header: {
+          fullName: "Updated Name",
+          firstName: "Updated",
+          lastName: "Name",
+          headline: "Lead Architect",
+          city: "NYC",
+          state: "NY",
+          country: "",
+          email: "updated@example.com",
+          phone: "",
+          links: [],
+        },
+        sampleContact: { email: "", phone: "" },
+        sections: [],
+      },
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.title, "Updated Title");
+  assert.equal(body.data.currentVersion, 2);
+});
+
+test("DELETE /api/v1/resume/:id deletes resume and returns 200", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, targetId);
+});
+
+test("GET /api/v1/resume/:id/download returns formatted file with attachment header", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/download?format=markdown`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("Content-Type"), "text/markdown");
+  assert.ok(res.headers.get("Content-Disposition").includes("attachment; filename="));
+  const text = await res.text();
+  assert.ok(text.includes(`# Resume ${targetId}`));
+});
+
+test("GET /api/v1/resume/:id/versions returns version history", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/versions`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data));
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].versionNumber, 1);
+});
+
+test("POST /api/v1/resume/:id/clone clones resume and returns 201", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/clone`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({ title: "Cloned Copy" }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.data.title, "Cloned Copy");
+  assert.equal(body.data.currentVersion, 1);
+});
+
+test("POST /api/v1/jd/parse parses JD text without authentication", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd/parse", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      rawJD: "We are seeking a Senior TypeScript Developer to build microservices.",
+      jobTitle: "Senior TypeScript Developer",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.jobTitle, "Senior TypeScript Developer");
+  assert.ok(Array.isArray(body.data.keywords));
+});
+
+test("POST /api/v1/jd saves JD and returns 201 when authenticated", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      rawJD: "Looking for an engineer with 5+ years experience in TypeScript.",
+      jobTitle: "Staff Engineer",
+    }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.data.jobTitle, "Staff Engineer");
+  assert.ok(body.data.id);
+});
+
+test("GET /api/v1/jd/history lists user JD histories", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd/history", {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data));
+  assert.equal(body.data.length, 1);
+});
+
+test("GET /api/v1/jd/:id returns single JD history", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${targetId}`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, targetId);
+});
+
+test("POST /api/v1/resume/:id/tailor computes ATS score and returns breakdown", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const jdHistoryId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/tailor`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({ jdHistoryId }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.equal(body.data.atsScore, 88);
+  assert.equal(body.data.atsBreakdown.rubricVersion, "1.0.0");
+});
+
+test("POST /api/v1/resume/generate generates resume from master profile and returns 201", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      title: "Generated Resume Title",
+      templateId: "default",
+    }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.ok(body.data.id);
+  assert.equal(body.data.currentVersion, 1);
+});
+
+test("POST /api/v1/resume/generate returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/resume/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  assert.equal(res.status, 401);
+});
+
+test("POST /api/v1/resume/:id/suggest returns 200 with reviewable suggestion", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/suggest`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      sectionKind: "experience",
+      action: "improve_impact",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.data.taskRunId);
+  assert.ok(body.data.suggestionId);
+  assert.equal(body.data.status, "pending_review");
+  assert.equal(body.data.suggestedContent, "Improved action-oriented content");
+});
+
+test("POST /api/v1/resume/:id/apply-suggestion increments version and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/apply-suggestion`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      expectedVersion: 1,
+      sectionKind: "experience",
+      appliedContent: "Updated bullet content",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, resumeId);
+  assert.equal(body.data.currentVersion, 2);
+});
+
+test("GET /api/v1/task-run/:id returns 200 with task status", async () => {
+  const { app } = createMockService();
+  const taskRunId = randomUUID();
+  const res = await app.request(`/api/v1/task-run/${taskRunId}`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, taskRunId);
+  assert.equal(body.data.status, "completed");
+  assert.ok(body.data.result);
+});
+
+test("DELETE /api/v1/jd/:id deletes JD history and returns 200", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${jdId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, jdId);
+});
+
+test("DELETE /api/v1/jd/history/:id deletes JD history via alias and returns 200", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/history/${jdId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, jdId);
+});
+
+test("DELETE /api/v1/jd/:id returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${jdId}`, {
+    method: "DELETE",
+  });
+
+  assert.equal(res.status, 401);
+});
+
+test("POST /api/v1/resume/:id/gap-analysis performs gap analysis and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      rawJD: "Seeking TypeScript and PostgreSQL developers with 5+ years experience.",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.equal(body.data.matchPercentage, 75);
+  assert.ok(Array.isArray(body.data.matched));
+  assert.ok(Array.isArray(body.data.supportedMissing));
+  assert.ok(Array.isArray(body.data.unsupportedMissing));
+});
+
+test("GET /api/v1/resume/:id/gap-analysis performs gap analysis and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.ok(body.data.matchPercentage >= 0);
+});
+
+test("POST /api/v1/resume/:id/gap-analysis returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  assert.equal(res.status, 401);
+});
+
+
