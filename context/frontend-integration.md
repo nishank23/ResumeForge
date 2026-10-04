@@ -1,5 +1,7 @@
 # Frontend Integration and Reference Review
 
+**Temporary AI preview — 2026-10-04:** The user's two supplied screenshots authorize a frontend-only selected-target dialog with explicit preview submission, temporary Thinking, inline diff review and no-suggestion state. Uses existing shared Dialog/Button and Forge styling; Accept changes only reviewed local text in one undoable transaction. Every stage identifies disconnected AI. No provider, network, public contract or persisted version work; E07 remains pending. [Actual verification](../docs/ai-preview-verification.md).
+
 ## Editor tool rail follow-up — 2026-10-04
 
 The user's twelve supplied screenshots request a left rail and separate Edit Content, Customize Template, ATS Score and Optimize for JD panels. Implemented a bounded local UI slice using Forge tokens, shared Dialog/Button and the existing Tiptap/canvas transactions. Only original template artwork is rendered. Browser formatting joins local draft history; ATS/JD remain honest unavailable states and export is disabled. [Actual verification and manual steps](../docs/editor-panels-verification.md). This supersedes the earlier no-panel direction for navigation/shortcuts; full F20, E06–E09 and all server privacy/auth/audit gates remain unchanged.

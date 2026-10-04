@@ -9,8 +9,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-04T12:02:38.742Z",
-  "lastResult": "Baseline committed; frontend/backend branches and separate worktree ready. Ownership/handoff docs checked; Gemini not started, no push."
+  "updatedAt": "2026-10-04T12:51:46.383Z",
+  "lastResult": "Frontend AI dialog checkpoint ready for commit and push; prior checks passed and Git diff reviewed. Real AI remains pending."
 }
 ```
 <!-- END:CURRENT_TASK -->
@@ -20,6 +20,8 @@ The Codex heartbeat checks this task every **15 minutes**. An `ongoing` task is 
 **Frontend update — 2026-10-03:** The sample editor now supports direct paper editing across all six sections, contextual actions, complete local Edit dialogs, empty-only fictional sample autofill and full-draft checkpoints/history. [Manual checks and screenshots](docs/manual-editor-verification.md) explain the reset-on-reload boundary. Real contacts, durable resume versions, AI, ATS and PDF remain pending.
 
 **Frontend fix — 2026-10-04:** Contextual actions are centered below the active section without shifting the resume or covering the next heading; mobile retains its action dock. [Before/after and manual checks](docs/manual-editor-verification.md#toolbar-positioning-correction--2026-10-04).
+
+**AI dialog preview — 2026-10-04:** Improve with AI opens a selected-target dialog with temporary Thinking, Suggested changes and No changes needed states. Accept/Cancel and Undo work locally; every state identifies the disconnected AI service. [Actual checks and manual steps](docs/ai-preview-verification.md). This is frontend-only and resets on reload.
 
 A planned multi-tenant resume and professional-profile platform for individuals, organizations, and vendors. It tailors resumes to supplied job descriptions without changing the master profile.
 

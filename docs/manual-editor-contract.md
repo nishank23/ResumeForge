@@ -1,5 +1,9 @@
 # Local manual editor completion contract — 2026-10-03
 
+## Temporary AI dialog preview — 2026-10-04
+
+The user's frontend-only dialog request authorizes a local presentation exception to the previous unavailable AI action. Improve with AI opens request setup; explicit Preview suggested changes shows temporary Thinking and conservative local wording examples or No changes needed. Every stage identifies AI as disconnected. This is not grounded generation, a content assessment or E07 completion. Accept commits one target-only, undoable local edit, preserving rich marks, stable IDs, facts and separate contacts; changed drafts reject. Cancel/Close/Escape and pending cancellation do not mutate history. Skills/header controls remain unchanged. No provider/API/persistence work or new public contract. [Verification and manual steps](ai-preview-verification.md).
+
 ## Editor rail and local formatting — 2026-10-04
 
 The user now requests section shortcuts in an Edit Content panel, plus Customize Template, ATS Score and Optimize for JD. This supersedes the earlier panel-removal direction only for navigation/shortcuts; paper typing and existing validated dialogs are preserved. Rail/panel switching and collapse do not mutate resume text, contacts or history. Back to all resumes uses the existing shell-owned workspace route and explicitly warns that all local checkpoints clear; standalone mode explains that the list is available in the signed-in shell.
