@@ -33,6 +33,18 @@ import {
   formatResumeAsText,
   formatResumeAsHtml,
 } from "./formatter.js";
+import {
+  type JdParseRequest,
+  type ParsedJdContentDto,
+  type ParsedKeywordDto,
+  type JdHistoryDto,
+  type ResumeTailorRequest,
+  type ResumeTailorResponseDto,
+  jdParseRequestSchema,
+  resumeTailorRequestSchema,
+} from "./jd-contracts.js";
+import { parseJdText } from "./jd-parser.js";
+import { computeAtsScore } from "./ats-scorer.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 
@@ -44,6 +56,14 @@ export interface ResumeServiceContext {
   actor: ResolvedActor;
   selectedWorkspaceId?: string;
   correlationId: string;
+}
+
+function toKeywords(val: unknown): ParsedKeywordDto[] {
+  return Array.isArray(val) ? (val as ParsedKeywordDto[]) : [];
+}
+
+function toStringArray(val: unknown): string[] {
+  return Array.isArray(val) ? (val as string[]) : [];
 }
 
 export function createResumeUseCases(db: Database, now = Date.now) {
@@ -691,6 +711,322 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     };
   }
 
+  /**
+   * Parses JD text without persisting to the database.
+   */
+  async function parseJdOnly(
+    input: JdParseRequest,
+  ): Promise<ParsedJdContentDto> {
+    await Promise.resolve();
+    const parsedInput = jdParseRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    return parseJdText(parsedInput.data.rawJD, parsedInput.data.jobTitle, parsedInput.data.company);
+  }
+
+  /**
+   * Parses a job description and persists it into JDHistory.
+   */
+  async function parseAndSaveJD(
+    context: ResumeServiceContext,
+    input: JdParseRequest,
+  ): Promise<JdHistoryDto> {
+    const parsedInput = jdParseRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    const workspace = await authorizeWorkspace(context, "resume.create");
+
+    // Ensure user profile exists
+    let profile = await db.userProfile.findUnique({
+      where: { userId: context.actor.userId },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      profile = await db.userProfile.create({
+        data: {
+          userId: context.actor.userId,
+          fullName: "User",
+        },
+        select: { id: true },
+      });
+    }
+
+    const parsedContent = parseJdText(data.rawJD, data.jobTitle, data.company);
+    const jdId = randomUUID();
+
+    const auditIntent = createAuditIntent(context, "resume.created", jdId, {
+      status: "succeeded",
+      reasonCode: "jd_created",
+    });
+
+    const created = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const jdRecord = await tx.jDHistory.create({
+          data: {
+            id: jdId,
+            profileId: profile.id,
+            workspaceType: "individual",
+            workspaceId: workspace.id,
+            createdByUserId: context.actor.userId,
+            jobTitle: parsedContent.jobTitle,
+            company: parsedContent.company,
+            rawJD: data.rawJD,
+            parsedKeywords: JSON.parse(JSON.stringify(parsedContent.keywords)) as JsonValue,
+            parsedRequirements: JSON.parse(JSON.stringify(parsedContent.requirements)) as JsonValue,
+            parsedResponsibilities: JSON.parse(JSON.stringify(parsedContent.responsibilities)) as JsonValue,
+            experienceLevel: parsedContent.experienceLevel,
+            roleType: parsedContent.roleType,
+          },
+        });
+        return jdRecord;
+      },
+    );
+
+    return {
+      id: created.id,
+      profileId: created.profileId,
+      workspaceId: created.workspaceId,
+      jobTitle: created.jobTitle,
+      company: created.company,
+      rawJD: created.rawJD,
+      parsedKeywords: toKeywords(created.parsedKeywords),
+      parsedRequirements: toStringArray(created.parsedRequirements),
+      parsedResponsibilities: toStringArray(created.parsedResponsibilities),
+      experienceLevel: created.experienceLevel,
+      roleType: created.roleType,
+      createdAt: created.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * Retrieves a specific JDHistory record by ID with strict ownership validation.
+   */
+  async function getJDHistoryById(
+    context: ResumeServiceContext,
+    jdId: string,
+  ): Promise<JdHistoryDto> {
+    if (!z.string().uuid().safeParse(jdId).success) {
+      throw new ResumeError("invalid_input", "Invalid JD ID");
+    }
+    await authorizeWorkspace(context, "resume.read");
+
+    const record = await db.jDHistory.findFirst({
+      where: {
+        id: jdId,
+        createdByUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+    });
+
+    if (!record) {
+      throw new ResumeError("not_found", "Job description not found");
+    }
+
+    return {
+      id: record.id,
+      profileId: record.profileId,
+      workspaceId: record.workspaceId,
+      jobTitle: record.jobTitle,
+      company: record.company,
+      rawJD: record.rawJD,
+      parsedKeywords: toKeywords(record.parsedKeywords),
+      parsedRequirements: toStringArray(record.parsedRequirements),
+      parsedResponsibilities: toStringArray(record.parsedResponsibilities),
+      experienceLevel: record.experienceLevel,
+      roleType: record.roleType,
+      createdAt: record.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * Lists all JDHistory records owned by the authenticated actor.
+   */
+  async function listJDHistories(
+    context: ResumeServiceContext,
+  ): Promise<JdHistoryDto[]> {
+    await authorizeWorkspace(context, "resume.read");
+
+    const records = await db.jDHistory.findMany({
+      where: {
+        createdByUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return records.map((record) => ({
+      id: record.id,
+      profileId: record.profileId,
+      workspaceId: record.workspaceId,
+      jobTitle: record.jobTitle,
+      company: record.company,
+      rawJD: record.rawJD,
+      parsedKeywords: toKeywords(record.parsedKeywords),
+      parsedRequirements: toStringArray(record.parsedRequirements),
+      parsedResponsibilities: toStringArray(record.parsedResponsibilities),
+      experienceLevel: record.experienceLevel,
+      roleType: record.roleType,
+      createdAt: record.createdAt.toISOString(),
+    }));
+  }
+
+  /**
+   * Tailors a resume against a JD: computes ATS score breakdown and updates the resume record.
+   */
+  async function tailorResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: ResumeTailorRequest,
+  ): Promise<ResumeTailorResponseDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const parsedInput = resumeTailorRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    await authorizeWorkspace(context, "resume.update");
+
+    // Fetch existing resume
+    const resume = await db.resume.findFirst({
+      where: {
+        id: resumeId,
+        ownerUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!resume) {
+      throw new ResumeError("not_found", "Resume not found");
+    }
+
+    let parsedJd: ParsedJdContentDto;
+    let jdHistoryId: string | null = null;
+
+    if (data.jdHistoryId) {
+      const jdRecord = await db.jDHistory.findFirst({
+        where: {
+          id: data.jdHistoryId,
+          createdByUserId: context.actor.userId,
+          workspaceId: context.actor.personalWorkspaceId,
+        },
+      });
+      if (!jdRecord) {
+        throw new ResumeError("not_found", "Job description history not found");
+      }
+      parsedJd = {
+        jobTitle: jdRecord.jobTitle,
+        company: jdRecord.company,
+        experienceLevel: (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
+        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+        keywords: toKeywords(jdRecord.parsedKeywords),
+        requirements: toStringArray(jdRecord.parsedRequirements),
+        responsibilities: toStringArray(jdRecord.parsedResponsibilities),
+      };
+      jdHistoryId = jdRecord.id;
+    } else if (data.rawJD) {
+      parsedJd = parseJdText(data.rawJD);
+      // Persist as JDHistory for provenance and linkage
+      const newJdId = randomUUID();
+      let profile = await db.userProfile.findUnique({
+        where: { userId: context.actor.userId },
+        select: { id: true },
+      });
+      if (!profile) {
+        profile = await db.userProfile.create({
+          data: { userId: context.actor.userId, fullName: "User" },
+          select: { id: true },
+        });
+      }
+      const newJd = await db.jDHistory.create({
+        data: {
+          id: newJdId,
+          profileId: profile.id,
+          workspaceType: "individual",
+          workspaceId: resume.workspaceId,
+          createdByUserId: context.actor.userId,
+          jobTitle: parsedJd.jobTitle,
+          company: parsedJd.company,
+          rawJD: data.rawJD,
+          parsedKeywords: JSON.parse(JSON.stringify(parsedJd.keywords)) as JsonValue,
+          parsedRequirements: JSON.parse(JSON.stringify(parsedJd.requirements)) as JsonValue,
+          parsedResponsibilities: JSON.parse(JSON.stringify(parsedJd.responsibilities)) as JsonValue,
+          experienceLevel: parsedJd.experienceLevel,
+          roleType: parsedJd.roleType,
+        },
+      });
+      jdHistoryId = newJd.id;
+    } else {
+      throw new ResumeError("invalid_input", "Either jdHistoryId or rawJD must be provided");
+    }
+
+    const rawContent = resume.content ?? resume.versions[0]?.content;
+    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+
+    const atsBreakdown = computeAtsScore(resumeContent, parsedJd);
+
+    const auditIntent = createAuditIntent(context, "resume.updated", resumeId, {
+      status: "succeeded",
+      reasonCode: "tailor_resume",
+    });
+
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        await tx.resume.update({
+          where: { id: resumeId },
+          data: {
+            atsScore: atsBreakdown.overallScore,
+            atsBreakdown: JSON.parse(JSON.stringify(atsBreakdown)) as JsonObject,
+            jdHistoryId,
+          },
+        });
+
+        if (resume.versions[0]) {
+          await tx.resumeVersion.update({
+            where: { id: resume.versions[0].id },
+            data: {
+              atsScore: atsBreakdown.overallScore,
+              atsBreakdown: JSON.parse(JSON.stringify(atsBreakdown)) as JsonObject,
+            },
+          });
+        }
+      },
+    );
+
+    return {
+      resumeId,
+      jdHistoryId,
+      atsScore: atsBreakdown.overallScore,
+      atsBreakdown,
+    };
+  }
+
   return {
     importResume,
     parseResumeOnly,
@@ -701,5 +1037,10 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     downloadResume,
     listResumeVersions,
     cloneResume,
+    parseJdOnly,
+    parseAndSaveJD,
+    getJDHistoryById,
+    listJDHistories,
+    tailorResume,
   };
 }

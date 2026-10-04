@@ -25,6 +25,8 @@ export function createResumeApp(config: {
 
   app.use("/api/v1/resume/*", localCors);
   app.use("/api/v1/resume", localCors);
+  app.use("/api/v1/jd/*", localCors);
+  app.use("/api/v1/jd", localCors);
 
   app.onError((_error, c) =>
     c.json(
@@ -373,6 +375,133 @@ export function createResumeApp(config: {
       return fail(c, "resume_unavailable", "Failed to list resumes", 503, requestId);
     }
   });
+
+  // Tailor resume against a JD (computes ATS score & updates resume)
+  app.post("/api/v1/resume/:id/tailor", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.tailorResume(
+        auth.context,
+        id,
+        body as Parameters<typeof config.resumes.tailorResume>[2],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to tailor resume", 503, requestId);
+    }
+  });
+
+  // Parse JD text only (preview / no persistence)
+  app.post("/api/v1/jd/parse", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.parseJdOnly(
+        body as Parameters<typeof config.resumes.parseJdOnly>[0],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to parse job description", 503, requestId);
+    }
+  });
+
+  // Save JD (parse and persist to JDHistory)
+  const handleSaveJd = async (c: Context) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.parseAndSaveJD(
+        auth.context,
+        body as Parameters<typeof config.resumes.parseAndSaveJD>[1],
+      );
+      return c.json({ data: result, requestId }, 201);
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to save job description", 503, requestId);
+    }
+  };
+
+  app.post("/api/v1/jd", handleSaveJd);
+  app.post("/api/v1/jd/history", handleSaveJd);
+
+  // List JD histories
+  const handleListJd = async (c: Context) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    try {
+      const result = await config.resumes.listJDHistories(auth.context);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, 503, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to list job descriptions", 503, requestId);
+    }
+  };
+
+  app.get("/api/v1/jd", handleListJd);
+  app.get("/api/v1/jd/history", handleListJd);
+
+  // Get specific JD history by ID
+  const handleGetJdById = async (c: Context) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id") ?? "";
+    try {
+      const result = await config.resumes.getJDHistoryById(auth.context, id);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to get job description", 503, requestId);
+    }
+  };
+
+  app.get("/api/v1/jd/:id", handleGetJdById);
+  app.get("/api/v1/jd/history/:id", handleGetJdById);
 
   return app;
 }

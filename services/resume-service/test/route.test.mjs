@@ -155,6 +155,74 @@ function createMockService() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }),
+    parseJdOnly: async (input) => ({
+      jobTitle: input.jobTitle || "Parsed Position",
+      company: input.company || "Parsed Company",
+      experienceLevel: "senior",
+      roleType: "full-time",
+      keywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript required" }],
+      requirements: ["5+ years experience"],
+      responsibilities: ["Build systems"],
+    }),
+    parseAndSaveJD: async (_context, input) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      jobTitle: input.jobTitle || "Saved Position",
+      company: input.company || "Saved Company",
+      rawJD: input.rawJD,
+      parsedKeywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript" }],
+      parsedRequirements: ["5+ years experience"],
+      parsedResponsibilities: ["Build systems"],
+      experienceLevel: "senior",
+      roleType: "full-time",
+      createdAt: new Date().toISOString(),
+    }),
+    getJDHistoryById: async (_context, id) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      jobTitle: "Saved Position",
+      company: "Saved Company",
+      rawJD: "Job details here...",
+      parsedKeywords: [],
+      parsedRequirements: [],
+      parsedResponsibilities: [],
+      experienceLevel: "senior",
+      roleType: "full-time",
+      createdAt: new Date().toISOString(),
+    }),
+    listJDHistories: async () => [
+      {
+        id: randomUUID(),
+        profileId: randomUUID(),
+        workspaceId: mockActor.personalWorkspaceId,
+        jobTitle: "Saved Position",
+        company: "Saved Company",
+        rawJD: "Job details here...",
+        parsedKeywords: [],
+        parsedRequirements: [],
+        parsedResponsibilities: [],
+        experienceLevel: "senior",
+        roleType: "full-time",
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    tailorResume: async (_context, id, input) => ({
+      resumeId: id,
+      jdHistoryId: input.jdHistoryId || randomUUID(),
+      atsScore: 88,
+      atsBreakdown: {
+        overallScore: 88,
+        rubricVersion: "1.0.0",
+        keywordMatch: { matched: ["TypeScript"], missing: [], score: 100 },
+        experienceRelevance: { score: 90, feedback: "Senior match" },
+        skillsCoverage: { matched: ["TypeScript"], missing: [], score: 100 },
+        completenessScore: 100,
+        readabilityScore: 80,
+        recommendations: ["Great match"],
+      },
+    }),
   };
 
   const resolveActor = async (auth) => {
@@ -373,4 +441,93 @@ test("POST /api/v1/resume/:id/clone clones resume and returns 201", async () => 
   const body = await res.json();
   assert.equal(body.data.title, "Cloned Copy");
   assert.equal(body.data.currentVersion, 1);
+});
+
+test("POST /api/v1/jd/parse parses JD text without authentication", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd/parse", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      rawJD: "We are seeking a Senior TypeScript Developer to build microservices.",
+      jobTitle: "Senior TypeScript Developer",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.jobTitle, "Senior TypeScript Developer");
+  assert.ok(Array.isArray(body.data.keywords));
+});
+
+test("POST /api/v1/jd saves JD and returns 201 when authenticated", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      rawJD: "Looking for an engineer with 5+ years experience in TypeScript.",
+      jobTitle: "Staff Engineer",
+    }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.data.jobTitle, "Staff Engineer");
+  assert.ok(body.data.id);
+});
+
+test("GET /api/v1/jd/history lists user JD histories", async () => {
+  const { app } = createMockService();
+  const res = await app.request("/api/v1/jd/history", {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data));
+  assert.equal(body.data.length, 1);
+});
+
+test("GET /api/v1/jd/:id returns single JD history", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${targetId}`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.id, targetId);
+});
+
+test("POST /api/v1/resume/:id/tailor computes ATS score and returns breakdown", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const jdHistoryId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/tailor`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({ jdHistoryId }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.equal(body.data.atsScore, 88);
+  assert.equal(body.data.atsBreakdown.rubricVersion, "1.0.0");
 });
