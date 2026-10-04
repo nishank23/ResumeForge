@@ -8,8 +8,8 @@
   "scripts": {
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
-    "test:db": "pnpm --filter @resume-forge/workspace-service... build && node --test test/audit.test.mjs",
-    "test": "node --test test/transport.test.mjs test/worker.test.mjs"
+    "test:db": "pnpm --filter @resume-forge/workspace-service... build && node --test test/audit.test.mjs test/workspace.db.test.mjs",
+    "test": "node --test test/transport.test.mjs test/worker.test.mjs test/rbac.test.mjs test/workspace-routes.test.mjs"
   },
   "dependencies": {
     "@resume-forge/prisma-client": "workspace:*",
