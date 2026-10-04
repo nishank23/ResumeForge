@@ -21,6 +21,8 @@ The Codex heartbeat checks this task every **15 minutes**. An `ongoing` task is 
 
 **Frontend fix — 2026-10-04:** Contextual actions are centered below the active section without shifting the resume or covering the next heading; mobile retains its action dock. [Before/after and manual checks](docs/manual-editor-verification.md#toolbar-positioning-correction--2026-10-04).
 
+**AI dialog preview — 2026-10-04:** Improve with AI opens a selected-target dialog with temporary Thinking, Suggested changes and No changes needed states. Accept/Cancel and Undo work locally; every state identifies the disconnected AI service. [Actual checks and manual steps](docs/ai-preview-verification.md). This is frontend-only and resets on reload.
+
 A planned multi-tenant resume and professional-profile platform for individuals, organizations, and vendors. It tailors resumes to supplied job descriptions without changing the master profile.
 
 **Skills update — 2026-10-04:** Languages are grouped inside Skills; click Skills for category/tag editing without an AI toolbar. Extra paragraph spacing is removed. [Verification and manual checks](docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) record desktop/keyboard results and mobile verification pending. Saves still reset on reload.
@@ -33,7 +35,18 @@ A planned multi-tenant resume and professional-profile platform for individuals,
 
 ## Start here
 
-**Parallel development — 2026-10-04:** Current sidebar work is committed on `main`; new work uses `codex/frontend` and a separate `codex/backend` checkout. Codex owns frontend and integration; the backend agent owns assigned service changes. Read [file ownership, scheduler rules and Gemini handoff](docs/parallel-development.md) before running both agents. Nothing has been pushed.
+**Frontend worktree — 2026-10-04:** All new frontend work uses `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2` on `codex/frontend`. The original checkout is retained at detached commit `0dc79ec` for its existing services. Use the new worktree's own task marker/lock. [Current checkout paths and coordination](docs/parallel-development.md).
+
+For frontend-only development in this worktree, install the frozen lockfile, build `@resume-forge/shared-types` and `@resume-forge/shared`, then run:
+
+```bash
+pnpm --parallel --filter @resume-forge/shell --filter @resume-forge/auth-mfe --filter @resume-forge/profile-mfe --filter @resume-forge/resume-mfe dev
+```
+
+The standalone sample editor is at `http://localhost:3003/`; the shell is at `http://localhost:3000/`. These four frontend servers now run from this worktree. Full-app sign-in is currently blocked by a local auth/profile database-password mismatch recorded in the [tracker](context/progress-tracker.md). Backend credentials and the existing database stay in the original checkout; do not initialize a second cluster or copy secrets into this worktree.
+
+
+**Parallel development — 2026-10-04:** Current sidebar work is committed on `main`; new work uses `codex/frontend` and a separate `codex/backend` checkout. Codex owns frontend and integration; the backend agent owns assigned service changes. Read [file ownership, scheduler rules and Gemini handoff](docs/parallel-development.md) before running both agents. The frontend AI dialog commit `0dc79ec` was subsequently pushed to `origin/codex/frontend`; the named frontend worktree now owns that branch.
 
 1. [Context index](context/README.md) — reading order and the complete document map.
 2. [Project overview](context/project-overview.md) — product scope, five baseline phases and proposed Phase 6.

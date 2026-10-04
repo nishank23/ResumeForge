@@ -5,10 +5,15 @@ The user selected a committed baseline, two branches and separate checkouts on 2
 ## Checkouts
 
 - `main`: reviewed sidebar baseline `5f7b9fb`; keep it for integrated work.
-- `codex/frontend`: `/Users/nishankbansal/Downloads/ResumeBuilderv2`. Codex owns frontend work and integration.
-- `codex/backend`: `/Users/nishankbansal/.codex/worktrees/resume-backend/ResumeBuilderv2`. Gemini runs here separately. This is a managed worktree attached to this chat; do not archive it while backend work is active.
+- `codex/frontend`: `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. This managed worktree is named `frontend` and attached to this chat. Codex performs all new frontend/integration work here.
+- Original checkout: `/Users/nishankbansal/Downloads/ResumeBuilderv2`, detached at pushed commit `0dc79ec`. Preserve its existing services and development data; do not implement new work in this folder.
+- `codex/backend`: `/Users/nishankbansal/Downloads/backend`, as verified by `git worktree list` during the frontend move. The external backend lane remains separate; do not switch, reset or remove it.
 
 Both branches started from the same baseline. A small shared workflow commit follows it. No Gemini process was launched, dependencies installed in its checkout, secrets copied or code pushed during setup.
+
+## Frontend worktree move — 2026-10-04
+
+Created the named `frontend` worktree from pushed frontend commit `0dc79ec`, then moved the `codex/frontend` branch checkout from the clean original folder into it. The original is detached at the same commit, so its checked-out application files did not change. The backend worktree was not altered. Future commands and scheduled work must explicitly use the new frontend path, read its README/tracker and claim its own local task lock. No new feature, dependency, migration, service restart or deployment is part of this move. Ignored dependencies, credentials, task locks and database directories were not copied; install locked dependencies in this checkout before its package checks.
 
 ## File ownership
 
@@ -23,7 +28,7 @@ Do not edit outside the assigned paths, reformat the whole repository, switch th
 1. Each agent checks its own README marker and `pnpm task:status`, then claims one bounded task using the existing helper. Locks do not expire and are local to each checkout. Finish with the returned owner token. Never copy `.local` locks or database directories between checkouts.
 2. Codex owns the canonical progress tracker. The backend agent records files changed, API proposal, exact checks/results, limitations, manual checks and required shared changes in its handoff document. Task marker changes are runtime bookkeeping and should not be included in the backend feature patch.
 3. Existing frontend heartbeat follows branch ownership in [scheduled development](scheduled-development.md). It cannot take backend work when frontend work is blocked. Gemini is run manually in its own checkout; this setup does not provide automatic Gemini orchestration.
-4. Keep the original checkout's dev server and managed local PostgreSQL running. Do not start a second stack on the same ports, initialize another dev cluster, migrate shared development data or change hosted settings. Backend tests must use disposable local databases and synthetic fixtures. Missing dependencies/local test configuration must be resolved without copying credentials into chat or Git.
+4. Keep one frontend stack on ports 3000–3003, now running from the named frontend worktree, and preserve the original checkout's managed local PostgreSQL and backend configuration. The gateway is restored; auth/profile startup is currently blocked by a local runtime-password mismatch documented in the tracker. Do not start a second stack on the same ports, initialize another dev cluster, migrate shared development data or change hosted settings. Backend tests must use disposable local databases and synthetic fixtures. Missing dependencies/local test configuration must be resolved without copying credentials into chat or Git.
 5. Backend handoff contains a feature-only diff or branch commit plus its tested base revision. Do not merge, push, deploy or modify `main` from the backend lane. Codex reviews the diff, resolves conflicts, incorporates tracker/contracts, runs relevant combined checks and verifies connected browser behavior before integration into `main`. The user should not need to resolve file merges.
 
 ## Gemini starting prompt

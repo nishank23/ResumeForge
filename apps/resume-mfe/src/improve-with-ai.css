@@ -1,0 +1,258 @@
+/* App-only preview decoration; never part of the resume page or export. */
+.rf-ai-dialog {
+  width: min(760px, 100%);
+  max-width: 760px;
+  max-height: calc(100dvh - 32px);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #8b5cf6;
+  border-radius: 18px;
+  isolation: isolate;
+}
+.rf-ai-dialog::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #8b5cf633 1.5px, transparent 1.5px);
+  background-size: 12px 12px;
+  mask-image: linear-gradient(
+    110deg,
+    #000,
+    transparent 28%,
+    transparent 76%,
+    #000
+  );
+  height: 128px;
+}
+.rf-ai-dialog > div:first-child {
+  flex-shrink: 0;
+  padding-bottom: 18px;
+}
+.rf-ai-dialog > div:first-child h2 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 23px;
+  letter-spacing: -0.6px;
+}
+.rf-ai-dialog > div:first-child h2::before {
+  content: "";
+  flex: 0 0 22px;
+  height: 22px;
+  background: var(--primary);
+  clip-path: polygon(
+    50% 0,
+    65% 35%,
+    100% 50%,
+    65% 65%,
+    50% 100%,
+    35% 65%,
+    0 50%,
+    35% 35%
+  );
+}
+.rf-ai-dialog > div:first-child p {
+  max-width: 62ch;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.rf-ai-dialog-body {
+  min-height: 0;
+  margin-top: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.rf-ai-preview-note {
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.rf-ai-intro,
+.rf-ai-thinking,
+.rf-ai-empty {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  padding: 30px 12px 20px;
+}
+.rf-ai-intro > svg,
+.rf-ai-thinking > svg {
+  color: var(--primary);
+}
+.rf-ai-empty > svg {
+  color: var(--success);
+}
+.rf-ai-intro h3,
+.rf-ai-empty h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.rf-ai-intro p,
+.rf-ai-thinking p,
+.rf-ai-empty p {
+  max-width: 60ch;
+  line-height: 1.75;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.rf-ai-thinking-dots {
+  display: flex;
+  gap: 7px;
+  height: 14px;
+  align-items: center;
+}
+.rf-ai-thinking-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: rf-ai-dot 1s ease-in-out infinite alternate;
+}
+.rf-ai-thinking-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.rf-ai-thinking-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes rf-ai-dot {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.rf-ai-diff-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 12px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.rf-ai-diff-key > span:last-child {
+  margin-left: auto;
+}
+.rf-ai-comparison {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 6px 20px;
+}
+.rf-ai-change {
+  padding: 18px 0;
+}
+.rf-ai-change + .rf-ai-change {
+  border-top: 1px solid var(--border);
+}
+.rf-ai-change h3 {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.rf-ai-change p {
+  font-size: 15px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rf-ai-change del,
+.rf-ai-removed-key {
+  color: #b42318;
+  background: #fff0ee;
+  text-decoration: line-through;
+}
+.rf-ai-change ins,
+.rf-ai-added-key {
+  color: #11653f;
+  background: #e7f7ee;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rf-ai-change del,
+.rf-ai-change ins,
+.rf-ai-removed-key,
+.rf-ai-added-key {
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.rf-ai-change details {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.rf-ai-change summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+}
+.rf-ai-change h4 {
+  font-weight: 600;
+  margin-top: 12px;
+}
+.rf-ai-change details p {
+  font-size: 13px;
+}
+.rf-ai-change summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.rf-ai-accept-note {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.rf-ai-dialog-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 24px;
+}
+.rf-ai-dialog-footer button {
+  min-height: 44px;
+}
+.rf-ai-error {
+  color: var(--destructive);
+  font-size: 13px;
+  margin-top: 12px;
+}
+@media (max-width: 540px) {
+  .rf-ai-dialog {
+    padding: 20px;
+    border-radius: 14px;
+  }
+  .rf-ai-dialog > div:first-child h2 {
+    font-size: 20px;
+  }
+  .rf-ai-dialog-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .rf-ai-dialog-footer button {
+    width: 100%;
+  }
+  .rf-ai-comparison {
+    padding-inline: 12px;
+  }
+  .rf-ai-diff-key > span:last-child {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rf-ai-dialog {
+    animation: none;
+    transition: none;
+  }
+  .rf-ai-thinking-dots i {
+    animation: none;
+  }
+}

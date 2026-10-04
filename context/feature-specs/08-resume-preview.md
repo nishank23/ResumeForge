@@ -1,5 +1,9 @@
 # F08 — Resume Builder, Preview and Initial Template
 
+## Temporary frontend AI dialogs — 2026-10-04
+
+The explicit frontend-only request adds selected-target setup, temporary Thinking, inline Suggested changes and No changes needed dialogs. Local conservative wording examples clearly say AI is disconnected; Accept/Cancel and Undo reuse current draft transactions. No provider, public contract or durable version is implemented; grounded E07 and F08 service acceptance remain pending. [Actual checks and manual steps](../../docs/ai-preview-verification.md).
+
 ## Local editor tools extension — 2026-10-04
 
 Implemented the user's explicit rail/panel request: Back to all resumes with local-loss confirmation, Edit Content section shortcuts, Customize Template local settings/one original preview, honest ATS filters and local JD preparation. The existing canvas, target dialogs, Summary, grouped Skills and history remain intact. Optional local `appearance` joins whole-draft checkpoints/history; it is not a persisted resume/render contract. Desktop editing gutters prevent action overlap; Preview uses actual spacing. [Results/manual checks](../../docs/editor-panels-verification.md). E06–E09 and full F20 remain pending.
