@@ -57,6 +57,12 @@ import {
 } from "./generator-contracts.js";
 import { mapProfileToResume } from "./content-mapper.js";
 import { generateSectionSuggestion } from "./suggestion-engine.js";
+import {
+  type GapAnalysisRequest,
+  type GapAnalysisResultDto,
+  gapAnalysisRequestSchema,
+} from "./gap-contracts.js";
+import { analyzeKeywordGaps } from "./gap-analyzer.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 
@@ -115,7 +121,14 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
   async function authorizeWorkspace(
     context: ResumeServiceContext,
-    _permission: "resume.create" | "resume.read" | "resume.update" | "resume.delete",
+    _permission:
+      | "resume.create"
+      | "resume.read"
+      | "resume.update"
+      | "resume.delete"
+      | "skillgap.analyze"
+      | "ats.run"
+      | "ats.view",
   ) {
     assertContext(context);
     const workspace = await db.workspace.findFirst({
@@ -896,6 +909,63 @@ export function createResumeUseCases(db: Database, now = Date.now) {
   }
 
   /**
+   * Deletes a JDHistory entry owned by the user and nullifies foreign key references in Resume records.
+   */
+  async function deleteJDHistory(
+    context: ResumeServiceContext,
+    jdId: string,
+  ): Promise<{ deleted: true; id: string }> {
+    if (!z.string().uuid().safeParse(jdId).success) {
+      throw new ResumeError("invalid_input", "Invalid JD ID");
+    }
+    await authorizeWorkspace(context, "resume.delete");
+
+    const auditIntent = createAuditIntent(context, "resume.deleted", jdId, {
+      status: "succeeded",
+      reasonCode: "jd_deleted",
+    });
+
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const existing = await tx.jDHistory.findFirst({
+          where: {
+            id: jdId,
+            createdByUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          throw new ResumeError("not_found", "Job description not found");
+        }
+
+        // Nullify references in Resume where jdHistoryId is this record
+        await tx.resume.updateMany({
+          where: {
+            jdHistoryId: jdId,
+            ownerUserId: context.actor.userId,
+          },
+          data: {
+            jdHistoryId: null,
+          },
+        });
+
+        await tx.jDHistory.delete({
+          where: { id: jdId },
+        });
+
+        return null;
+      },
+    );
+
+    return { deleted: true, id: jdId };
+  }
+
+  /**
    * Tailors a resume against a JD: computes ATS score breakdown and updates the resume record.
    */
   async function tailorResume(
@@ -1533,6 +1603,181 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     };
   }
 
+  /**
+   * Performs Keyword & Skill Gap Analysis (F17) comparing a Resume and a Job Description,
+   * grounded against master profile facts. Invariant: never mutates profile or resume,
+   * never invents qualifications, and never leaks UserContact.
+   */
+  async function analyzeResumeGap(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: GapAnalysisRequest = {},
+  ): Promise<GapAnalysisResultDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const parsedInput = gapAnalysisRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    await authorizeWorkspace(context, "skillgap.analyze");
+
+    // Fetch resume with latest version
+    const resume = await db.resume.findFirst({
+      where: {
+        id: resumeId,
+        ownerUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!resume) {
+      throw new ResumeError("not_found", "Resume not found");
+    }
+
+    let parsedJd: ParsedJdContentDto;
+    let jdHistoryId: string | null = null;
+    let jobTitle: string | null;
+    let company: string | null;
+
+    if (data.jdHistoryId) {
+      const jdRecord = await db.jDHistory.findFirst({
+        where: {
+          id: data.jdHistoryId,
+          createdByUserId: context.actor.userId,
+          workspaceId: context.actor.personalWorkspaceId,
+        },
+      });
+      if (!jdRecord) {
+        throw new ResumeError("not_found", "Job description history not found");
+      }
+      parsedJd = {
+        jobTitle: jdRecord.jobTitle,
+        company: jdRecord.company,
+        experienceLevel:
+          (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
+        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+        keywords: toKeywords(jdRecord.parsedKeywords),
+        requirements: toStringArray(jdRecord.parsedRequirements),
+        responsibilities: toStringArray(jdRecord.parsedResponsibilities),
+      };
+      jdHistoryId = jdRecord.id;
+      jobTitle = jdRecord.jobTitle;
+      company = jdRecord.company;
+    } else if (data.rawJD) {
+      parsedJd = parseJdText(data.rawJD);
+      jobTitle = parsedJd.jobTitle;
+      company = parsedJd.company;
+    } else if (resume.jdHistoryId) {
+      const jdRecord = await db.jDHistory.findFirst({
+        where: {
+          id: resume.jdHistoryId,
+          createdByUserId: context.actor.userId,
+          workspaceId: context.actor.personalWorkspaceId,
+        },
+      });
+      if (jdRecord) {
+        parsedJd = {
+          jobTitle: jdRecord.jobTitle,
+          company: jdRecord.company,
+          experienceLevel:
+            (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
+          roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+          keywords: toKeywords(jdRecord.parsedKeywords),
+          requirements: toStringArray(jdRecord.parsedRequirements),
+          responsibilities: toStringArray(jdRecord.parsedResponsibilities),
+        };
+        jdHistoryId = jdRecord.id;
+        jobTitle = jdRecord.jobTitle;
+        company = jdRecord.company;
+      } else {
+        throw new ResumeError(
+          "invalid_input",
+          "Linked job description no longer exists. Provide a valid jdHistoryId or rawJD.",
+        );
+      }
+    } else {
+      throw new ResumeError(
+        "invalid_input",
+        "A job description (jdHistoryId or rawJD) is required for gap analysis.",
+      );
+    }
+
+    // Fetch master profile facts (strictly omitting UserContact)
+    const profile = await db.userProfile.findUnique({
+      where: { userId: context.actor.userId },
+      include: {
+        experiences: { orderBy: { sortOrder: "asc" } },
+        educations: { orderBy: { sortOrder: "asc" } },
+        skills: { orderBy: { name: "asc" } },
+        projects: { orderBy: { name: "asc" } },
+        certifications: { orderBy: { name: "asc" } },
+      },
+    });
+
+    const masterProfileFacts = {
+      id: profile?.id ?? randomUUID(),
+      fullName: profile?.fullName ?? undefined,
+      location: profile?.location ?? null,
+      professionalSummary: profile?.professionalSummary ?? null,
+      revision: profile?.revision ?? 0,
+      experiences: (profile?.experiences ?? []).map((e) => ({
+        id: e.id,
+        company: e.company,
+        title: e.title,
+        bulletPoints: Array.isArray(e.bulletPoints) ? (e.bulletPoints as string[]) : [],
+      })),
+      educations: (profile?.educations ?? []).map((e) => ({
+        id: e.id,
+        institution: e.institution,
+        degree: e.degree,
+        fieldOfStudy: e.fieldOfStudy,
+        description: e.description,
+      })),
+      skills: (profile?.skills ?? []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        proficiency: s.proficiency,
+      })),
+      projects: (profile?.projects ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        technologies: Array.isArray(p.technologies) ? (p.technologies as string[]) : [],
+      })),
+      certifications: (profile?.certifications ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        issuer: c.issuer,
+      })),
+    };
+
+    const rawContent = resume.content ?? resume.versions[0]?.content;
+    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+    const resumeTitle = resumeContent.title || "Untitled Resume";
+
+    return analyzeKeywordGaps(resumeContent, parsedJd, masterProfileFacts, {
+      resumeId: resume.id,
+      resumeTitle,
+      resumeVersion: resume.currentVersion,
+      profileRevision: profile?.revision ?? 0,
+      jdHistoryId,
+      jobTitle,
+      company,
+    });
+  }
+
   return {
     importResume,
     parseResumeOnly,
@@ -1547,10 +1792,12 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     parseAndSaveJD,
     getJDHistoryById,
     listJDHistories,
+    deleteJDHistory,
     tailorResume,
     generateResumeFromProfile,
     generateSectionSuggestion: generateSectionSuggestionForResume,
     applySectionSuggestion,
     getTaskRunById,
+    analyzeResumeGap,
   };
 }

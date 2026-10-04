@@ -407,6 +407,38 @@ export function createResumeApp(config: {
     }
   });
 
+  // Keyword & skill gap analysis between resume and JD (F17)
+  const handleGapAnalysis = async (c: Context) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id") ?? "";
+    try {
+      let body: unknown = {};
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (contentType.includes("application/json")) {
+        body = await c.req.json().catch(() => ({}));
+      }
+      const result = await config.resumes.analyzeResumeGap(
+        auth.context,
+        id,
+        body as Parameters<typeof config.resumes.analyzeResumeGap>[2],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to run gap analysis", 503, requestId);
+    }
+  };
+
+  app.post("/api/v1/resume/:id/gap-analysis", handleGapAnalysis);
+  app.get("/api/v1/resume/:id/gap-analysis", handleGapAnalysis);
+
   // Parse JD text only (preview / no persistence)
   app.post("/api/v1/jd/parse", async (c) => {
     const requestId = randomUUID();
@@ -504,6 +536,29 @@ export function createResumeApp(config: {
 
   app.get("/api/v1/jd/:id", handleGetJdById);
   app.get("/api/v1/jd/history/:id", handleGetJdById);
+
+  // Delete specific JD history by ID (F11)
+  const handleDeleteJd = async (c: Context) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id") ?? "";
+    try {
+      const result = await config.resumes.deleteJDHistory(auth.context, id);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to delete job description", 503, requestId);
+    }
+  };
+
+  app.delete("/api/v1/jd/:id", handleDeleteJd);
+  app.delete("/api/v1/jd/history/:id", handleDeleteJd);
 
   // Generate a basic or tailored resume from master profile facts
   app.post("/api/v1/resume/generate", async (c) => {

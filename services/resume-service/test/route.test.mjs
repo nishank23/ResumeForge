@@ -208,6 +208,53 @@ function createMockService() {
         createdAt: new Date().toISOString(),
       },
     ],
+    deleteJDHistory: async (_context, id) => ({
+      deleted: true,
+      id,
+    }),
+    analyzeResumeGap: async (_context, resumeId, input) => ({
+      resumeId,
+      resumeTitle: "Mock Resume",
+      resumeVersion: 1,
+      profileRevision: 1,
+      jdHistoryId: input?.jdHistoryId || null,
+      jobTitle: "Software Engineer",
+      company: "Acme",
+      matchPercentage: 75,
+      totalKeywordsCount: 4,
+      matchedCount: 3,
+      supportedMissingCount: 1,
+      unsupportedMissingCount: 0,
+      requiredMissingCount: 0,
+      matched: [
+        {
+          keyword: "TypeScript",
+          category: "technical",
+          required: true,
+          matchType: "exact",
+          matchedText: "TypeScript",
+          resumeSection: "skills",
+          explanation: "Matches in skills",
+        },
+      ],
+      supportedMissing: [
+        {
+          keyword: "PostgreSQL",
+          category: "technical",
+          required: false,
+          supportingSourceSection: "skills",
+          supportingEvidence: "PostgreSQL in master profile",
+          profileRevision: 1,
+          suggestedTargetSection: "skills",
+          suggestedAction: "Add PostgreSQL to resume",
+          explanation: "Supported in master profile",
+        },
+      ],
+      unsupportedMissing: [],
+      model: "deterministic-hybrid-v1",
+      semanticEngineStatus: "fallback_exact_synonyms",
+      analyzedAt: new Date().toISOString(),
+    }),
     tailorResume: async (_context, id, input) => ({
       resumeId: id,
       jdHistoryId: input.jdHistoryId || randomUUID(),
@@ -687,4 +734,100 @@ test("GET /api/v1/task-run/:id returns 200 with task status", async () => {
   assert.equal(body.data.status, "completed");
   assert.ok(body.data.result);
 });
+
+test("DELETE /api/v1/jd/:id deletes JD history and returns 200", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${jdId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, jdId);
+});
+
+test("DELETE /api/v1/jd/history/:id deletes JD history via alias and returns 200", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/history/${jdId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, jdId);
+});
+
+test("DELETE /api/v1/jd/:id returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const jdId = randomUUID();
+  const res = await app.request(`/api/v1/jd/${jdId}`, {
+    method: "DELETE",
+  });
+
+  assert.equal(res.status, 401);
+});
+
+test("POST /api/v1/resume/:id/gap-analysis performs gap analysis and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      rawJD: "Seeking TypeScript and PostgreSQL developers with 5+ years experience.",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.equal(body.data.matchPercentage, 75);
+  assert.ok(Array.isArray(body.data.matched));
+  assert.ok(Array.isArray(body.data.supportedMissing));
+  assert.ok(Array.isArray(body.data.unsupportedMissing));
+});
+
+test("GET /api/v1/resume/:id/gap-analysis performs gap analysis and returns 200", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.resumeId, resumeId);
+  assert.ok(body.data.matchPercentage >= 0);
+});
+
+test("POST /api/v1/resume/:id/gap-analysis returns 401 when unauthenticated", async () => {
+  const { app } = createMockService();
+  const resumeId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${resumeId}/gap-analysis`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  assert.equal(res.status, 401);
+});
+
 
