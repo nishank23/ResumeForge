@@ -48,6 +48,15 @@ import {
   type SkillListDto,
   type SkillAddedDto,
 } from "./skill-contracts.js";
+import {
+  MAX_PROJECTS,
+  projectCreateSchema,
+  projectListSchema,
+  projectAddedSchema,
+  projectUpdateSchema,
+  type ProjectListDto,
+  type ProjectAddedDto,
+} from "./project-contracts.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 type Context = {
@@ -89,6 +98,15 @@ const skillProjection = {
   name: true,
   category: true,
   proficiency: true,
+} as const;
+const projectProjection = {
+  id: true,
+  name: true,
+  description: true,
+  url: true,
+  technologies: true,
+  startDate: true,
+  endDate: true,
 } as const;
 
 /** Server composition supplies a freshly verified actor; context from request bodies is never accepted. */
@@ -763,6 +781,168 @@ export function createProfileUseCases(db: Database, now = Date.now) {
             profileId,
             revision: expectedRevision + 1,
             entry,
+          });
+        },
+      );
+    },
+    listProjects: async (context: Context): Promise<ProjectListDto> => {
+      assertContext(context);
+      const id = await authorize(context, "profile.read");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.viewed", id),
+          metadata: { permission: "profile.read", status: "projects_read" },
+        },
+        async (tx) => {
+          assertContext(context);
+          const [parent] = await tx.$queryRaw<
+            { id: string; revision: number }[]
+          >`
+            SELECT "id", "revision" FROM "UserProfile"
+            WHERE "id" = ${id}::uuid AND "userId" = ${context.actor.userId}::uuid
+            FOR SHARE`;
+          if (!parent) throw new ProfileError("not_found");
+          const entries = await tx.userProject.findMany({
+            where: { profileId: id, profile: { userId: context.actor.userId } },
+            select: projectProjection,
+            orderBy: [{ startDate: "desc" }, { name: "asc" }, { id: "asc" }],
+            take: MAX_PROJECTS + 1,
+          });
+          assertContext(context);
+          return projectListSchema.parse({
+            profileId: id,
+            revision: parent.revision,
+            entries: entries.map((entry) => ({
+              ...entry,
+              technologies: Array.isArray(entry.technologies)
+                ? entry.technologies
+                : [],
+            })),
+          });
+        },
+      );
+    },
+    addProject: async (
+      context: Context,
+      input: unknown,
+    ): Promise<ProjectAddedDto> => {
+      assertContext(context);
+      const parsed = projectCreateSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "project_added",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const updated = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (updated.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          if ((await tx.userProject.count({ where })) >= MAX_PROJECTS)
+            throw new ProfileError("section_limit");
+          const entry = await tx.userProject.create({
+            data: {
+              id: randomUUID(),
+              profileId,
+              ...fields,
+              technologies: fields.technologies,
+            },
+            select: projectProjection,
+          });
+          assertContext(context);
+          return projectAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry: {
+              ...entry,
+              technologies: Array.isArray(entry.technologies)
+                ? entry.technologies
+                : [],
+            },
+          });
+        },
+      );
+    },
+    updateProject: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<ProjectAddedDto> => {
+      assertContext(context);
+      const parsed = projectUpdateSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "project_updated",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            id: entryId,
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          const updated = await tx.userProject.updateMany({
+            where,
+            data: {
+              ...fields,
+              technologies: fields.technologies,
+            },
+          });
+          if (updated.count !== 1) throw new ProfileError("not_found");
+          const entry = await tx.userProject.findFirst({
+            where,
+            select: projectProjection,
+          });
+          if (!entry) throw new ProfileError("not_found");
+          assertContext(context);
+          return projectAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry: {
+              ...entry,
+              technologies: Array.isArray(entry.technologies)
+                ? entry.technologies
+                : [],
+            },
           });
         },
       );

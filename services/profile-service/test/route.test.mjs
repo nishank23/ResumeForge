@@ -26,6 +26,8 @@ const writeRoutes = [
   [`/api/v1/profile/education/${randomUUID()}`, "PUT"],
   ["/api/v1/profile/skills", "POST"],
   [`/api/v1/profile/skills/${randomUUID()}`, "PUT"],
+  ["/api/v1/profile/projects", "POST"],
+  [`/api/v1/profile/projects/${randomUUID()}`, "PUT"],
 ];
 function setup(
   resolveActor = async () => ({ status: "authenticated", actor }),
@@ -62,6 +64,13 @@ function setup(
       addSkill: operation("addSkill"),
       updateSkill: async (context, id, input) => {
         calls.push({ kind: "updateSkill", context, id, input });
+        if (error) throw error;
+        return dto;
+      },
+      listProjects: operation("listProjects"),
+      addProject: operation("addProject"),
+      updateProject: async (context, id, input) => {
+        calls.push({ kind: "updateProject", context, id, input });
         if (error) throw error;
         return dto;
       },
@@ -488,3 +497,45 @@ test("skills routes dispatch with local CORS and authentic context", async () =>
     ["listSkills", "addSkill", "updateSkill"],
   );
 });
+
+test("projects routes dispatch with local CORS and authentic context", async () => {
+  const { app, calls } = setup();
+  const path = "/api/v1/profile/projects";
+  const headers = {
+    Authorization: "Bearer token",
+    "Content-Type": "application/json",
+    Origin: "http://localhost:3000",
+    "X-Workspace-Id": actor.personalWorkspaceId,
+  };
+  const projectInput = {
+    expectedRevision: 1,
+    name: "ResumeForge",
+    description: "AI resume builder",
+    technologies: ["TypeScript", "React"],
+  };
+  // GET
+  assert.equal((await app.request(path, { headers })).status, 200);
+
+  // POST
+  const added = await app.request(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(projectInput),
+  });
+  assert.equal(added.status, 201);
+
+  // PUT /api/v1/profile/projects/:id
+  const projectId = randomUUID();
+  const updated = await app.request(`${path}/${projectId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(projectInput),
+  });
+  assert.equal(updated.status, 200);
+
+  assert.deepEqual(
+    calls.map((c) => c.kind),
+    ["listProjects", "addProject", "updateProject"],
+  );
+});
+
