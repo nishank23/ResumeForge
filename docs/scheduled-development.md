@@ -2,10 +2,16 @@
 
 The existing Codex heartbeat checks this chat every **15 minutes**. It uses the README current-task marker and the canonical [progress tracker](../context/progress-tracker.md), rather than a second task queue. Keep the Mac awake, Codex running and the project available. This is a scheduled wakeup, not a continuously running server or a guarantee that every check can execute when permissions or services are unavailable.
 
+## Branch ownership — 2026-10-04
+
+The user selected [separate frontend/backend worktrees](parallel-development.md). The existing heartbeat remains attached to the original checkout, now on `codex/frontend`. Before choosing work, verify the current branch. On `main`, a backend branch or an unexpected branch, do no development and report the mismatch once. On `codex/frontend`, choose only an approved frontend slice within that lane's file ownership. If it needs pending backend work, leave idle; do not apply the earlier fallback to foundation/backend implementation. Gemini is started separately in `codex/backend`; no Gemini automation has been created. The saved heartbeat cadence and notification preference have not been changed.
+
+Task markers and ignored locks are local to each checkout, not a global lock across worktrees. Each agent must still honor its own ongoing task and owner token. File ownership and a single integration owner coordinate the two lanes; locks alone do not prevent shared database, API or dependency conflicts. Backend progress is recorded in its handoff document, then incorporated into the canonical tracker by Codex during integration.
+
 ## Each run
 
 1. Run `pnpm task:status` before development. If ongoing, leave the task and working tree alone and wait for the next scheduled check. Never expire a task because 15 minutes have passed.
-2. If idle, inspect status/recent diffs, the tracker, the CareerZenith review and the relevant specification. Preserve completed work. Choose one unfinished slice with satisfied dependencies, prioritizing the approved resume editor; otherwise choose its next unblocked foundation dependency.
+2. If idle, inspect status/recent diffs, the tracker, the CareerZenith review and the relevant specification. Preserve completed work. Choose one unfinished slice with satisfied dependencies within the current branch's ownership. The frontend lane must not take reserved backend foundation work.
 3. Claim it with `pnpm task:start "Short slice title"`. Exit 2 means another run claimed it; stop. Keep the returned owner token until completion. The lock is ignored local state, not a credential.
 4. Implement and run appropriate checks. Update the tracker with actual results, manual checks and blockers. CareerZenith is a capability reference; retain our architecture, identity, authentication and contact privacy. Do not label unavailable AI/ATS/PDF behavior or synthetic data as functional parity.
 5. Finish with `pnpm task:finish OWNER "Verified outcome; remaining limitation"`. Finish also when a slice fails or hits an external blocker, after recording its actual state. No secrets, personal data, automatic pushes, deployment or messages to others.

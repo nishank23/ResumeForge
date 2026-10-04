@@ -9,8 +9,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-04T11:17:30.726Z",
-  "lastResult": "Sidebar folds to 72px; builds, shell checks, 8 tests and desktop/mobile/keyboard pass. State resets on reload; Education next."
+  "updatedAt": "2026-10-04T12:02:38.742Z",
+  "lastResult": "Baseline committed; frontend/backend branches and separate worktree ready. Ownership/handoff docs checked; Gemini not started, no push."
 }
 ```
 <!-- END:CURRENT_TASK -->
@@ -32,6 +32,8 @@ A planned multi-tenant resume and professional-profile platform for individuals,
 **Workspace sidebar — 2026-10-04:** Collapse sidebar below the logo folds the first column into a 72px icon rail. Expand restores its labels; mobile keeps the existing navigation menu. The choice resets on reload. [Screenshots and manual checks](docs/workspace-sidebar-verification.md).
 
 ## Start here
+
+**Parallel development — 2026-10-04:** Current sidebar work is committed on `main`; new work uses `codex/frontend` and a separate `codex/backend` checkout. Codex owns frontend and integration; the backend agent owns assigned service changes. Read [file ownership, scheduler rules and Gemini handoff](docs/parallel-development.md) before running both agents. Nothing has been pushed.
 
 1. [Context index](context/README.md) — reading order and the complete document map.
 2. [Project overview](context/project-overview.md) — product scope, five baseline phases and proposed Phase 6.

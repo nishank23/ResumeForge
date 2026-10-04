@@ -1,0 +1,57 @@
+# Frontend and backend development lanes
+
+The user selected a committed baseline, two branches and separate checkouts on 2026-10-04. Branches alone do not isolate simultaneous edits when agents share one working folder.
+
+## Checkouts
+
+- `main`: reviewed sidebar baseline `5f7b9fb`; keep it for integrated work.
+- `codex/frontend`: `/Users/nishankbansal/Downloads/ResumeBuilderv2`. Codex owns frontend work and integration.
+- `codex/backend`: `/Users/nishankbansal/.codex/worktrees/resume-backend/ResumeBuilderv2`. Gemini runs here separately. This is a managed worktree attached to this chat; do not archive it while backend work is active.
+
+Both branches started from the same baseline. A small shared workflow commit follows it. No Gemini process was launched, dependencies installed in its checkout, secrets copied or code pushed during setup.
+
+## File ownership
+
+- Codex frontend: `apps/shell`, `apps/profile-mfe`, `apps/resume-mfe`, shared UI components and styles in `packages/shared`. Preserve authentication and completed canvas editing; choose only tracker-approved slices.
+- Backend agent's first task: owned Education list/add in `services/profile-service`, its tests and `docs/handoffs/backend-education.md`. Read the F04 specification and existing Experience contract before choosing fields or behavior. This assignment does not authorize deletion/reorder, other sections, contacts, durable resumes or completion.
+- Codex coordinator only: public API/domain contracts, the canonical tracker, root README outside the local task marker, AGENTS, dependencies/lockfile, Prisma schema/migrations, access-policy/resume-core and other shared packages. The backend agent reports required changes here as proposals before implementing dependent behavior. Existing service-local validation can be changed within the agreed task.
+
+Do not edit outside the assigned paths, reformat the whole repository, switch the other checkout's branch, reset another agent's work, commit credentials or overwrite approved gates. File ownership reduces conflicts but cannot guarantee zero integration fixes.
+
+## Coordination and verification
+
+1. Each agent checks its own README marker and `pnpm task:status`, then claims one bounded task using the existing helper. Locks do not expire and are local to each checkout. Finish with the returned owner token. Never copy `.local` locks or database directories between checkouts.
+2. Codex owns the canonical progress tracker. The backend agent records files changed, API proposal, exact checks/results, limitations, manual checks and required shared changes in its handoff document. Task marker changes are runtime bookkeeping and should not be included in the backend feature patch.
+3. Existing frontend heartbeat follows branch ownership in [scheduled development](scheduled-development.md). It cannot take backend work when frontend work is blocked. Gemini is run manually in its own checkout; this setup does not provide automatic Gemini orchestration.
+4. Keep the original checkout's dev server and managed local PostgreSQL running. Do not start a second stack on the same ports, initialize another dev cluster, migrate shared development data or change hosted settings. Backend tests must use disposable local databases and synthetic fixtures. Missing dependencies/local test configuration must be resolved without copying credentials into chat or Git.
+5. Backend handoff contains a feature-only diff or branch commit plus its tested base revision. Do not merge, push, deploy or modify `main` from the backend lane. Codex reviews the diff, resolves conflicts, incorporates tracker/contracts, runs relevant combined checks and verifies connected browser behavior before integration into `main`. The user should not need to resolve file merges.
+
+## Gemini starting prompt
+
+Open the backend checkout above, then paste:
+
+```text
+Work only on codex/backend in this checkout. Read AGENTS.md,
+docs/parallel-development.md, context/progress-tracker.md,
+context/feature-specs/04-profile-wizard.md and docs/experience-api.md.
+Honor the current task marker and pnpm task:status; claim one bounded slice.
+
+Implement only owned Education list/add and its relevant tests, reusing
+existing actor, ownership, master revision and transactional audit patterns.
+Inspect actual schema/contracts first. Preserve contacts, other profile
+fields, completed editor work and all approval gates. Use local PostgreSQL
+with disposable synthetic test databases; no hosted services or secrets.
+
+Edit only services/profile-service, its tests and
+docs/handoffs/backend-education.md. Propose required shared schema,
+dependency or public-contract changes in the handoff before proceeding.
+Do not edit frontend, shared packages, canonical tracker or other docs.
+Do not merge, push, deploy or modify main. Return a feature-only diff,
+exact test results, manual checks and blockers. Finish your own task token;
+exclude README task bookkeeping from the feature patch. Codex handles
+review, integration and canonical tracker updates.
+```
+
+## Setup checks
+
+Run `git branch --show-current`, `git status --short` and `git worktree list` in the original checkout. It should show `codex/frontend` here and `codex/backend` in the backend folder. Both checkouts should be clean after the workflow commit is shared. `pnpm task:status` should be idle in each checkout. Real backend behavior and combined integration are not yet tested by branch setup.
