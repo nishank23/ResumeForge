@@ -24,6 +24,7 @@ export function createProfileApp(config: {
   app.use("/api/v1/profile/draft", localCors);
   app.use("/api/v1/profile/experience", localCors);
   app.use("/api/v1/profile/experience/:id", localCors);
+  app.use("/api/v1/profile/education", localCors);
   app.onError((_error, c) =>
     c.json(
       {
@@ -67,11 +68,14 @@ export function createProfileApp(config: {
         correlationId: requestId,
       };
       const experience = c.req.path === "/api/v1/profile/experience";
+      const education = c.req.path === "/api/v1/profile/education";
       if (c.req.method === "GET")
         return c.json({
           data: await (experience
             ? config.profiles.listExperience(context)
-            : config.profiles.read(context)),
+            : education
+              ? config.profiles.listEducation(context)
+              : config.profiles.read(context)),
           requestId,
         });
       if (
@@ -122,7 +126,9 @@ export function createProfileApp(config: {
           data: await (creating
             ? experience
               ? config.profiles.addExperience(context, input)
-              : config.profiles.create(context, input)
+              : education
+                ? config.profiles.addEducation(context, input)
+                : config.profiles.create(context, input)
             : experienceId !== undefined
               ? config.profiles.updateExperience(context, experienceId, input)
               : c.req.path === "/api/v1/profile/draft"
@@ -156,6 +162,8 @@ export function createProfileApp(config: {
   app.get("/api/v1/profile/experience", handler);
   app.post("/api/v1/profile/experience", handler);
   app.put("/api/v1/profile/experience/:id", handler);
+  app.get("/api/v1/profile/education", handler);
+  app.post("/api/v1/profile/education", handler);
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: "Route not found." } }, 404),
   );

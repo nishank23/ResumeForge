@@ -30,6 +30,14 @@ import {
   type ExperienceListDto,
   type ExperienceAddedDto,
 } from "./experience-contracts.js";
+import {
+  MAX_EDUCATIONS,
+  educationCreateSchema,
+  educationListSchema,
+  educationAddedSchema,
+  type EducationListDto,
+  type EducationAddedDto,
+} from "./education-contracts.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 type Context = {
@@ -53,6 +61,17 @@ const experienceProjection = {
   endDate: true,
   isCurrent: true,
   bulletPoints: true,
+  sortOrder: true,
+} as const;
+const educationProjection = {
+  id: true,
+  institution: true,
+  degree: true,
+  fieldOfStudy: true,
+  startDate: true,
+  endDate: true,
+  gpa: true,
+  description: true,
   sortOrder: true,
 } as const;
 
@@ -391,6 +410,105 @@ export function createProfileUseCases(db: Database, now = Date.now) {
           if (!entry) throw new ProfileError("not_found");
           assertContext(context);
           return experienceAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
+          });
+        },
+      );
+    },
+    listEducation: async (context: Context): Promise<EducationListDto> => {
+      assertContext(context);
+      const id = await authorize(context, "profile.read");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.viewed", id),
+          metadata: { permission: "profile.read", status: "education_read" },
+        },
+        async (tx) => {
+          assertContext(context);
+          // Every application section write locks/increments this same parent first.
+          const [parent] = await tx.$queryRaw<
+            { id: string; revision: number }[]
+          >`
+            SELECT "id", "revision" FROM "UserProfile"
+            WHERE "id" = ${id}::uuid AND "userId" = ${context.actor.userId}::uuid
+            FOR SHARE`;
+          if (!parent) throw new ProfileError("not_found");
+          const entries = await tx.education.findMany({
+            where: { profileId: id, profile: { userId: context.actor.userId } },
+            select: educationProjection,
+            orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+            take: MAX_EDUCATIONS + 1,
+          });
+          assertContext(context);
+          return educationListSchema.parse({
+            profileId: parent.id,
+            revision: parent.revision,
+            entries,
+          });
+        },
+      );
+    },
+    addEducation: async (
+      context: Context,
+      input: unknown,
+    ): Promise<EducationAddedDto> => {
+      assertContext(context);
+      const parsed = educationCreateSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "education_added",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const updated = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (updated.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          if ((await tx.education.count({ where })) >= MAX_EDUCATIONS)
+            throw new ProfileError("section_limit");
+          const previous = await tx.education.findFirst({
+            where,
+            orderBy: { sortOrder: "desc" },
+            select: { sortOrder: true },
+          });
+          if (
+            previous &&
+            (previous.sortOrder < 0 || previous.sortOrder >= 2_147_483_647)
+          )
+            throw new ProfileError("section_limit");
+          const entry = await tx.education.create({
+            data: {
+              id: randomUUID(),
+              profileId,
+              ...fields,
+              sortOrder: previous ? previous.sortOrder + 1 : 0,
+            },
+            select: educationProjection,
+          });
+          assertContext(context);
+          return educationAddedSchema.parse({
             profileId,
             revision: expectedRevision + 1,
             entry,

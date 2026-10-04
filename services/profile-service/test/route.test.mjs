@@ -22,6 +22,7 @@ const writeRoutes = [
   ["/api/v1/profile/draft", "PUT"],
   ["/api/v1/profile/experience", "POST"],
   [`/api/v1/profile/experience/${randomUUID()}`, "PUT"],
+  ["/api/v1/profile/education", "POST"],
 ];
 function setup(
   resolveActor = async () => ({ status: "authenticated", actor }),
@@ -47,6 +48,8 @@ function setup(
         if (error) throw error;
         return dto;
       },
+      listEducation: operation("listEducation"),
+      addEducation: operation("addEducation"),
     },
   });
   return { app, calls };
@@ -259,6 +262,61 @@ test("experience list/add dispatch the verified context and reject unsupported c
   assert.deepEqual(
     calls.map((call) => call.kind),
     ["listExperience", "addExperience"],
+  );
+  assert.deepEqual(calls[1].input, input);
+  for (const call of calls) {
+    assert.deepEqual(call.context.actor, actor);
+    assert.equal(call.context.selectedWorkspaceId, actor.personalWorkspaceId);
+  }
+  const preflight = await app.request(path, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "http://localhost:3000",
+      "Access-Control-Request-Method": "POST",
+    },
+  });
+  assert.equal(preflight.status, 204);
+  assert.ok(
+    preflight.headers.get("Access-Control-Allow-Methods").includes("POST"),
+  );
+  for (const method of ["PUT", "DELETE"])
+    assert.equal((await app.request(path, { method })).status, 404);
+  assert.equal((await app.request(`${path}/${randomUUID()}`)).status, 404);
+  assert.equal(calls.length, 2);
+  const unavailable = setup(async () => ({ status: "unavailable" }));
+  assert.equal((await unavailable.app.request(path)).status, 503);
+  assert.equal(unavailable.calls.length, 0);
+});
+
+test("education list/add dispatch the verified context and reject unsupported child/verb targets", async () => {
+  const { app, calls } = setup();
+  const path = "/api/v1/profile/education";
+  const headers = {
+    Origin: "http://localhost:3000",
+    "Content-Type": "application/json",
+    "X-Workspace-Id": actor.personalWorkspaceId,
+  };
+  const input = {
+    expectedRevision: 1,
+    institution: "Synthetic University",
+    degree: "BS Computer Science",
+    fieldOfStudy: "Software Engineering",
+  };
+  assert.equal((await app.request(path, { headers })).status, 200);
+  const added = await app.request(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  });
+  assert.equal(added.status, 201);
+  assert.equal(added.headers.get("Cache-Control"), "no-store");
+  assert.equal(
+    added.headers.get("Access-Control-Allow-Origin"),
+    "http://localhost:3000",
+  );
+  assert.deepEqual(
+    calls.map((call) => call.kind),
+    ["listEducation", "addEducation"],
   );
   assert.deepEqual(calls[1].input, input);
   for (const call of calls) {
