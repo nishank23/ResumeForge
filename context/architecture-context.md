@@ -16,7 +16,7 @@ This is the target architecture, not deployed infrastructure. Stack choices come
 | Editing/preview | Tiptap + `@react-pdf/renderer` | Limited rich text and resume rendering |
 | HTTP | Hono on Node.js containers | Gateway and domain service APIs |
 | Identity | Google + LinkedIn OAuth; JWT sessions | Provider sign-in and application sessions |
-| Database | Neon PostgreSQL + pgvector + Prisma 7 | Relations, structured JSONB, semantic vectors |
+| Database | Local PostgreSQL 18 + pgvector + Prisma 7; hosting deferred | Relations and structured JSONB implemented; extension ready, real semantic vectors gated by D07 |
 | Async work | Trigger.dev v4 | Durable AI, scoring, embedding, and PDF tasks |
 | AI | Vercel AI SDK, Gemini default | Provider adapters and validated structured output |
 | Artifacts | Cloudflare R2 | Private PDFs and temporary import uploads |
@@ -39,7 +39,7 @@ flowchart LR
     Resume --> Tasks[Trigger.dev tasks]
     Tasks --> Core[Workspace-independent resume core]
     Core --> AI[AI provider adapter]
-    Auth --> DB[(Neon + pgvector)]
+    Auth --> DB[(Local PostgreSQL + pgvector)]
     Profile --> DB
     Resume --> DB
     Workspace --> DB

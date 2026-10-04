@@ -44,3 +44,7 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 ## U06 rendering continuity
 
 F20 extends export identity with versioned render settings, font/renderer versions and template identity. Fit-to-page cannot hide or delete content; validate selectable text, order and clipping across every supported setting/template. F19 imported resumes use the same contact-safe render DTO after review, never direct export of the unrestricted original upload. Phase 3 still ships the initial template first.
+
+## Requested editor export control — 2026-10-03
+
+The user explicitly requests **Export PDF** in the compact Editor/Preview toolbar. The [frontend editor plan](../../docs/frontend-editor-plan.md) adds its pending acceptance criteria: explain unavailability before the real pipeline exists, identify the saved version, resolve unsaved changes explicitly, show preparing/ready/error/retry states, and preserve exact-version/privacy rendering. No fake download, browser-print substitute or export of unapplied proposals. Hidden sections, editor controls, ATS panels and placeholders never enter output. F09/D10/D12 dependencies remain open; this documentation does not implement export.

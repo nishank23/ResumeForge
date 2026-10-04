@@ -1,5 +1,10 @@
 # Phase 6 Build Plan — Resume Builder Expansion
 
+## Local appearance brought forward — 2026-10-04
+
+The user explicitly requested editor tool panels. One bounded browser-only formatting preview was authorized and implemented alongside F08: the existing original layout, spacing/type controls and local checkpoints/history. [Evidence](../../docs/editor-panels-verification.md). Full Phase 6 allocation, additional template inventory, saved settings, shared presets, fit-to-page and preview/PDF rendering remain behind the entry gate below; no dependency is marked complete from local UI evidence.
+
+
 **Features:** F19–F20. **State:** Not started. **Allocation:** Proposed for user review. **Goal:** Complete the observed file-intake and document-customization capabilities without disrupting the original F01–F18 sequence.
 
 ## Entry gate

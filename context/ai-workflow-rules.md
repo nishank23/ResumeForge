@@ -2,9 +2,9 @@
 
 ## Current scope
 
-Prepare and review context first. The user explicitly wants to confirm the context before development. Do not run future build tasks, install packages, create application scaffolds, or provision infrastructure during this stage. This gate comes from the live user request.
+The context-review gate was cleared by the user on 2026-09-29. Development is authorized within the approved scope and current tracker; earlier planning-stage pauses do not reopen that gate. Follow dependencies and resolve open decisions at the slice that requires them.
 
-The source plan is a working planning baseline. Current context documents resolve its ambiguities and define the intended implementation. Commands in planning documents describe future work; execute them only within the user's authorized scope.
+The source plan is a working planning baseline. Current context documents resolve its ambiguities and define the intended implementation. Commands in planning documents describe future work; execute them only within the user's authorized scope. The 2026-10-03 request authorizes tracker-driven scheduled development and local PostgreSQL/pgvector setup, with AI credentials forthcoming. Follow the [README current-task marker](../README.md#current-development-task) and [scheduled development procedure](../docs/scheduled-development.md) to claim/release one slice and skip ongoing work.
 
 ## Before a feature
 

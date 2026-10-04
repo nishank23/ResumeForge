@@ -115,8 +115,8 @@ test("fails closed for blank authoritative identifiers", () => {
   );
 });
 
-test("only professional read/update actions are enabled for the personal owner", () => {
-  for (const permission of ["profile.read", "profile.update"])
+test("only professional create/read/update actions are enabled for the personal owner", () => {
+  for (const permission of ["profile.create", "profile.read", "profile.update"])
     assert.equal(
       authorizePersonalProfileAction({
         permission,
@@ -127,7 +127,6 @@ test("only professional read/update actions are enabled for the personal owner",
       true,
     );
   for (const permission of [
-    "profile.create",
     "profile.contact.read",
     "profile.delete",
     "coverletter.read",
@@ -145,25 +144,25 @@ test("only professional read/update actions are enabled for the personal owner",
 });
 
 test("an enabled action never bypasses owner/resource or shared-workspace scope checks", () => {
-  for (const request of [
-    { actorUserId: "user-bob", workspace: ownWorkspace },
-    {
-      actorUserId: "user-alice",
-      workspace: { ...ownWorkspace, type: "organization" },
-    },
-    {
-      actorUserId: "user-alice",
-      workspace: { ...ownWorkspace, type: "vendor" },
-    },
-    {
-      actorUserId: "user-alice",
-      workspace: ownWorkspace,
-      resource: { ...ownResource, ownerUserId: "user-bob" },
-    },
-  ])
-    assert.equal(
-      authorizePersonalProfileAction({ permission: "profile.read", ...request })
-        .allowed,
-      false,
-    );
+  for (const permission of ["profile.create", "profile.read", "profile.update"])
+    for (const request of [
+      { actorUserId: "user-bob", workspace: ownWorkspace },
+      {
+        actorUserId: "user-alice",
+        workspace: { ...ownWorkspace, type: "organization" },
+      },
+      {
+        actorUserId: "user-alice",
+        workspace: { ...ownWorkspace, type: "vendor" },
+      },
+      {
+        actorUserId: "user-alice",
+        workspace: ownWorkspace,
+        resource: { ...ownResource, ownerUserId: "user-bob" },
+      },
+    ])
+      assert.equal(
+        authorizePersonalProfileAction({ permission, ...request }).allowed,
+        false,
+      );
 });

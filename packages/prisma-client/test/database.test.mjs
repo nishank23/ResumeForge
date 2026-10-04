@@ -34,6 +34,9 @@ test("local migration, isolation, integrity, rollback and restore", async (t) =>
   await admin.connect();
   try {
     await admin.query(`CREATE DATABASE "${name}"`);
+    await admin.query(
+      `ALTER DATABASE "${name}" SET timezone = 'Africa/Maputo'`,
+    );
     const migration = spawnSync(
       "pnpm",
       ["exec", "prisma", "migrate", "deploy"],
@@ -65,6 +68,54 @@ test("local migration, isolation, integrity, rollback and restore", async (t) =>
         contact: { create: { email: "contact@example.invalid" } },
       },
     });
+
+    await t.test(
+      "pooled clients use UTC despite database and URL timezone settings, preserving other startup options",
+      async () => {
+        const configured = new URL(url);
+        configured.searchParams.set(
+          "options",
+          "-c timezone=Africa/Maputo -c application_name=rf_synthetic_timezone",
+        );
+        const second = createDatabaseClient(configured.href);
+        const instant = new Date("2026-10-04T00:00:00.000Z");
+        try {
+          assert.deepEqual(await client.$queryRaw`SHOW TIME ZONE`, [
+            { TimeZone: "UTC" },
+          ]);
+          assert.deepEqual(await second.$queryRaw`SHOW TIME ZONE`, [
+            { TimeZone: "UTC" },
+          ]);
+          assert.deepEqual(await second.$queryRaw`SHOW application_name`, [
+            { application_name: "rf_synthetic_timezone" },
+          ]);
+          await client.userProfile.update({
+            where: { id: profile.id },
+            data: { onboardingCompletedAt: instant },
+          });
+          assert.deepEqual(
+            (
+              await second.userProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).onboardingCompletedAt,
+            instant,
+          );
+          assert.deepEqual(
+            (
+              await second.$queryRaw`SELECT '2026-10-04T02:00:00+02:00'::timestamptz AS instant`
+            )[0].instant,
+            instant,
+          );
+        } finally {
+          await client.userProfile.update({
+            where: { id: profile.id },
+            data: { onboardingCompletedAt: null },
+          });
+          await second.$disconnect();
+        }
+      },
+    );
 
     await t.test("one master and personal workspace per user", async () => {
       await assert.rejects(

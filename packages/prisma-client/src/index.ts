@@ -34,9 +34,17 @@ export function createDatabaseClient(
     (!Number.isInteger(timeout) || timeout < 50 || timeout > 30_000)
   )
     throw new RangeError("Invalid database timeout");
+  // adapter-pg normalizes timestamptz offsets as UTC; request UTC output on every pooled connection.
+  const connection = new URL(connectionString);
+  connection.searchParams.set(
+    "options",
+    [connection.searchParams.get("options"), "-c timezone=UTC"]
+      .filter(Boolean)
+      .join(" "),
+  );
   return new PrismaClient({
     adapter: new PrismaPg({
-      connectionString,
+      connectionString: connection.href,
       ...(timeout === undefined
         ? {}
         : {

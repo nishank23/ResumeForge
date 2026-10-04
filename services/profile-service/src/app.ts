@@ -15,14 +15,15 @@ export function createProfileApp(config: {
     c.header("Referrer-Policy", "no-referrer");
     await next();
   });
-  app.use(
-    "/api/v1/profile",
-    cors({
-      origin: "http://localhost:3000",
-      allowMethods: ["GET", "PUT"],
-      allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
-    }),
-  );
+  const localCors = cors({
+    origin: "http://localhost:3000",
+    allowMethods: ["GET", "POST", "PUT"],
+    allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
+  });
+  app.use("/api/v1/profile", localCors);
+  app.use("/api/v1/profile/draft", localCors);
+  app.use("/api/v1/profile/experience", localCors);
+  app.use("/api/v1/profile/experience/:id", localCors);
   app.onError((_error, c) =>
     c.json(
       {
@@ -65,8 +66,14 @@ export function createProfileApp(config: {
         selectedWorkspaceId: c.req.header("X-Workspace-Id"),
         correlationId: requestId,
       };
+      const experience = c.req.path === "/api/v1/profile/experience";
       if (c.req.method === "GET")
-        return c.json({ data: await config.profiles.read(context), requestId });
+        return c.json({
+          data: await (experience
+            ? config.profiles.listExperience(context)
+            : config.profiles.read(context)),
+          requestId,
+        });
       if (
         c.req.header("Origin") &&
         c.req.header("Origin") !== "http://localhost:3000"
@@ -108,10 +115,23 @@ export function createProfileApp(config: {
       } catch {
         return fail("invalid_input", 400);
       }
-      return c.json({
-        data: await config.profiles.update(context, input),
-        requestId,
-      });
+      const creating = c.req.method === "POST";
+      const experienceId = c.req.param("id");
+      return c.json(
+        {
+          data: await (creating
+            ? experience
+              ? config.profiles.addExperience(context, input)
+              : config.profiles.create(context, input)
+            : experienceId !== undefined
+              ? config.profiles.updateExperience(context, experienceId, input)
+              : c.req.path === "/api/v1/profile/draft"
+                ? config.profiles.saveDraft(context, input)
+                : config.profiles.update(context, input)),
+          requestId,
+        },
+        creating ? 201 : 200,
+      );
     } catch (error) {
       if (error instanceof ProfileError) {
         const statuses = {
@@ -119,6 +139,9 @@ export function createProfileApp(config: {
           forbidden: 403,
           not_found: 404,
           revision_conflict: 409,
+          profile_exists: 409,
+          onboarding_complete: 409,
+          section_limit: 409,
           invalid_input: 422,
         } as const;
         return fail(error.code, statuses[error.code]);
@@ -127,7 +150,12 @@ export function createProfileApp(config: {
     }
   };
   app.get("/api/v1/profile", handler);
+  app.post("/api/v1/profile", handler);
   app.put("/api/v1/profile", handler);
+  app.put("/api/v1/profile/draft", handler);
+  app.get("/api/v1/profile/experience", handler);
+  app.post("/api/v1/profile/experience", handler);
+  app.put("/api/v1/profile/experience/:id", handler);
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: "Route not found." } }, 404),
   );

@@ -1,6 +1,8 @@
 # Phase 2 Build Plan — AI Pipeline
 
-**Features:** F05–F08. **State:** Not started. **Goal:** Build a basic resume or tailor it to a JD, then review and apply grounded section-specific improvements.
+**Current implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](../progress-tracker.md) and [verification](../../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
+
+**Features:** F05–F08. **State:** Backend/AI not started; V01 and local E01–E05 canvas-first F08 editing verified 2026-10-03. **Goal:** Build a basic resume or tailor it to a JD, then review and apply grounded section-specific improvements.
 
 ## Entry conditions
 
@@ -37,8 +39,42 @@ Planned files: scoring core/task, versioned breakdown persistence, ATS UI.
 - [ ] Implement the approved [F07](../feature-specs/07-ats-scoring.md) rubric and compatible semantic scoring.
 - [ ] Handle partial/unavailable/stale results explicitly; label scores as heuristics.
 - [ ] Verify arithmetic, evidence, and fixed-input examples independently of live model variability.
+- [ ] Deliver E08's Readiness Rating and Pending/Completed/Deleted tabs with Fix/View/Reason/Dismiss/Restore, exact-version evidence and truthful unavailable/stale states. D09 governs real ratings; [frontend editor plan](../../docs/frontend-editor-plan.md) defines the requested UI.
 
 ## Task P2.5 — Preview and initial template (F08)
+
+### Frontend-first manual summary slice — authorized 2026-10-03
+
+The user brought this bounded frontend slice forward while Phase 1 continues. Its dependencies are the completed F01 shell/shared UI and protected routing; it uses synthetic, contact-free content only. F06 generation, D12 real headers and durable resume storage remain prerequisites for the full F08 feature.
+
+- [x] Compact editor workspace with section tools beside one clean original resume layout.
+- [x] Two synchronized constrained Tiptap summary inputs, Editor/Preview, local Save/Cancel and shared undo/redo.
+- [x] Verify desktop/mobile/keyboard operation and label the in-memory checkpoint honestly; no browser storage, API mutation, AI or export. Evidence and manual checks: [local editor verification](../../docs/manual-editor-verification.md). Full P2.5/F08 remains incomplete.
+
+Design: retain cobalt `#4338CA`, ink `#172033`, muted `#536079`, canvas `#EEF1F6`, paper `#FFFFFF` and divider `#E0E4EC`. System UI is for tools; Georgia gives the resume name a document identity, with restrained sans-serif body text. A compact action strip sits above a left-aligned section panel and centered paper. The document is the main visual; selection outlines appear only while editing. Review against the brief removed the large heading, duplicate notices, card borders inside the resume and decorative gradients from this focused workspace. This does not activate the F20 gallery or other manual section forms.
+
+### V01 document design — authorized and verified 2026-10-03
+
+The user's later instruction brought this visual slice ahead of E01. It supersedes the initial paper typography/selection treatment above. [Design tokens and acceptance](../../docs/frontend-editor-plan.md#v01--resume-document-design) and [verification](../../docs/manual-editor-verification.md#v01-verification--2026-10-03) document the boundary.
+
+- [x] Centered name/headline/synthetic contact line on white paper, readable serif text, thin section rules and aligned dates.
+- [x] Consistent bullets and compact Skills groups; Summary, Experience, Education, Projects, Skills and Languages render through a display-only local fixture.
+- [x] Keep controls outside paper and preserve Summary/history/authentication; verify desktop/mobile/keyboard, dark-theme paper and long content without clipping.
+
+No real UserContact projection, durable storage, other field forms, AI, ATS rating or PDF pipeline was implemented. P2.5/F08 remains partial. E01 is the next manual editing slice.
+
+### Local E01–E05 manual follow-up — verified 2026-10-03
+
+The user's five screenshots and explicit field/action list are documented in the [frontend editor completion plan](../../docs/frontend-editor-plan.md), with reusable [development prompts](../../docs/development-prompts.md). The user subsequently authorized the connected manual flow, including canvas-first editing and fictional sample autofill. These local checks are complete; protected service integrations remain separate:
+
+- [x] E01: local Work Experience entries and reusable accessible Edit dialog with target-only Save/Cancel, validated dates, synchronized rendering and shared history.
+- [x] E02: local First/Last Name, professional headline and City/State/Country header fields.
+- [x] E03: local Education and Project repeated-entry forms with validated dates, optional grade and safe links.
+- [x] E04: categorized Skills and separate Languages.
+- [x] E05: contextual edit/move/visibility/delete controls for stable supported targets, with keyboard/click alternatives, 44px mobile targets and local undo/redo. Actual touch hardware remains untested.
+- [x] E05 clarification: Summary's inline toolbar omits movement arrows; out-of-range entry/bullet moves show an accessible highest/lowest-position error popup with no content, selection, dirty-state or history changes. Verify first/last/single-item and stale-target guards separately from successful movement.
+
+Real Phone/Email and durable draft/version recovery are E06, dependent on D12 and protected contact/resume services. E07 uses P2.6's grounded AI contract; E08 uses P2.4/F07; E09 is F09's Phase 3 exact-version private PDF flow. Required UI controls must show honest unavailable states until their backing feature exists. No F20 gallery, file-intake or arbitrary canvas expansion is implied.
 
 Planned files: template registry/renderer contract, resume-MFE editor/preview, version-save use case.
 
@@ -67,3 +103,5 @@ A saved profile supports a basic draft; adding a JD supports an attributable tai
 - [ ] F06/F08 support blank/profile drafts, typed optional sections, keyboard reorder, manual Save/Cancel, local undo/redo and responsive preview/page count.
 - [ ] F07 issue reasons and open/resolved/dismissed states retain immutable evidence; Fix only opens the appropriate editing flow.
 - [ ] Resume-local user-confirmed facts have provenance and never write the master profile; contact fields remain protected.
+
+Local implementation also includes direct paper fields, isolated dialogs, empty-only explicitly fictional autofill preserving typed values/IDs, and full-draft checkpoints/history. See [actual verification](../../docs/manual-editor-verification.md#e01e05-canvas-first-verification--2026-10-03); these checks do not complete persisted P2.5/F08.

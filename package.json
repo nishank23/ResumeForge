@@ -7,6 +7,12 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "task:status": "node scripts/development-task.mjs status",
+    "task:start": "node scripts/development-task.mjs start",
+    "task:finish": "node scripts/development-task.mjs finish",
+    "task:test": "node --test scripts/test/development-task.test.mjs scripts/test/local-vector-config.test.mjs",
+    "db:vector:init": "node scripts/init-local-vector.mjs",
+    "db:test:vector": "node --test scripts/test/local-vector.test.mjs",
     "db:local:start": "node scripts/local-db.mjs start",
     "db:local:stop": "node scripts/local-db.mjs stop",
     "db:local:status": "node scripts/local-db.mjs status",

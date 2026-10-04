@@ -1,10 +1,25 @@
 # Frontend Integration and Reference Review
 
+## Editor tool rail follow-up — 2026-10-04
+
+The user's twelve supplied screenshots request a left rail and separate Edit Content, Customize Template, ATS Score and Optimize for JD panels. Implemented a bounded local UI slice using Forge tokens, shared Dialog/Button and the existing Tiptap/canvas transactions. Only original template artwork is rendered. Browser formatting joins local draft history; ATS/JD remain honest unavailable states and export is disabled. [Actual verification and manual steps](../docs/editor-panels-verification.md). This supersedes the earlier no-panel direction for navigation/shortcuts; full F20, E06–E09 and all server privacy/auth/audit gates remain unchanged.
+
+
+**Latest frontend correction — 2026-10-04:** Skills groups spoken Languages in the document and shared local dialog. Skills selection suppresses the floating toolbar; click/Enter/Space opens category/tag management. Other canvas actions, Summary, authentication and privacy are preserved. Extra paragraph spacing is removed without changing text. No new dependency or API. [Results and remaining checks](../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) override historical separate-Languages and Skills inline-action descriptions.
+
+**Current implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](progress-tracker.md) and [verification](../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
+
 **Updated:** 2026-10-03. This document contains the original 2026-09-29 planning/reference baseline. The context gate was subsequently cleared and F01 implemented; the [tracker](progress-tracker.md) controls current authorization/status. The user requested Performative UI, contextual prompts for selected resume content, and resume-building/tailoring capabilities informed by CareerZenith. No Studio/Focus concept is selected.
 
 **Latest reference inspection:** [2026-10-03 blank-builder review](../docs/careerzenith-builder-review.md) records the requested Upload/Create → New flow, direct editing, Save/Cancel recovery, section addition, formatting and persistence checks, plus a comparison with the running local sample editor. The user wants the interactive document-builder experience improved before more backend work. The older observations below retain their original verification limits; this follow-up adds no completed F08/F20 implementation.
 
 ## Reference evidence and limits
+
+**Implementation follow-up — 2026-10-03:** The user authorized the first manual editor slice. Compact workspace, clean original paper, synchronized Tiptap Summary, Editor/Preview and local Save/Cancel/history are implemented and verified. [Manual checks and boundaries](../docs/manual-editor-verification.md) distinguish this partial F08 UI from durable resume creation, real contacts, AI/PDF and F20, which remain pending. Tiptap is pinned and lazy-loaded through a shared adapter after React/Vite/federation checks; the original planning-only statements below are historical.
+
+**User-supplied screenshot follow-up — 2026-10-03:** Five images clarify the required header/section forms, contextual AI/edit/move/visibility/delete controls, Project dialog, readiness/action panel and Export PDF. The [frontend editor plan](../docs/frontend-editor-plan.md) and [development prompts](../docs/development-prompts.md) capture these as pending slices. This is screenshot evidence only; no new reference-site save/AI/score/reorder/export test was performed. Keep the original resume-forge styling, accessible shared Dialog/Tiptap adapters and explicit request/review/apply semantics.
+
+**Subsequent live toolbar clarification:** [Summary/boundary review](../docs/careerzenith-builder-review.md#summary-toolbar-and-move-boundary-follow-up--2026-10-03) confirms Summary inline AI/text-formatting without item arrows and an existing “Cannot move item further in this direction” notification. Separate heading arrows do not make Summary a repeated-entry list. Requirements now include a no-mutation boundary error popup; independently triggered top/bottom and valid reorder behavior remain unverified.
 
 | Reference | Observed on 2026-09-29 | Use in this project |
 |---|---|---|

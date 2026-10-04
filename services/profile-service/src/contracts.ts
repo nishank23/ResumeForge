@@ -18,6 +18,27 @@ export const profileUpdateSchema = z
     expectedRevision: z.number().int().positive().max(2_147_483_646),
   })
   .strict();
+export const profileCreateSchema = z
+  .object({
+    fullName: fields.fullName,
+    location: fields.location.default(null),
+    professionalSummary: fields.professionalSummary.default(null),
+  })
+  .strict();
+export const profileDraftSchema = z
+  .object({
+    fullName: fields.fullName.optional(),
+    location: fields.location.optional(),
+    professionalSummary: fields.professionalSummary.optional(),
+    expectedRevision: z.number().int().positive().max(2_147_483_646),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      input.fullName !== undefined ||
+      input.location !== undefined ||
+      input.professionalSummary !== undefined,
+  );
 export class ProfileError extends Error {
   constructor(
     readonly code:
@@ -25,6 +46,9 @@ export class ProfileError extends Error {
       | "forbidden"
       | "not_found"
       | "revision_conflict"
+      | "profile_exists"
+      | "onboarding_complete"
+      | "section_limit"
       | "invalid_input",
   ) {
     super("Profile request rejected");

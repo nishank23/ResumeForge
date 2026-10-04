@@ -1,6 +1,10 @@
 # Resume Capability Coverage
 
-**Review date:** 2026-09-29. **Status:** Planning only; no capability is implemented. The user requested comprehensive resume-builder capability coverage from CareerZenith, with our own design. This register maps every resume capability identified in the review to a specification; it is not a claim to have discovered every hidden or paid feature.
+**Current implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](progress-tracker.md) and [verification](../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
+
+**Review date:** 2026-09-29; requirements updated 2026-10-03. **Status:** Planning register; current implementation is recorded in the tracker, including the partial local Summary editor. The user requested comprehensive resume-builder capability coverage from CareerZenith, with our own design. This register maps every resume capability identified in the review to a specification; it is not a claim to have discovered every hidden or paid feature.
+
+The 2026-10-03 screenshot follow-up explicitly requests personal/header fields, complete Work Experience/Education/Projects, five Skills categories and separate Languages, Edit dialogs, contextual AI/move/visibility/delete actions, Readiness Rating with Pending/Completed/Deleted recommendations and Export PDF. Exact fields, states, dependencies and pending acceptance are in the [frontend editor plan](../docs/frontend-editor-plan.md); [development prompts](../docs/development-prompts.md) preserve the completed Summary slice.
 
 ## Evidence and scope
 

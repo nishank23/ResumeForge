@@ -244,6 +244,46 @@ body {
 }
 
 /* Product workspace: document-first hierarchy shared by host and remotes. */
+.rf-workspace-editor .rf-main {
+  padding: 0;
+}
+.rf-workspace-editor .rf-topbar {
+  height: 42px;
+  padding-inline: 24px;
+}
+.rf-workspace-editor .rf-footer {
+  display: none;
+}
+@media (min-width: 761px) {
+  .rf-workspace.rf-workspace-editor {
+    grid-template-columns: 184px minmax(0, 1fr);
+  }
+  .rf-workspace-editor .rf-sidebar {
+    padding: 24px 12px 16px;
+  }
+  .rf-workspace-editor .rf-brand {
+    font-size: 14px;
+    gap: 6px;
+  }
+  .rf-workspace-editor .rf-brand-mark {
+    width: 28px;
+    height: 32px;
+  }
+  .rf-workspace-editor .rf-workspace-label {
+    margin: 24px 0 16px;
+  }
+  .rf-workspace-editor .rf-workspace-label div > span {
+    display: none;
+  }
+  .rf-workspace-editor .rf-nav a {
+    padding: 11px 9px;
+    gap: 9px;
+    font-size: 12px;
+  }
+  .rf-workspace-editor .rf-account {
+    flex-wrap: wrap;
+  }
+}
 .rf-workspace {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);

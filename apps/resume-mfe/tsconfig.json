@@ -5,12 +5,23 @@
     "rootDir": "src",
     "composite": true,
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "noEmit": true
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../../packages/shared" },
-    { "path": "../../packages/shared-types" }
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/shared-types"
+    }
   ]
 }

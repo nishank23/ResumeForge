@@ -8,6 +8,16 @@
 
 import "./styles/styles.css";
 
+export {
+  SummaryEditor,
+  type SummaryEditorProps,
+} from "./components/ui/summary-editor";
+export {
+  normalizeSummary,
+  summaryFromText,
+  type SummaryDocument,
+} from "./components/ui/summary-document";
+
 // ── Utilities & Motion Hooks ──────────────────────────────────────────
 export { cn } from "./utils/cn";
 export {

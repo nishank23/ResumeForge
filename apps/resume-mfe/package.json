@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
     "dev": "vite --port 3003",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
@@ -17,6 +18,7 @@
     "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-hook-form": "7.89.0",
     "react-router": "^7.6.0"
   },
   "devDependencies": {

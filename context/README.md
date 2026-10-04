@@ -26,6 +26,8 @@
 - [API reference](../docs/api-reference.md) — planned routes, ownership, validation and error contracts.
 - [Local actor resolution](../docs/actor-resolution.md) — implemented service-authenticated session boundary and consumer responsibilities.
 - [Local profile API](../docs/profile-api.md) — existing owned professional read/update, revision/audit contract and verification.
+- [Scheduled local development](../docs/scheduled-development.md) — 15-minute README/task-lock workflow, interruption recovery and local PostgreSQL/pgvector checks.
+- [Frontend editor completion plan](../docs/frontend-editor-plan.md) — requested fields, dialogs, contextual actions, ATS tabs, PDF control and bounded slice acceptance; [development prompts](../docs/development-prompts.md) resume from the completed Summary foundation.
 - [Deployment plan](../docs/deployment.md) — topology, unresolved hosting choices, future readiness checks.
 - [MCP integration](../docs/mcp-integration.md) — Phase 5 tools and REST policy parity.
 

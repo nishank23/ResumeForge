@@ -38,7 +38,9 @@ The inspected surface is a structured resume document editor. Arbitrary free-pos
 
 Several icon buttons lack meaningful accessible names, and section containers contain nested buttons. Keyboard reordering did not produce a verified result. These observations are reasons to make our controls explicitly labeled and independently keyboard-operable. They are not a full accessibility audit. Mobile, screen-reader behavior, long resumes, multiple pages, PDF extraction, fit-to-page and provider quality remain untested.
 
-## Comparison with resume-forge today
+## Comparison with resume-forge at inspection
+
+Subsequently, the bounded local Summary workspace was implemented and verified; see [manual checks](manual-editor-verification.md). The user then supplied five screenshots requesting the remaining forms/actions, readiness panel and PDF control. [Frontend editor completion plan](frontend-editor-plan.md) records those pending requirements; the table below preserves the earlier baseline rather than describing the latest editor.
 
 Inspected the running local library and sample editor at port 3000, and the current `ResumeRemoteRoot` through CodeGraph. The completed F01 visual foundation and authentication/session work remain intact. F08/F20 product behavior is still unimplemented.
 
@@ -75,3 +77,11 @@ Before marking the editor slice complete, use synthetic content to verify:
 - Confirm mobile navigation, labeled controls, focus restoration and reduced motion. Keep protected contacts out of unauthorized payloads, DOM and exports.
 
 Related contracts: [F08](../context/feature-specs/08-resume-preview.md), [editing contract](../context/resume-editing-contract.md), [F20](../context/feature-specs/20-template-customization.md), [UI context](../context/ui-context.md), [current tracker](../context/progress-tracker.md).
+
+## Summary toolbar and move-boundary follow-up — 2026-10-03
+
+At the user's explicit request, revisited the existing builder, then opened only the previously created **Builder Review (Synthetic)** through the dashboard. Selecting its populated Summary showed **Improve with AI** and text-formatting controls; its inline bar had **no entry up/down arrows**. The rendered section-heading controls separately contained direction arrows, distinguishing whole-section ordering from Summary text editing. The Work Experience item toolbar showed AI, down/up, edit, eye and delete icons; icon behavior other than selection remains outside this follow-up's proof.
+
+The initially visible builder notification read **“Cannot move item further in this direction.”** This verifies an out-of-range error toast is displayed. A later move-button trial did not independently reproduce that notification; text-editing controls changed during inspection, so successful movement and separate top/bottom boundary tests remain unverified. No AI generation, hide/delete, export, new draft creation or intentional content save was performed. Do not claim that every control was exercised or infer a persisted-content guarantee from this inspection.
+
+The [frontend editor plan](frontend-editor-plan.md) and [development prompts](development-prompts.md) now require the Summary inline arrow exception and an accessible highest/lowest-position error popup for rejected moves, with no content/order/selection/dirty/history mutation. These are pending implementation requirements. Valid reordering still needs its own test; the earlier unverified-reorder statement remains accurate.

@@ -1,6 +1,11 @@
 # F20 — Template Library and Formatting Customization
 
-**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Not started
+## Explicit local preview slice — 2026-10-04
+
+The user's new tool-panel request brings forward only browser-only preview controls: one original Forge Classic template preview, three density presets, bounded margins/spacing and four system-font typography roles, reset and whole-draft local history. This is partial presentation work under F08, not full Phase 6 implementation, a durable template inventory or preview/PDF parity. Readable local bounds and exact limitations are in the [local contract](../../docs/manual-editor-contract.md#editor-rail-and-local-formatting--2026-10-04); [verification](../../docs/editor-panels-verification.md) records actual evidence. Remaining acceptance criteria below are still unchecked.
+
+
+**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partial local preview only; full feature pending
 
 ## Goal and dependencies
 

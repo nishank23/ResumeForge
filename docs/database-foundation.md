@@ -2,6 +2,12 @@
 
 Implemented 2026-09-30: Prisma CLI/client/adapter-pg pinned together at 7.10.0, pg 8.16.3, PostgreSQL 18.3, Node 22.18.0. Prisma 7 uses a driver adapter and a separate CLI configuration; see [official Prisma 7 documentation](https://www.prisma.io/docs/orm/v7). Hosting remains deferred.
 
+## UTC application connections — 2026-10-04
+
+The new onboarding completion-race check exposed a two-hour read offset under Africa/Maputo: the installed adapter-pg 7.10.0 `normalize_timestamptz` replaces the returned offset with UTC without adjusting the clock. PostgreSQL returns timestamptz in the connection's [TimeZone](https://www.postgresql.org/docs/18/datatype-datetime.html). The server-only client factory now appends `-c timezone=UTC` to connection [startup options](https://www.postgresql.org/docs/18/libpq-connect.html#LIBPQ-PARAMKEYWORDS), preserving other options and existing timeouts. Each pooled application connection gets UTC output, including when database/URL settings specify a different timezone. No schema, stored timestamps, server default, role privileges or secrets are changed; restart local services to load this fix.
+
+`pnpm db:test` now prints 14 passes, including a disposable database with Africa/Maputo defaults, a conflicting URL timezone, preservation of application-name settings and exact ORM/raw timestamp round trips. Profile completion-race checks (22/22 profile cases), session expiry/rotation (11/11 auth cases) and audit lease/retry/delivery (12/12 audit cases) also pass. This correction does not complete the onboarding endpoint or change contact/access policy.
+
 The initial migration creates User, OAuthAccount, Session, Workspace, UserProfile, UserContact and ProfileWorkspaceGrant. Foreign keys restrict deletion; no retention or cascading private-data deletion policy is silently selected. One personal workspace and master profile per user are unique. A composite profile/owner foreign key prevents grants attributed to a different user. Grant capabilities default to false. Contact reads remain explicit separate queries.
 
 SQL CHECK constraints enforce personal workspace ownership, positive profile revisions, SHA-256 hex-shaped refresh hashes, session expiration, no self rotation, and read permission before profile write grants. Hash generation and secure token handling are future auth-service responsibilities. These CHECK constraints are intentionally maintained in migration SQL because Prisma schema syntax cannot represent them.
@@ -26,7 +32,7 @@ Duplicate event IDs reject and roll back the entire operation. This is capture u
 
 ## Remaining P1.3 work
 
-Production service identity/scheduling supervision; private contact/section repositories and route integration; hosted service roles/identity. Local runtime grants and private professional-profile GET/PUT are verified; see [runtime database roles](runtime-database-roles.md). Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. Profile creation/drafts and onboarding remain pending; see [profile API](profile-api.md). D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
+Production service identity/scheduling supervision; remaining private contact/section repositories and route integration; hosted service roles/identity. Local runtime grants, private professional-profile POST/GET/PUT/draft PUT and [Work Experience list/add/update](experience-api.md) are verified; see [runtime database roles](runtime-database-roles.md). Profile section, typed organization/vendor, membership and resume/version/task storage models already exist; their service behavior is not complete. Entry deletion/reorder, other section/contact APIs, browser wizard and onboarding completion remain pending; see [profile API](profile-api.md). D07 still gates vectors; D12 gates protected resume snapshots. Audit retention/deletion periods must be resolved before deploying real personal data. This slice does not complete F03.
 
 ## Local audit relay and ledger — 2026-10-02
 
@@ -45,7 +51,7 @@ pnpm db:runtime:init
 pnpm db:test:audit
 ```
 
-`db:test:audit` uses disposable synthetic databases and should print 12 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, ledger commit followed by acknowledgement COMMIT failure, authenticated HTTP retry after a rejected credential/lost reply, and ledger COMMIT failure before HTTP acknowledgement. Existing `pnpm db:test` should still print 13 passes. These tests do not seed the development database.
+`db:test:audit` uses disposable synthetic databases and should print 12 passes, zero failures. It covers retries/backoff, independent connections, concurrency, lease recovery, scope denial, ledger commit followed by acknowledgement COMMIT failure, authenticated HTTP retry after a rejected credential/lost reply, and ledger COMMIT failure before HTTP acknowledgement. Current `pnpm db:test` should print 14 passes including UTC connection checks. These tests do not seed the development database.
 
 The local runner ignores root/hosted DATABASE_URL values and restricts execution to the managed database on 127.0.0.1:55432. It processes one batch and prints counts only, including remaining pending/delivering/blocked backlog. With no development intents, all counts are zero. Run it again for additional batches or after the retry time/lease expiry; it remains the one-pass operator command; the automatic worker is described below. Blocked backlog or attempted transient failures cause a nonzero exit. This slice adds no UI and no public audit query. Production service identity, hosted role provisioning, broader denied-event capture, full service coverage and retention remain prerequisites for release.
 

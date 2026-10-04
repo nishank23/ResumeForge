@@ -31,6 +31,7 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [ ] Implement the approved workspace/profile/contact/session model from [F03](../feature-specs/03-database-schema.md).
 - [x] Add constraints, revisions, version/task foundations, tenant indexes, and synthetic fixtures.
 - [ ] Add approved vector columns only after D07 validation; avoid guessed dimensions/model names.
+- [x] Prepare local pgvector extension independently of D07; verify synthetic operators, invalid dimensions/values and rollback in an isolated disposable database (2026-10-03, PostgreSQL 18.3 / pgvector 0.8.7).
 - [x] Establish fail-closed personal workspace/resource ownership checks without activating proposed shared-role mappings.
 - [x] Define a content-free, allowlisted audit event-intent contract with scoped identifiers and explicit outcomes.
 - [x] Add validated personal-workspace audit capture in the same transaction as domain work; verify rollback and fail-closed contact result delivery.
@@ -40,7 +41,10 @@ Planned files: Prisma models/migrations, shared domain schemas, authorization pe
 - [x] Verify automatic local audit relay passes with nonoverlap, bounded batches/IO waits, graceful shutdown and durable restart/retry/lease recovery.
 - [x] Resolve private-service actors through authenticated local HTTP with minimal session/workspace projection, expiry/revocation checks and unavailable-peer failure; no client identity/role claims or shared roles are trusted.
 - [x] Integrate private professional-profile GET/PUT with verified actors, scoped action/ownership checks, revision conflicts, contact-free DTOs and transactional audit; verify fail-closed reads, rollback and owned-workspace denial delivery.
+- [x] Add explicit owned professional-profile initialization with required user-supplied name, no auth/contact copying or completion state; verify duplicate/concurrent creation, atomic audit rollback/retry and multi-owner delivery (2026-10-04).
 - [ ] Extend private-route policy/capture to contacts and sections; hosted scheduling supervision/runtime roles/production service identity remain deployment prerequisites.
+- [x] Add scoped Work Experience list/add with strict year/month/plain-bullet schemas, shared parent revision/consistent snapshots and atomic audit rollback/retry (2026-10-04).
+- [x] Add revisioned owned Work Experience entry updates preserving ID/order/metadata/completion; verify missing/foreign rejection, conflicts, blocked-write expiry and atomic rollback/retry (2026-10-04). Deletion/reorder, other sections and contacts remain pending.
 - [ ] Run migration, scoped-query, constraint, and recovery checks against a development database.
 
 ## Task P1.4 — Authentication (F02)
@@ -59,6 +63,7 @@ Planned files: auth service/gateway, auth MFE, shell session bootstrap, personal
 Planned files: profile service/remote, profile schemas and draft/setup endpoints.
 
 - [ ] Implement [F04](../feature-specs/04-profile-wizard.md) draft/review/complete flow with separate contact handling.
+- [x] Add revisioned contact-free professional draft saves on an initialized incomplete master, preserving omissions and rejecting completion races; verify reload/conflicts/atomic audit rollback (2026-10-04). Full section/contact drafts and wizard remain pending.
 - [ ] Verify reload/retry, empty optional sections, validation, conflicts, and denied cross-user access.
 - [ ] Record acceptance evidence and update all four feature statuses accurately.
 

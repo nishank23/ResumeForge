@@ -19,24 +19,33 @@ const FOCUSABLE_SELECTOR =
 function useModalFocusManagement(open: boolean, onClose: () => void) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
 
-    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+    if (
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
       previousFocusRef.current = document.activeElement;
     }
 
     const container = dialogRef.current;
     if (container) {
-      const firstFocusable = container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      const firstFocusable =
+        container.querySelector<HTMLElement>("[data-modal-initial-focus]") ??
+        container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
       (firstFocusable ?? container).focus();
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -64,7 +73,7 @@ function useModalFocusManagement(open: boolean, onClose: () => void) {
       document.removeEventListener("keydown", handleKeyDown);
       previousFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return dialogRef;
 }
@@ -79,6 +88,8 @@ export interface DialogProps {
   readonly children: ReactNode;
   readonly footer?: ReactNode;
   readonly className?: string;
+  readonly bodyClassName?: string;
+  readonly footerClassName?: string;
 }
 
 export function Dialog({
@@ -89,11 +100,15 @@ export function Dialog({
   children,
   footer,
   className,
+  bodyClassName,
+  footerClassName,
 }: DialogProps) {
   const baseId = useId();
   const titleId = `rf-dialog-title-${baseId}`;
   const descId = description ? `rf-dialog-desc-${baseId}` : undefined;
-  const dialogRef = useModalFocusManagement(open, () => { onOpenChange(false); });
+  const dialogRef = useModalFocusManagement(open, () => {
+    onOpenChange(false);
+  });
 
   if (!open) return null;
 
@@ -104,7 +119,9 @@ export function Dialog({
     >
       <div
         aria-hidden="true"
-        onClick={() => { onOpenChange(false); }}
+        onClick={() => {
+          onOpenChange(false);
+        }}
         className="fixed inset-0 bg-black/50 backdrop-blur-xs"
       />
       <div
@@ -125,7 +142,10 @@ export function Dialog({
               {title}
             </h2>
             {description ? (
-              <p id={descId} className="mt-1 text-sm text-[var(--muted-foreground)]">
+              <p
+                id={descId}
+                className="mt-1 text-sm text-[var(--muted-foreground)]"
+              >
                 {description}
               </p>
             ) : null}
@@ -134,15 +154,21 @@ export function Dialog({
             variant="ghost"
             size="icon"
             aria-label="Close dialog"
-            onClick={() => { onOpenChange(false); }}
+            onClick={() => {
+              onOpenChange(false);
+            }}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
 
-        <div className="mt-4">{children}</div>
+        <div className={cn("mt-4", bodyClassName)}>{children}</div>
 
-        {footer ? <div className="mt-6 flex justify-end gap-3">{footer}</div> : null}
+        {footer ? (
+          <div className={cn("mt-6 flex justify-end gap-3", footerClassName)}>
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -214,7 +240,10 @@ export function ConfirmDeleteDialog({
             <h2 id={titleId} className="text-base font-semibold">
               {title}
             </h2>
-            <p id={descId} className="mt-1.5 text-sm text-[var(--muted-foreground)]">
+            <p
+              id={descId}
+              className="mt-1.5 text-sm text-[var(--muted-foreground)]"
+            >
               {description}
             </p>
             {resourceName ? (
@@ -229,7 +258,9 @@ export function ConfirmDeleteDialog({
           <Button
             variant="outline"
             disabled={loading}
-            onClick={() => { onOpenChange(false); }}
+            onClick={() => {
+              onOpenChange(false);
+            }}
           >
             {cancelLabel}
           </Button>
@@ -306,7 +337,9 @@ export function DropdownMenu({
     const menuEl = menuRef.current;
     if (!menuEl) return;
     const buttons = Array.from(
-      menuEl.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'),
+      menuEl.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]:not(:disabled)',
+      ),
     );
     if (buttons.length === 0) return;
 
@@ -317,13 +350,17 @@ export function DropdownMenu({
       next?.focus();
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      const prev = buttons[(currentIndex - 1 + buttons.length) % buttons.length];
+      const prev =
+        buttons[(currentIndex - 1 + buttons.length) % buttons.length];
       prev?.focus();
     }
   };
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block text-left", className)}>
+    <div
+      ref={containerRef}
+      className={cn("relative inline-block text-left", className)}
+    >
       <Button
         ref={triggerRef}
         variant="outline"
@@ -331,7 +368,9 @@ export function DropdownMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={ariaLabel}
-        onClick={() => { setOpen((prev) => !prev); }}
+        onClick={() => {
+          setOpen((prev) => !prev);
+        }}
       >
         {triggerLabel}
       </Button>
@@ -415,9 +454,12 @@ export function StatusBanner({
 
   const toneStyles: Record<StatusBannerTone, string> = {
     info: "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]",
-    success: "border-[var(--success)]/40 bg-[var(--surface)] text-[var(--foreground)]",
-    warning: "border-[var(--warning)]/40 bg-[var(--surface)] text-[var(--foreground)]",
-    error: "border-[var(--destructive)]/50 bg-[var(--surface)] text-[var(--foreground)]",
+    success:
+      "border-[var(--success)]/40 bg-[var(--surface)] text-[var(--foreground)]",
+    warning:
+      "border-[var(--warning)]/40 bg-[var(--surface)] text-[var(--foreground)]",
+    error:
+      "border-[var(--destructive)]/50 bg-[var(--surface)] text-[var(--foreground)]",
   };
 
   return (
@@ -447,10 +489,14 @@ export function StatusBanner({
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
               {TONE_LABELS[tone]}
             </span>
-            <p className="text-sm font-semibold text-[var(--foreground)]">{title}</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              {title}
+            </p>
           </div>
           {description ? (
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">{description}</p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              {description}
+            </p>
           ) : null}
         </div>
       </div>

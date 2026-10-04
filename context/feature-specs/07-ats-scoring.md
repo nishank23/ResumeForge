@@ -51,3 +51,14 @@ Store stable issue identity, rule/rubric version, source resume/JD version, targ
 
 - [ ] Dismiss/reopen affects only the actor's feedback preference and cannot alter evidence or total score.
 - [ ] Resolved status requires a newer evaluation; stale or deleted targets give a recoverable navigation state.
+
+## Requested ATS panel — 2026-10-03
+
+Use an **ATS Score** tool panel beside the document with **Readiness Rating**, **Suggested Actions** and counted **Pending / Completed / Deleted** tabs. Pending maps to `open`, Completed to `resolved`, Deleted to `dismissed`. Deleted is reversible recommendation dismissal, not resume deletion; it cannot improve the score. See the [frontend editor plan](../../docs/frontend-editor-plan.md) for Fix, View, Reason, Dismiss and Restore behavior.
+
+- [ ] No-JD structural readiness is clearly distinct from JD matching; absent evaluation shows Not evaluated. D09 still gates rating rules/thresholds/weights; the reference's bars and counts are not our algorithm.
+- [ ] Fix opens the target field/dialog/composer; View selects it and Reason exposes evidence. No automatic AI call or application.
+- [ ] Counts/statuses use the current evaluation/preferences, support empty/stale/deleted-target recovery and re-evaluation, and are accessible without color.
+- [ ] Completing a manual edit alone cannot mark a rule resolved; dismiss/restore preserve immutable evidence and score math.
+
+UI fixtures may be explicitly synthetic; actual readiness/scoring and issue persistence are not implemented by this requirements update.

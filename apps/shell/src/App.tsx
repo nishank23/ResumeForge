@@ -144,6 +144,9 @@ function WorkspaceShell() {
             : location.pathname === "/sign-in"
               ? "Welcome"
               : "My resumes";
+  const isResumeEditor =
+    /^\/w\/[^/]+\/resumes\/[^/]+$/.test(location.pathname) &&
+    !location.pathname.endsWith("/new");
   const remote = (
     name: "auth" | "profile" | "resume",
     child: React.ReactNode,
@@ -161,7 +164,7 @@ function WorkspaceShell() {
   );
   return (
     <div
-      className="rf-workspace"
+      className={`rf-workspace ${isResumeEditor ? "rf-workspace-editor" : ""}`}
       data-shell-root="resume-forge"
       data-react-version={React.version}
     >
@@ -344,7 +347,7 @@ function WorkspaceShell() {
                 element={remote(
                   "resume",
                   <LazyResumeRemoteRoot
-                    key="editor"
+                    key={location.pathname}
                     context={context}
                     view="editor"
                   />,
@@ -571,8 +574,8 @@ function ResumeLibrary({
       <div className="rf-library-footnote">
         <FileText size={16} aria-hidden="true" />
         <p>
-          This is a design preview. Open the sample to try section selection and
-          review a sample rewrite.
+          Open the sample to edit its summary and try Editor/Preview. Changes
+          stay local and reset when you leave or reload.
         </p>
       </div>
     </div>

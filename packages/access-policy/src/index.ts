@@ -166,7 +166,7 @@ export function authorizePersonalScope(
   };
 }
 
-/** Activate only the two Phase 1 professional-profile actions in owned personal scope. */
+/** Activate only professional profile create/read/update in owned personal scope. */
 export function authorizePersonalProfileAction(
   request: PersonalScopeRequest & { readonly permission: string },
 ):
@@ -176,6 +176,7 @@ export function authorizePersonalProfileAction(
   if (!scope.allowed) return scope;
   if (
     request.permission !== "profile.read" &&
+    request.permission !== "profile.create" &&
     request.permission !== "profile.update"
   )
     return { allowed: false, code: "action_not_allowed" };

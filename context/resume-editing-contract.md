@@ -1,6 +1,20 @@
 # Contextual Resume Editing Contract
 
-**Updated:** 2026-09-29. **Proposed implementation contract for the requested capabilities; no endpoints, components or migrations exist.** The user requests section-specific prompt assistance and resume-building/tailoring functionality. This document defines how to add those capabilities to F06/F08 while retaining the master-profile and privacy boundaries.
+**Frontend clarification — 2026-10-04:** Spoken Languages are grouped under Skills in the local document and dialog, with distinct language identity/proficiency retained. Skills is a dialog-only editing region, without a floating AI/item toolbar. Category/tag Save projects only that Skills section (including languages), leaves contacts and other sections intact, and commits one history step; Cancel restores the opening draft. This replaces the older Skills inline-action presentation only; proposed backend/AI contracts remain gated. [Local contract and bounds](../docs/manual-editor-contract.md#skills-grouping-correction--2026-10-04), [verification](../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04).
+
+**Updated:** 2026-10-03. **Proposed backend/AI contract; local E01–E05 manual editing is implemented; backend/AI behavior remains proposed.** The user requests section-specific prompt assistance and resume-building/tailoring functionality. This document defines how to add those capabilities to F06/F08 while retaining the master-profile and privacy boundaries.
+
+## Implemented frontend-only boundary
+
+The user authorized local E01–E05 after V01. The [local editor verification](../docs/manual-editor-verification.md) and [transaction contract](../docs/manual-editor-contract.md) record direct canvas editing, stable target dialogs, ordering/visibility/delete, empty-only fictional autofill and full-draft history/checkpoints. Summary and rich descriptions reuse the constrained shared Tiptap adapter. Separate demo contacts are synthetic only. Save locally/Cancel never create persisted versions or mutate the master profile; reload/navigation/session loss clears state. Real blank/profile creation, protected contact integration, durable saves, grounded AI proposals and renderer/PDF contracts below remain pending.
+
+## Required frontend extension — 2026-10-03
+
+The user's screenshot follow-up requests the remaining header/section forms, contextual toolbar with move arrows and Edit dialogs, categorized Skills/Languages, ATS issue tabs and Export PDF. [Field coverage and acceptance criteria](../docs/frontend-editor-plan.md) distinguish these required UI capabilities from the unresolved dependent backend/scoring/render choices. No new runtime behavior is implemented by this update.
+
+Dialog Save commits a validated target edit into the current local draft; Cancel restores the dialog's opening snapshot, while the workspace Save locally checkpoints the whole draft in memory. Reuse one shared history and stable section/entry identity. Define stable bullet identity before bullet reordering; move actions stay within their target list. Show/hide is reversible document visibility; delete removes selected draft content; neither is ATS issue dismissal. Phone/email remain separate protected manual header fields and are never AI targets. Real header loading/saving and export remain gated by D12 and current server permissions.
+
+Summary's inline action bar excludes move arrows. Section ordering is a separate navigator action; entry/bullet ordering belongs to a stable list. Reject out-of-range moves before any state/history/save mutation and show an accessible highest/lowest-position error popup without taking focus. Cover first, last, single-item and stale-target cases. This user-requested clarification supersedes the earlier boundary-disabled-control proposal; its local implementation is verified; future server mutations must enforce the same guard.
 
 ## User flow
 

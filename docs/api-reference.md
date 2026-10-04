@@ -1,6 +1,6 @@
 # Planned API Reference
 
-**Mostly planned contracts.** Local Google/session endpoints, professional profile GET/PUT, and the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
+**Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
 
 ## Shared rules
 
@@ -30,18 +30,21 @@ Google local redirect lands directly on auth-service port 4001; no authorization
 
 ## Profile service
 
-GET and PUT `/profile` are implemented locally on profile-service port 4002 for an existing owned master profile. The professional DTO contains only `id`, `fullName`, nullable `location`, nullable `professionalSummary` and `revision`. PUT requires these three professional fields plus `expectedRevision`; no client profile/user ID, contact data or unknown fields are accepted. All query parameters are rejected in this personal-only slice. The optional workspace header is a selector checked against verified ownership. The server-only actor adapter resolves each session afresh; profile use cases enforce action/resource/field checks and commit content-free audit capture before returning. Revision conflicts return 409; missing own profiles return 404 without creation. Contacts, sections, draft/setup and browser/gateway integration remain pending. See [profile contract and verification](profile-api.md).
+POST, GET and PUT `/profile` and PUT `/profile/draft` are implemented locally on profile-service port 4002. POST initializes a missing owned master from an explicit full name and optional nullable location/summary; no auth/provider facts are copied. It returns 201 at revision 1, or 409 `profile_exists` without overwriting/duplicating an existing master. GET/PUT operate only on an existing profile; normal PUT requires these three professional fields plus `expectedRevision`. Draft PUT requires at least one of those fields and `expectedRevision`, preserves omitted values and allows null clearing of location/summary during incomplete onboarding only. It shares the master's revision and never completes/reopens setup; completed onboarding returns 409 `onboarding_complete`. The professional DTO contains only `id`, `fullName`, nullable `location`, nullable `professionalSummary` and `revision`. No client profile/user ID, contacts, onboarding state or unknown fields are accepted. All query parameters are rejected. The optional workspace header is checked against verified ownership. Every use case resolves a fresh server actor, enforces action/scope and commits content-free audit capture before returning. Revision conflicts return 409; absent profiles return 404 without implicit creation. Work Experience GET/POST and entry PUT are also implemented under the same parent revision; see [its separate contract](experience-api.md). Entry deletion/reorder, other section/contact APIs, final setup and browser/gateway integration remain pending. See [profile contract and verification](profile-api.md).
 
 | Method       | Path                          | Contract / permission                                                               |
 | ------------ | ----------------------------- | ----------------------------------------------------------------------------------- |
 | GET          | `/profile`                    | Authorized professional DTO; `profile.read`; contact excluded by default            |
+| POST         | `/profile`                    | Explicit professional initialization; `profile.create`; owned personal scope, 201 or existing-profile 409 |
 | PUT          | `/profile`                    | Validate allowlisted professional fields + revision; `profile.update`               |
+| PUT          | `/profile/draft`              | Partial professional save on an existing incomplete master + revision; `profile.update` |
 | POST         | `/profile/setup`              | Validate and complete onboarding; own profile or expressly authorized creation      |
 | GET / PUT    | `/profile/contact`            | Separate DTO/write schema; `profile.contact.read` / `profile.contact.update`        |
 | GET / POST   | `/profile/education`          | List/create a scoped education row                                                  |
 | PUT / DELETE | `/profile/education/:id`      | Update/delete via authorized parent profile                                         |
-| GET / POST   | `/profile/experience`         | List/create experience                                                              |
-| PUT / DELETE | `/profile/experience/:id`     | Update/delete experience                                                            |
+| GET / POST   | `/profile/experience`         | Implemented local owned list/add; contact-free DTO, shared parent revision and audit; `profile.read` / `profile.update` |
+| PUT          | `/profile/experience/:id`     | Implemented local owned full-field replacement + parent revision; `profile.update` |
+| DELETE       | `/profile/experience/:id`     | Planned owned-entry deletion                                                            |
 | GET / POST   | `/profile/skills`             | List/create skills                                                                  |
 | PUT / DELETE | `/profile/skills/:id`         | Update/delete skills                                                                |
 | GET / POST   | `/profile/projects`           | List/create professional projects                                                   |
@@ -50,7 +53,7 @@ GET and PUT `/profile` are implemented locally on profile-service port 4002 for 
 | PUT / DELETE | `/profile/certifications/:id` | Update/delete certifications                                                        |
 | POST         | `/profile/import/linkedin`    | Phase 5: validate upload reference, create preview; proposed confirm endpoint below |
 
-Section reads require `profile.read`; section writes require `profile.update` on the parent. Dedicated contact permissions cannot be bypassed through `/profile` or import. Proposed additions: `PUT /profile/draft` for partial onboarding save, `DELETE /profile` for an approved profile-deletion lifecycle, `GET /profile/import/:id` for review, and `POST /profile/import/:id/confirm` for explicit merge. D03/D11 govern destructive/shared effects.
+Section reads require `profile.read`; section writes require `profile.update` on the parent. Local Experience GET/POST and entry PUT are implemented: bounded owned entries, append order, strict dates/plain bullets, parent revisions and atomic content-free audit. Entry deletion/reorder and other section/contact routes remain planned; see [Experience contract and verification](experience-api.md). Dedicated contact permissions cannot be bypassed through `/profile`, `/profile/draft`, `/profile/experience` or import. Draft PUT covers only the three professional master fields. Proposed additions: `DELETE /profile` for an approved profile-deletion lifecycle, `GET /profile/import/:id` for review, and `POST /profile/import/:id/confirm` for explicit merge. D03/D11 govern destructive/shared effects.
 
 ## Resume service
 
