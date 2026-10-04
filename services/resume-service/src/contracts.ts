@@ -7,6 +7,7 @@ export type ResumeErrorCode =
   | "invalid_input"
   | "file_too_large"
   | "unsupported_media_type"
+  | "revision_conflict"
   | "resume_unavailable";
 
 export class ResumeError extends Error {
@@ -216,3 +217,26 @@ export interface ResumeSummaryDto {
 export interface ResumeDetailDto extends ResumeSummaryDto {
   readonly content: ParsedResumeContentDto;
 }
+
+export const resumeUpdateRequestSchema = z
+  .object({
+    expectedVersion: z.number().int().positive().max(2_147_483_646),
+    title: z.string().trim().min(1).max(200).optional(),
+    templateId: z.string().trim().max(50).nullable().optional(),
+    status: z.enum(["draft", "active", "archived"]).optional(),
+    content: parsedResumeContentSchema,
+  })
+  .strict();
+
+export type ResumeUpdateRequest = z.infer<typeof resumeUpdateRequestSchema>;
+
+export interface ResumeVersionDto {
+  readonly id: string;
+  readonly resumeId: string;
+  readonly versionNumber: number;
+  readonly content: ParsedResumeContentDto;
+  readonly createdAt: string;
+  readonly createdByUserId: string;
+}
+
+export type ResumeDownloadFormat = "json" | "markdown" | "text" | "html";

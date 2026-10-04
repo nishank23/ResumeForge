@@ -100,6 +100,61 @@ function createMockService() {
         updatedAt: new Date().toISOString(),
       },
     ],
+    updateResume: async (_context, id, input) => ({
+      id,
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: input.title || "Updated Resume",
+      templateId: input.templateId || "default",
+      currentVersion: input.expectedVersion + 1,
+      status: input.status || "draft",
+      atsScore: null,
+      content: input.content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
+    deleteResume: async (_context, id) => ({
+      deleted: true,
+      id,
+    }),
+    downloadResume: async (_context, id, format) => ({
+      content: `# Resume ${id}\nFormat: ${format}`,
+      mimeType: format === "json" ? "application/json" : "text/markdown",
+      fileName: `resume_${id}.${format === "json" ? "json" : "md"}`,
+    }),
+    listResumeVersions: async (_context, id) => [
+      {
+        id: randomUUID(),
+        resumeId: id,
+        versionNumber: 1,
+        content: {
+          title: "Version 1",
+          header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+          sampleContact: { email: "", phone: "" },
+          sections: [],
+        },
+        createdAt: new Date().toISOString(),
+        createdByUserId: mockActor.userId,
+      },
+    ],
+    cloneResume: async (_context, id, title) => ({
+      id: randomUUID(),
+      profileId: randomUUID(),
+      workspaceId: mockActor.personalWorkspaceId,
+      title: title || "Cloned Resume",
+      templateId: "default",
+      currentVersion: 1,
+      status: "draft",
+      atsScore: null,
+      content: {
+        title: title || "Cloned Resume",
+        header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+        sampleContact: { email: "", phone: "" },
+        sections: [],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
   };
 
   const resolveActor = async (auth) => {
@@ -212,4 +267,110 @@ test("GET /api/v1/resume lists user resumes", async () => {
   assert.ok(Array.isArray(body.data));
   assert.equal(body.data.length, 1);
   assert.equal(body.data[0].title, "My Saved Resume");
+});
+
+test("PUT /api/v1/resume/:id updates resume and returns 200", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      expectedVersion: 1,
+      title: "Updated Title",
+      content: {
+        title: "Updated Title",
+        header: {
+          fullName: "Updated Name",
+          firstName: "Updated",
+          lastName: "Name",
+          headline: "Lead Architect",
+          city: "NYC",
+          state: "NY",
+          country: "",
+          email: "updated@example.com",
+          phone: "",
+          links: [],
+        },
+        sampleContact: { email: "", phone: "" },
+        sections: [],
+      },
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.title, "Updated Title");
+  assert.equal(body.data.currentVersion, 2);
+});
+
+test("DELETE /api/v1/resume/:id deletes resume and returns 200", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.data.deleted, true);
+  assert.equal(body.data.id, targetId);
+});
+
+test("GET /api/v1/resume/:id/download returns formatted file with attachment header", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/download?format=markdown`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("Content-Type"), "text/markdown");
+  assert.ok(res.headers.get("Content-Disposition").includes("attachment; filename="));
+  const text = await res.text();
+  assert.ok(text.includes(`# Resume ${targetId}`));
+});
+
+test("GET /api/v1/resume/:id/versions returns version history", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/versions`, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer valid-token",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data));
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].versionNumber, 1);
+});
+
+test("POST /api/v1/resume/:id/clone clones resume and returns 201", async () => {
+  const { app } = createMockService();
+  const targetId = randomUUID();
+  const res = await app.request(`/api/v1/resume/${targetId}/clone`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({ title: "Cloned Copy" }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.data.title, "Cloned Copy");
+  assert.equal(body.data.currentVersion, 1);
 });

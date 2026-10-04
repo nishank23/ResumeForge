@@ -16,14 +16,23 @@ import {
   ResumeError,
   resumeImportRequestSchema,
   resumeParseRequestSchema,
+  resumeUpdateRequestSchema,
   type ResumeImportRequest,
   type ResumeParseRequest,
+  type ResumeUpdateRequest,
+  type ResumeVersionDto,
+  type ResumeDownloadFormat,
   type ParsedResumeContentDto,
   type ResumeDetailDto,
   type ResumeSummaryDto,
 } from "./contracts.js";
 import { extractTextFromFile } from "./extractor.js";
 import { parseResumeText } from "./parser.js";
+import {
+  formatResumeAsMarkdown,
+  formatResumeAsText,
+  formatResumeAsHtml,
+} from "./formatter.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 
@@ -347,10 +356,350 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     });
   }
 
+  /**
+   * Updates an existing resume, creates a new version, and advances currentVersion.
+   * Ensures strict ID isolation (editing resume 1 ONLY updates resume 1).
+   */
+  async function updateResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: ResumeUpdateRequest,
+  ): Promise<ResumeDetailDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const parsedInput = resumeUpdateRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw new ResumeError(
+        "invalid_input",
+        parsedInput.error.errors.map((e) => e.message).join(", "),
+      );
+    }
+    const data = parsedInput.data;
+    await authorizeWorkspace(context, "resume.update");
+
+    const versionId = randomUUID();
+    const auditIntent = createAuditIntent(context, "resume.updated", resumeId, {
+      versionId,
+      status: data.status ?? "draft",
+    });
+
+    const updated = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const existing = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          select: { id: true, currentVersion: true },
+        });
+
+        if (!existing) {
+          throw new ResumeError("not_found", "Resume not found");
+        }
+
+        if (existing.currentVersion !== data.expectedVersion) {
+          throw new ResumeError("revision_conflict", "Resume version conflict");
+        }
+
+        const newVersionNumber = existing.currentVersion + 1;
+
+        await tx.resumeVersion.create({
+          data: {
+            id: versionId,
+            resumeId,
+            versionNumber: newVersionNumber,
+            content: JSON.parse(JSON.stringify(data.content)) as JsonObject,
+            createdByUserId: context.actor.userId,
+          },
+        });
+
+        const contentToSave = {
+          ...data.content,
+          ...(data.title ? { title: data.title } : {}),
+        };
+
+        const resumeRecord = await tx.resume.update({
+          where: { id: resumeId },
+          data: {
+            currentVersion: newVersionNumber,
+            content: JSON.parse(JSON.stringify(contentToSave)) as JsonObject,
+            ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
+            ...(data.status ? { status: data.status } : {}),
+          },
+        });
+
+        return resumeRecord;
+      },
+    );
+
+    return {
+      id: updated.id,
+      profileId: updated.profileId,
+      workspaceId: updated.workspaceId,
+      title: data.title ?? data.content.title,
+      templateId: updated.templateId,
+      currentVersion: updated.currentVersion,
+      status: updated.status,
+      atsScore: updated.atsScore,
+      content: data.content,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Deletes a resume and all its version history.
+   */
+  async function deleteResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+  ): Promise<{ deleted: true; id: string }> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    await authorizeWorkspace(context, "resume.delete");
+
+    const auditIntent = createAuditIntent(context, "resume.deleted", resumeId, {});
+
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const existing = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          throw new ResumeError("not_found", "Resume not found");
+        }
+
+        await tx.resumeVersion.deleteMany({ where: { resumeId } });
+        await tx.taskRun.deleteMany({ where: { resumeId } });
+        await tx.resume.delete({ where: { id: resumeId } });
+        return null;
+      },
+    );
+
+    return { deleted: true, id: resumeId };
+  }
+
+  /**
+   * Downloads a resume in JSON, Markdown, Text, or HTML format with audit logging.
+   */
+  async function downloadResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    format: ResumeDownloadFormat,
+  ): Promise<{ content: string; mimeType: string; fileName: string }> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    await authorizeWorkspace(context, "resume.read");
+
+    const auditIntent = createAuditIntent(context, "resume.downloaded", resumeId, {
+      status: "succeeded",
+    });
+
+    const result = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const resume = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          select: { id: true, content: true, status: true },
+        });
+
+        if (!resume) {
+          throw new ResumeError("not_found", "Resume not found");
+        }
+
+        const rawContent = (resume.content ?? {}) as unknown as ParsedResumeContentDto;
+        const title = (rawContent.title || "Resume").replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        let output: string;
+        let mimeType: string;
+        let ext: string;
+
+        if (format === "json") {
+          output = JSON.stringify(rawContent, null, 2);
+          mimeType = "application/json; charset=utf-8";
+          ext = "json";
+        } else if (format === "markdown") {
+          output = formatResumeAsMarkdown(rawContent);
+          mimeType = "text/markdown; charset=utf-8";
+          ext = "md";
+        } else if (format === "html") {
+          output = formatResumeAsHtml(rawContent);
+          mimeType = "text/html; charset=utf-8";
+          ext = "html";
+        } else {
+          output = formatResumeAsText(rawContent);
+          mimeType = "text/plain; charset=utf-8";
+          ext = "txt";
+        }
+
+        return {
+          content: output,
+          mimeType,
+          fileName: `${title}.${ext}`,
+        };
+      },
+    );
+
+    return result;
+  }
+
+  /**
+   * Lists historical versions of a resume.
+   */
+  async function listResumeVersions(
+    context: ResumeServiceContext,
+    resumeId: string,
+  ): Promise<ResumeVersionDto[]> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    await authorizeWorkspace(context, "resume.read");
+
+    const resume = await db.resume.findFirst({
+      where: {
+        id: resumeId,
+        ownerUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+      select: { id: true },
+    });
+
+    if (!resume) {
+      throw new ResumeError("not_found", "Resume not found");
+    }
+
+    const versions = await db.resumeVersion.findMany({
+      where: { resumeId },
+      orderBy: { versionNumber: "desc" },
+    });
+
+    return versions.map((v) => ({
+      id: v.id,
+      resumeId: v.resumeId,
+      versionNumber: v.versionNumber,
+      content: v.content as unknown as ParsedResumeContentDto,
+      createdAt: v.createdAt.toISOString(),
+      createdByUserId: v.createdByUserId,
+    }));
+  }
+
+  /**
+   * Clones a resume to create a new independent copy.
+   */
+  async function cloneResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    newTitle?: string,
+  ): Promise<ResumeDetailDto> {
+    if (!z.string().uuid().safeParse(resumeId).success) {
+      throw new ResumeError("invalid_input", "Invalid resume ID");
+    }
+    const workspace = await authorizeWorkspace(context, "resume.create");
+
+    const source = await db.resume.findFirst({
+      where: {
+        id: resumeId,
+        ownerUserId: context.actor.userId,
+        workspaceId: context.actor.personalWorkspaceId,
+      },
+    });
+
+    if (!source) {
+      throw new ResumeError("not_found", "Resume not found");
+    }
+
+    const content = JSON.parse(JSON.stringify(source.content ?? {})) as ParsedResumeContentDto;
+    const title = newTitle || `${content.title || "Resume"} (Copy)`;
+    content.title = title;
+
+    const clonedId = randomUUID();
+    const versionId = randomUUID();
+
+    const auditIntent = createAuditIntent(context, "resume.created", clonedId, {
+      versionId,
+      status: "draft",
+    });
+
+    const created = await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      auditIntent,
+      async (tx) => {
+        const resumeRecord = await tx.resume.create({
+          data: {
+            id: clonedId,
+            profileId: source.profileId,
+            ownerUserId: context.actor.userId,
+            workspaceType: "individual",
+            workspaceId: workspace.id,
+            createdByUserId: context.actor.userId,
+            templateId: source.templateId,
+            content: JSON.parse(JSON.stringify(content)) as JsonObject,
+            status: "draft",
+            currentVersion: 1,
+          },
+        });
+
+        await tx.resumeVersion.create({
+          data: {
+            id: versionId,
+            resumeId: clonedId,
+            versionNumber: 1,
+            content: JSON.parse(JSON.stringify(content)) as JsonObject,
+            createdByUserId: context.actor.userId,
+          },
+        });
+
+        return resumeRecord;
+      },
+    );
+
+    return {
+      id: created.id,
+      profileId: created.profileId,
+      workspaceId: created.workspaceId,
+      title,
+      templateId: created.templateId,
+      currentVersion: created.currentVersion,
+      status: created.status,
+      atsScore: created.atsScore,
+      content,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    };
+  }
+
   return {
     importResume,
     parseResumeOnly,
     getResumeById,
     listResumes,
+    updateResume,
+    deleteResume,
+    downloadResume,
+    listResumeVersions,
+    cloneResume,
   };
 }

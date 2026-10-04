@@ -19,7 +19,7 @@ export function createResumeApp(config: {
 
   const localCors = cors({
     origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
   });
 
@@ -42,7 +42,7 @@ export function createResumeApp(config: {
     c: Context,
     code: string,
     message: string,
-    status: 400 | 401 | 403 | 404 | 413 | 415 | 422 | 503,
+    status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503,
     requestId: string,
   ) =>
     c.json(
@@ -185,7 +185,6 @@ export function createResumeApp(config: {
       );
       return c.json({ data: result, requestId }, 201);
     } catch (err: unknown) {
-      console.error("DEBUG IMPORT ERROR:", err);
       if (err instanceof ResumeError) {
         const statusMap: Record<string, 400 | 401 | 403 | 404 | 413 | 415 | 422 | 503> = {
           invalid_input: 422,
@@ -202,6 +201,17 @@ export function createResumeApp(config: {
     }
   });
 
+  const statusMap: Record<string, 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503> = {
+    invalid_input: 422,
+    file_too_large: 413,
+    unsupported_media_type: 415,
+    unauthenticated: 401,
+    forbidden: 403,
+    not_found: 404,
+    revision_conflict: 409,
+    resume_unavailable: 503,
+  };
+
   // Get single resume by ID
   app.get("/api/v1/resume/:id", async (c) => {
     const requestId = randomUUID();
@@ -216,18 +226,132 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        const statusMap: Record<string, 400 | 401 | 403 | 404 | 413 | 415 | 422 | 503> = {
-          invalid_input: 422,
-          file_too_large: 413,
-          unsupported_media_type: 415,
-          unauthenticated: 401,
-          forbidden: 403,
-          not_found: 404,
-          resume_unavailable: 503,
-        };
         return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
       }
       return fail(c, "resume_unavailable", "Failed to retrieve resume", 503, requestId);
+    }
+  });
+
+  // Update resume by ID
+  app.put("/api/v1/resume/:id", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (!contentType.includes("application/json")) {
+        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+      }
+      const body: unknown = await c.req.json();
+      const result = await config.resumes.updateResume(
+        auth.context,
+        id,
+        body as Parameters<typeof config.resumes.updateResume>[2],
+      );
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to update resume", 503, requestId);
+    }
+  });
+
+  // Delete resume by ID
+  app.delete("/api/v1/resume/:id", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const result = await config.resumes.deleteResume(auth.context, id);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to delete resume", 503, requestId);
+    }
+  });
+
+  // Download resume by ID
+  app.get("/api/v1/resume/:id/download", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    const formatQuery = c.req.query("format") || "markdown";
+    const validFormats = ["json", "markdown", "text", "html"] as const;
+    const format = validFormats.includes(formatQuery as typeof validFormats[number])
+      ? (formatQuery as typeof validFormats[number])
+      : "markdown";
+
+    try {
+      const result = await config.resumes.downloadResume(auth.context, id, format);
+      c.header("Content-Type", result.mimeType);
+      c.header("Content-Disposition", `attachment; filename="${result.fileName}"`);
+      return c.body(result.content);
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to download resume", 503, requestId);
+    }
+  });
+
+  // List versions for a resume
+  app.get("/api/v1/resume/:id/versions", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      const result = await config.resumes.listResumeVersions(auth.context, id);
+      return c.json({ data: result, requestId });
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to list versions", 503, requestId);
+    }
+  });
+
+  // Clone a resume
+  app.post("/api/v1/resume/:id/clone", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+
+    const id = c.req.param("id");
+    try {
+      let title: string | undefined;
+      const contentType = c.req.header("Content-Type") ?? "";
+      if (contentType.includes("application/json")) {
+        const body = (await c.req.json().catch(() => ({}))) as { title?: string };
+        title = body.title;
+      }
+      const result = await config.resumes.cloneResume(auth.context, id, title);
+      return c.json({ data: result, requestId }, 201);
+    } catch (err: unknown) {
+      if (err instanceof ResumeError) {
+        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+      }
+      return fail(c, "resume_unavailable", "Failed to clone resume", 503, requestId);
     }
   });
 
