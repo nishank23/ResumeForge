@@ -54,4 +54,6 @@ review, integration and canonical tracker updates.
 
 ## Setup checks
 
-Run `git branch --show-current`, `git status --short` and `git worktree list` in the original checkout. It should show `codex/frontend` here and `codex/backend` in the backend folder. Both checkouts should be clean after the workflow commit is shared. `pnpm task:status` should be idle in each checkout. Real backend behavior and combined integration are not yet tested by branch setup.
+Run `git branch --show-current`, `git status --short` and `git worktree list` in the original checkout. They verified `codex/frontend` here and `codex/backend` in the backend folder, with clean checkouts after sharing the workflow commit. The frontend's `pnpm task:status` and backend's dependency-free `node scripts/development-task.mjs status` both reported idle.
+
+In the fresh backend worktree, `pnpm task:status` attempted dependency setup and failed to create a virtual-store slot under the current sandbox (`ERR_PNPM_PACKAGE_MANAGER_CREATE_SLOT_DIR`). No tracked files changed. Install the locked dependencies with `pnpm install --frozen-lockfile` in the backend agent's authorized environment before package checks. The direct Node task helper does not require dependencies and verified state without installing them. Real backend behavior and combined integration are not yet tested by branch setup.
