@@ -231,6 +231,24 @@ test("owned Education with real actor transport, revisioned persistence and atom
       fieldOfStudy: "Computer Science",
       ...extra,
     });
+    const firstEntry = async (name = "alice") => {
+      const profile = await record(name);
+      return owner.education.findFirstOrThrow({
+        where: { profileId: profile.id },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      });
+    };
+    const replacement = async (extra = {}, name = "alice") => ({
+      expectedRevision: (await record(name)).revision,
+      institution: "Synthetic Updated University",
+      degree: "Master of Science",
+      fieldOfStudy: "Artificial Intelligence",
+      startDate: null,
+      endDate: null,
+      gpa: null,
+      description: null,
+      ...extra,
+    });
     const eventFor = (requestId) =>
       owner.auditOutbox.findFirstOrThrow({
         where: { payload: { path: ["correlationId"], equals: requestId } },
@@ -872,6 +890,269 @@ test("owned Education with real actor transport, revisioned persistence and atom
     );
 
     await t.test(
+      "education entry PUT replaces all allowlisted fields, increments parent revision and logs atomic audit",
+      async () => {
+        const target = await firstEntry("alice");
+        const original = target;
+        const before = await record("alice");
+        const unrelated = await owner.education.findMany({
+          where: { NOT: { id: target.id } },
+        });
+        const contacts = await owner.userContact.findMany();
+        const body = await replacement(
+          {
+            institution: "  Synthetic Updated University  ",
+            degree: " Master of Science ",
+            fieldOfStudy: " Artificial Intelligence ",
+            startDate: "2020",
+            endDate: "2024-05",
+            gpa: " 3.95 ",
+            description: " Graduated with highest honors ",
+          },
+          "alice",
+        );
+        const response = await request("alice", {
+          target: `${endpoint}/${target.id}`,
+          method: "PUT",
+          body,
+        });
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get("Cache-Control"), "no-store");
+        const result = await response.json();
+        const after = await record("alice");
+        assert.deepEqual(after, {
+          ...before,
+          revision: before.revision + 1,
+          updatedAt: after.updatedAt,
+        });
+        const row = await firstEntry("alice");
+        const { expectedRevision: _revision, ...fields } = body;
+        const normalized = {
+          ...fields,
+          institution: fields.institution.trim(),
+          degree: fields.degree.trim(),
+          fieldOfStudy: fields.fieldOfStudy.trim(),
+          gpa: fields.gpa.trim(),
+          description: fields.description.trim(),
+        };
+        assert.deepEqual(row, { ...original, ...normalized });
+        const { profileId: _profileId, ...dto } = row;
+        assert.deepEqual(result.data, {
+          profileId: before.id,
+          revision: after.revision,
+          entry: dto,
+        });
+        assert.deepEqual(
+          await owner.education.findMany({
+            where: { NOT: { id: target.id } },
+          }),
+          unrelated,
+        );
+        assert.deepEqual(await owner.userContact.findMany(), contacts);
+        const event = await eventFor(result.requestId);
+        assert.deepEqual(event.payload.metadata, {
+          permission: "profile.update",
+          status: "education_updated",
+        });
+        assert.equal(event.payload.resourceId, before.id);
+        assert.equal(
+          JSON.stringify(event.payload).includes("Synthetic"),
+          false,
+        );
+        const reload = (await (await request("alice")).json()).data;
+        assert.deepEqual(
+          reload.entries.find((entry) => entry.id === target.id),
+          dto,
+        );
+
+        const cleared = await request("alice", {
+          target: `${endpoint}/${target.id}`,
+          method: "PUT",
+          body: await replacement({}, "alice"),
+        });
+        assert.equal(cleared.status, 200);
+        const clearedEntry = (await cleared.json()).data.entry;
+        assert.equal(clearedEntry.startDate, null);
+        assert.equal(clearedEntry.endDate, null);
+        assert.equal(clearedEntry.gpa, null);
+        assert.equal(clearedEntry.description, null);
+        assert.equal(clearedEntry.id, target.id);
+        assert.equal(clearedEntry.sortOrder, original.sortOrder);
+      },
+    );
+
+    await t.test(
+      "replacement requires every education field and rejects invalid dates, bounds and mass assignment",
+      async () => {
+        const target = await firstEntry("alice");
+        const before = await record("alice");
+        const count = await owner.auditOutbox.count();
+        const valid = await replacement({}, "alice");
+        const invalid = [
+          ...[
+            "institution",
+            "degree",
+            "fieldOfStudy",
+            "startDate",
+            "endDate",
+            "gpa",
+            "description",
+            "expectedRevision",
+          ].map((key) => {
+            const copy = { ...valid };
+            delete copy[key];
+            return copy;
+          }),
+          ...[
+            { institution: " " },
+            { degree: " " },
+            { fieldOfStudy: " " },
+            { institution: "x".repeat(201) },
+            { degree: "x".repeat(201) },
+            { fieldOfStudy: "x".repeat(201) },
+            { startDate: "2024-13" },
+            { startDate: "2024-01-01" },
+            { endDate: "2024" },
+            { startDate: "2024-02", endDate: "2023-12" },
+            { gpa: "x".repeat(51) },
+            { description: "x".repeat(1001) },
+            { expectedRevision: 0 },
+            { expectedRevision: 2147483647 },
+            { id: target.id },
+            { profileId: people.bob.profile.id },
+            { userId: people.bob.id },
+            { workspaceId: people.bob.personalWorkspace.id },
+            { sortOrder: 99 },
+            { email: "private@example.invalid" },
+            { onboardingCompletedAt: "2026-10-04" },
+            { revision: valid.expectedRevision },
+          ].map((extra) => ({ ...valid, ...extra })),
+        ];
+        for (const body of invalid) {
+          const response = await request("alice", {
+            target: `${endpoint}/${target.id}`,
+            method: "PUT",
+            body,
+          });
+          assert.equal(response.status, 422);
+          assert.equal("data" in (await response.json()), false);
+        }
+        for (const path of [
+          `${endpoint}/malformed`,
+          `${endpoint}/${target.id}?profileId=${people.bob.profile.id}`,
+        ])
+          assert.equal(
+            (
+              await request("alice", {
+                target: path,
+                method: "PUT",
+                body: valid,
+              })
+            ).status,
+            422,
+          );
+        assert.deepEqual(await firstEntry("alice"), target);
+        assert.deepEqual(await record("alice"), before);
+        assert.equal(await owner.auditOutbox.count(), count);
+      },
+    );
+
+    await t.test(
+      "missing and foreign education entry IDs share 404 and cannot advance the owner's revision",
+      async () => {
+        const other = await firstEntry("bob");
+        const before = await record("alice");
+        const otherProfile = await record("bob");
+        const count = await owner.auditOutbox.count();
+        for (const id of [randomUUID(), other.id]) {
+          const response = await request("alice", {
+            target: `${endpoint}/${id}`,
+            method: "PUT",
+            body: await replacement({}, "alice"),
+            headers: { "X-User-Id": people.bob.id, "X-Role": "ORG_OWNER" },
+          });
+          assert.equal(response.status, 404);
+          assert.equal((await response.json()).error.code, "not_found");
+        }
+        assert.deepEqual(await record("alice"), before);
+        assert.deepEqual(await record("bob"), otherProfile);
+        assert.deepEqual(await firstEntry("bob"), other);
+        assert.equal(await owner.auditOutbox.count(), count);
+        const own = await firstEntry("alice");
+        const denied = await request("alice", {
+          target: `${endpoint}/${own.id}`,
+          method: "PUT",
+          body: await replacement({}, "alice"),
+          headers: { "X-Workspace-Id": people.bob.personalWorkspace.id },
+        });
+        assert.equal(denied.status, 403);
+      },
+    );
+
+    await t.test(
+      "stale expectedRevision returns 409 and competing update/add/draft writes elect one winner",
+      async () => {
+        const target = await firstEntry("alice");
+        const body = await replacement({}, "alice");
+        const stale = await request("alice", {
+          target: `${endpoint}/${target.id}`,
+          method: "PUT",
+          body: { ...body, expectedRevision: body.expectedRevision - 1 },
+        });
+        assert.equal(stale.status, 409);
+        assert.equal((await stale.json()).error.code, "revision_conflict");
+
+        // Concurrent update vs draft save
+        const replies = await Promise.all([
+          request("alice", {
+            target: `${endpoint}/${target.id}`,
+            method: "PUT",
+            body,
+          }),
+          request("alice", {
+            target: `${root}/draft`,
+            method: "PUT",
+            body: {
+              expectedRevision: body.expectedRevision,
+              professionalSummary: "Synthetic competing draft",
+            },
+          }),
+        ]);
+        assert.equal(
+          replies.filter((r) => r.status === 409).length,
+          1,
+        );
+        const winner = replies.find((r) => r.status === 200);
+        assert.ok(winner);
+      },
+    );
+
+    await t.test(
+      "ordinary education entry updates preserve completed onboarding instead of reopening it",
+      async () => {
+        const target = await firstEntry("bob");
+        const before = await record("bob");
+        assert.notEqual(before.onboardingCompletedAt, null);
+        const response = await request("bob", {
+          target: `${endpoint}/${target.id}`,
+          method: "PUT",
+          body: await replacement(
+            { institution: "Updated Completed Onboarding Univ" },
+            "bob",
+          ),
+        });
+        assert.equal(response.status, 200);
+        const after = await record("bob");
+        assert.notEqual(after.onboardingCompletedAt, null);
+        assert.equal(
+          after.onboardingCompletedAt.toISOString(),
+          before.onboardingCompletedAt.toISOString(),
+        );
+        assert.equal(after.revision, before.revision + 1);
+      },
+    );
+
+    await t.test(
       "education read/add audit events deliver through the restricted HTTP ledger without content",
       async () => {
         const key = randomBytes(32).toString("hex");
@@ -905,6 +1186,9 @@ test("owned Education with real actor transport, revisioned persistence and atom
         );
         assert.ok(
           events.some((event) => event.metadata.status === "education_added"),
+        );
+        assert.ok(
+          events.some((event) => event.metadata.status === "education_updated"),
         );
         for (const event of events) {
           const person = Object.values(people).find(
@@ -948,6 +1232,10 @@ test("owned Education with real actor transport, revisioned persistence and atom
         await assert.rejects(profiles.addEducation(context, await input()), {
           code: "unauthenticated",
         });
+        await assert.rejects(
+          profiles.updateEducation(context, randomUUID(), await replacement()),
+          { code: "unauthenticated" },
+        );
         await auth.request("/api/v1/auth/logout", {
           method: "POST",
           headers: {
@@ -955,22 +1243,28 @@ test("owned Education with real actor transport, revisioned persistence and atom
             Origin: "http://localhost:3000",
           },
         });
-        for (const method of ["GET", "POST"])
+        const aliceTarget = (await firstEntry("alice")).id;
+        for (const method of ["GET", "POST", "PUT"])
           assert.equal(
             (
               await request("alice", {
+                target: method === "PUT" ? `${endpoint}/${aliceTarget}` : endpoint,
                 method,
                 ...(method === "POST" ? { body: await input() } : {}),
+                ...(method === "PUT" ? { body: await replacement() } : {}),
               })
             ).status,
             401,
           );
         await close(authServer);
         servers.splice(servers.indexOf(authServer), 1);
-        for (const method of ["GET", "POST"]) {
+        const bobTarget = (await firstEntry("bob")).id;
+        for (const method of ["GET", "POST", "PUT"]) {
           const response = await request("bob", {
+            target: method === "PUT" ? `${endpoint}/${bobTarget}` : endpoint,
             method,
             ...(method === "POST" ? { body: await input({}, "bob") } : {}),
+            ...(method === "PUT" ? { body: await replacement({}, "bob") } : {}),
           });
           assert.equal(response.status, 503);
           assert.equal("data" in (await response.json()), false);

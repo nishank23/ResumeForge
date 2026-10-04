@@ -40,6 +40,13 @@ export const educationCreateSchema = z
   })
   .strict()
   .refine(validDates);
+export const educationUpdateSchema = z
+  .object({
+    ...fields,
+    expectedRevision: revision.max(2_147_483_646),
+  })
+  .strict()
+  .refine(validDates);
 export const educationSchema = z
   .object({
     id: z.string().uuid(),

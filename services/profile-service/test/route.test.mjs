@@ -23,6 +23,7 @@ const writeRoutes = [
   ["/api/v1/profile/experience", "POST"],
   [`/api/v1/profile/experience/${randomUUID()}`, "PUT"],
   ["/api/v1/profile/education", "POST"],
+  [`/api/v1/profile/education/${randomUUID()}`, "PUT"],
 ];
 function setup(
   resolveActor = async () => ({ status: "authenticated", actor }),
@@ -50,6 +51,11 @@ function setup(
       },
       listEducation: operation("listEducation"),
       addEducation: operation("addEducation"),
+      updateEducation: async (context, id, input) => {
+        calls.push({ kind: "updateEducation", context, id, input });
+        if (error) throw error;
+        return dto;
+      },
     },
   });
   return { app, calls };
@@ -344,49 +350,54 @@ test("education list/add dispatch the verified context and reject unsupported ch
 });
 
 test("entry PUT dispatches the path target with local CORS and no unsupported child operations", async () => {
-  const { app, calls } = setup();
-  const id = randomUUID();
-  const path = `/api/v1/profile/experience/${id}`;
-  const input = { expectedRevision: 1, title: "Synthetic replacement" };
-  const response = await app.request(path, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Origin: "http://localhost:3000",
-    },
-    body: JSON.stringify(input),
-  });
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("Cache-Control"), "no-store");
-  assert.equal(
-    response.headers.get("Access-Control-Allow-Origin"),
-    "http://localhost:3000",
-  );
-  assert.deepEqual(calls[0], {
-    kind: "updateExperience",
-    context: calls[0].context,
-    id,
-    input,
-  });
-  assert.deepEqual(calls[0].context.actor, actor);
-  const preflight = await app.request(path, {
-    method: "OPTIONS",
-    headers: {
-      Origin: "http://localhost:3000",
-      "Access-Control-Request-Method": "PUT",
-    },
-  });
-  assert.equal(preflight.status, 204);
-  assert.ok(
-    preflight.headers.get("Access-Control-Allow-Methods").includes("PUT"),
-  );
-  for (const method of ["GET", "POST", "PATCH", "DELETE"])
-    assert.equal((await app.request(path, { method })).status, 404);
-  assert.equal(
-    (await app.request(`${path}/extra`, { method: "PUT" })).status,
-    404,
-  );
-  assert.equal(calls.length, 1);
+  for (const [section, kind] of [
+    ["experience", "updateExperience"],
+    ["education", "updateEducation"],
+  ]) {
+    const { app, calls } = setup();
+    const id = randomUUID();
+    const path = `/api/v1/profile/${section}/${id}`;
+    const input = { expectedRevision: 1, title: "Synthetic replacement" };
+    const response = await app.request(path, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:3000",
+      },
+      body: JSON.stringify(input),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.equal(
+      response.headers.get("Access-Control-Allow-Origin"),
+      "http://localhost:3000",
+    );
+    assert.deepEqual(calls[0], {
+      kind,
+      context: calls[0].context,
+      id,
+      input,
+    });
+    assert.deepEqual(calls[0].context.actor, actor);
+    const preflight = await app.request(path, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "http://localhost:3000",
+        "Access-Control-Request-Method": "PUT",
+      },
+    });
+    assert.equal(preflight.status, 204);
+    assert.ok(
+      preflight.headers.get("Access-Control-Allow-Methods").includes("PUT"),
+    );
+    for (const method of ["GET", "POST", "PATCH", "DELETE"])
+      assert.equal((await app.request(path, { method })).status, 404);
+    assert.equal(
+      (await app.request(`${path}/extra`, { method: "PUT" })).status,
+      404,
+    );
+    assert.equal(calls.length, 1);
+  }
 });
 
 test("profile errors are stable and raw database errors are suppressed", async () => {

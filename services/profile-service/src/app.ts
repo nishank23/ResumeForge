@@ -25,6 +25,7 @@ export function createProfileApp(config: {
   app.use("/api/v1/profile/experience", localCors);
   app.use("/api/v1/profile/experience/:id", localCors);
   app.use("/api/v1/profile/education", localCors);
+  app.use("/api/v1/profile/education/:id", localCors);
   app.onError((_error, c) =>
     c.json(
       {
@@ -120,7 +121,13 @@ export function createProfileApp(config: {
         return fail("invalid_input", 400);
       }
       const creating = c.req.method === "POST";
-      const experienceId = c.req.param("id");
+      const entryId = c.req.param("id");
+      const isExperienceEntry =
+        entryId !== undefined &&
+        c.req.path.startsWith("/api/v1/profile/experience/");
+      const isEducationEntry =
+        entryId !== undefined &&
+        c.req.path.startsWith("/api/v1/profile/education/");
       return c.json(
         {
           data: await (creating
@@ -129,11 +136,13 @@ export function createProfileApp(config: {
               : education
                 ? config.profiles.addEducation(context, input)
                 : config.profiles.create(context, input)
-            : experienceId !== undefined
-              ? config.profiles.updateExperience(context, experienceId, input)
-              : c.req.path === "/api/v1/profile/draft"
-                ? config.profiles.saveDraft(context, input)
-                : config.profiles.update(context, input)),
+            : isExperienceEntry
+              ? config.profiles.updateExperience(context, entryId, input)
+              : isEducationEntry
+                ? config.profiles.updateEducation(context, entryId, input)
+                : c.req.path === "/api/v1/profile/draft"
+                  ? config.profiles.saveDraft(context, input)
+                  : config.profiles.update(context, input)),
           requestId,
         },
         creating ? 201 : 200,
@@ -164,6 +173,7 @@ export function createProfileApp(config: {
   app.put("/api/v1/profile/experience/:id", handler);
   app.get("/api/v1/profile/education", handler);
   app.post("/api/v1/profile/education", handler);
+  app.put("/api/v1/profile/education/:id", handler);
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: "Route not found." } }, 404),
   );

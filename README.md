@@ -9,8 +9,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-04T13:27:20.127Z",
-  "lastResult": "Resume import, parsing and database persistence implemented, verified across 21 unit and DB tests, and documented in docs/handoffs/backend-resume-import.md"
+  "updatedAt": "2026-10-04T13:44:15.014Z",
+  "lastResult": "Owned Education entry updates implemented and verified across unit, route and database tests"
 }
 ```
 <!-- END:CURRENT_TASK -->

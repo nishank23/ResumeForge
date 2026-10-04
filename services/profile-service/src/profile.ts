@@ -35,6 +35,7 @@ import {
   educationCreateSchema,
   educationListSchema,
   educationAddedSchema,
+  educationUpdateSchema,
   type EducationListDto,
   type EducationAddedDto,
 } from "./education-contracts.js";
@@ -507,6 +508,64 @@ export function createProfileUseCases(db: Database, now = Date.now) {
             },
             select: educationProjection,
           });
+          assertContext(context);
+          return educationAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
+          });
+        },
+      );
+    },
+    updateEducation: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<EducationAddedDto> => {
+      assertContext(context);
+      const parsed = educationUpdateSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "education_updated",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          // Lock the same parent as every other professional write before the child.
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            id: entryId,
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          const updated = await tx.education.updateMany({
+            where,
+            data: fields,
+          });
+          // Throwing also rolls back the parent revision for missing/foreign IDs.
+          if (updated.count !== 1) throw new ProfileError("not_found");
+          const entry = await tx.education.findFirst({
+            where,
+            select: educationProjection,
+          });
+          if (!entry) throw new ProfileError("not_found");
           assertContext(context);
           return educationAddedSchema.parse({
             profileId,
