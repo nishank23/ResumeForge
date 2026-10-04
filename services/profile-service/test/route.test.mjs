@@ -24,6 +24,8 @@ const writeRoutes = [
   [`/api/v1/profile/experience/${randomUUID()}`, "PUT"],
   ["/api/v1/profile/education", "POST"],
   [`/api/v1/profile/education/${randomUUID()}`, "PUT"],
+  ["/api/v1/profile/skills", "POST"],
+  [`/api/v1/profile/skills/${randomUUID()}`, "PUT"],
 ];
 function setup(
   resolveActor = async () => ({ status: "authenticated", actor }),
@@ -53,6 +55,13 @@ function setup(
       addEducation: operation("addEducation"),
       updateEducation: async (context, id, input) => {
         calls.push({ kind: "updateEducation", context, id, input });
+        if (error) throw error;
+        return dto;
+      },
+      listSkills: operation("listSkills"),
+      addSkill: operation("addSkill"),
+      updateSkill: async (context, id, input) => {
+        calls.push({ kind: "updateSkill", context, id, input });
         if (error) throw error;
         return dto;
       },
@@ -437,4 +446,45 @@ test("stalled authenticated body is cancelled without calling the profile use ca
   assert.equal(response.status, 408);
   assert.equal(cancelled, true);
   assert.equal(calls.length, 0);
+});
+
+test("skills routes dispatch with local CORS and authentic context", async () => {
+  const { app, calls } = setup();
+  const path = "/api/v1/profile/skills";
+  const headers = {
+    Authorization: "Bearer token",
+    "Content-Type": "application/json",
+    Origin: "http://localhost:3000",
+    "X-Workspace-Id": actor.personalWorkspaceId,
+  };
+  const skillInput = {
+    expectedRevision: 1,
+    name: "TypeScript",
+    category: "Languages",
+    proficiency: "advanced",
+  };
+  // GET
+  assert.equal((await app.request(path, { headers })).status, 200);
+
+  // POST
+  const added = await app.request(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(skillInput),
+  });
+  assert.equal(added.status, 201);
+
+  // PUT /api/v1/profile/skills/:id
+  const skillId = randomUUID();
+  const updated = await app.request(`${path}/${skillId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(skillInput),
+  });
+  assert.equal(updated.status, 200);
+
+  assert.deepEqual(
+    calls.map((c) => c.kind),
+    ["listSkills", "addSkill", "updateSkill"],
+  );
 });

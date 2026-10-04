@@ -39,6 +39,15 @@ import {
   type EducationListDto,
   type EducationAddedDto,
 } from "./education-contracts.js";
+import {
+  MAX_SKILLS,
+  skillCreateSchema,
+  skillListSchema,
+  skillAddedSchema,
+  skillUpdateSchema,
+  type SkillListDto,
+  type SkillAddedDto,
+} from "./skill-contracts.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
 type Context = {
@@ -74,6 +83,12 @@ const educationProjection = {
   gpa: true,
   description: true,
   sortOrder: true,
+} as const;
+const skillProjection = {
+  id: true,
+  name: true,
+  category: true,
+  proficiency: true,
 } as const;
 
 /** Server composition supplies a freshly verified actor; context from request bodies is never accepted. */
@@ -606,6 +621,149 @@ export function createProfileUseCases(db: Database, now = Date.now) {
           if (!profile) throw new ProfileError("not_found");
           assertContext(context);
           return professionalProfileSchema.parse(profile);
+        },
+      );
+    },
+    listSkills: async (context: Context): Promise<SkillListDto> => {
+      assertContext(context);
+      const id = await authorize(context, "profile.read");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.viewed", id),
+          metadata: { permission: "profile.read", status: "skills_read" },
+        },
+        async (tx) => {
+          assertContext(context);
+          const [parent] = await tx.$queryRaw<
+            { id: string; revision: number }[]
+          >`
+            SELECT "id", "revision" FROM "UserProfile"
+            WHERE "id" = ${id}::uuid AND "userId" = ${context.actor.userId}::uuid
+            FOR SHARE`;
+          if (!parent) throw new ProfileError("not_found");
+          const entries = await tx.skill.findMany({
+            where: { profileId: id, profile: { userId: context.actor.userId } },
+            select: skillProjection,
+            orderBy: [{ category: "asc" }, { name: "asc" }, { id: "asc" }],
+            take: MAX_SKILLS + 1,
+          });
+          assertContext(context);
+          return skillListSchema.parse({
+            profileId: id,
+            revision: parent.revision,
+            entries,
+          });
+        },
+      );
+    },
+    addSkill: async (
+      context: Context,
+      input: unknown,
+    ): Promise<SkillAddedDto> => {
+      assertContext(context);
+      const parsed = skillCreateSchema.safeParse(input);
+      if (!parsed.success) throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "skill_added",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const updated = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (updated.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          if ((await tx.skill.count({ where })) >= MAX_SKILLS)
+            throw new ProfileError("section_limit");
+          const entry = await tx.skill.create({
+            data: {
+              id: randomUUID(),
+              profileId,
+              ...fields,
+            },
+            select: skillProjection,
+          });
+          assertContext(context);
+          return skillAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
+          });
+        },
+      );
+    },
+    updateSkill: async (
+      context: Context,
+      entryId: string,
+      input: unknown,
+    ): Promise<SkillAddedDto> => {
+      assertContext(context);
+      const parsed = skillUpdateSchema.safeParse(input);
+      if (!z.string().uuid().safeParse(entryId).success || !parsed.success)
+        throw new ProfileError("invalid_input");
+      const profileId = await authorize(context, "profile.update");
+      return withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        {
+          ...event(context, "profile.updated", profileId),
+          metadata: {
+            permission: "profile.update",
+            status: "skill_updated",
+          },
+        },
+        async (tx) => {
+          assertContext(context);
+          const { expectedRevision, ...fields } = parsed.data;
+          const parent = await tx.userProfile.updateMany({
+            where: {
+              id: profileId,
+              userId: context.actor.userId,
+              revision: expectedRevision,
+            },
+            data: { revision: { increment: 1 } },
+          });
+          if (parent.count !== 1) throw new ProfileError("revision_conflict");
+          const where = {
+            id: entryId,
+            profileId,
+            profile: { userId: context.actor.userId },
+          };
+          const updated = await tx.skill.updateMany({
+            where,
+            data: fields,
+          });
+          if (updated.count !== 1) throw new ProfileError("not_found");
+          const entry = await tx.skill.findFirst({
+            where,
+            select: skillProjection,
+          });
+          if (!entry) throw new ProfileError("not_found");
+          assertContext(context);
+          return skillAddedSchema.parse({
+            profileId,
+            revision: expectedRevision + 1,
+            entry,
+          });
         },
       );
     },
