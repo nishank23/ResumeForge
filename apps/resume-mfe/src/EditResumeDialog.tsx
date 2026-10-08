@@ -118,6 +118,10 @@ export function EditResumeDialog({
     name: "entry.bullets",
   });
   const links = useFieldArray({ control: form.control, name: "entry.links" });
+  const headerLinks = useFieldArray({
+    control: form.control,
+    name: "header.links",
+  });
   const languages = useFieldArray({ control: form.control, name: "languages" });
   useEffect(() => {
     const snapshot = JSON.parse(serialized) as EditorFormValues;
@@ -169,8 +173,8 @@ export function EditResumeDialog({
       title={section?.kind === "skills" ? "Skills" : `Edit ${displayLabel}`}
       description={
         section?.kind === "skills"
-          ? "Synthetic local draft. Save applies changes; Cancel restores the previous skills."
-          : "Synthetic local draft · Changes appear on the page; Save applies them to this draft."
+          ? "Save applies changes to this draft. Cancel restores the previous skills. Use Save changes in the editor to store a version."
+          : "Changes appear on the page. Save applies them to this draft; use Save changes in the editor to store a version."
       }
       className={`rf-edit-dialog${section?.kind === "skills" ? " rf-skills-dialog" : ""}`}
       bodyClassName="rf-edit-dialog-body"
@@ -248,30 +252,32 @@ export function EditResumeDialog({
             }
           }}
         >
-          <div className="rf-sample-fill">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const candidate = fillEmptyForm(
-                  form.getValues(),
-                  target,
-                  section?.kind,
-                  sample,
-                  newId,
-                );
-                form.reset(candidate, { keepDefaultValues: true });
-                form.clearErrors();
-                setDialogError(null);
-              }}
-            >
-              Auto-fill sample details
-            </Button>
-            <p>
-              Fills empty fields with fictional demo details. Your typed content
-              is kept; Undo or Cancel removes the examples.
-            </p>
-          </div>
+          {base.synthetic ? (
+            <div className="rf-sample-fill">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const candidate = fillEmptyForm(
+                    form.getValues(),
+                    target,
+                    section?.kind,
+                    sample,
+                    newId,
+                  );
+                  form.reset(candidate, { keepDefaultValues: true });
+                  form.clearErrors();
+                  setDialogError(null);
+                }}
+              >
+                Auto-fill sample details
+              </Button>
+              <p>
+                Fills empty fields with fictional demo details. Your typed
+                content is kept; Undo or Cancel removes the examples.
+              </p>
+            </div>
+          ) : null}
           <div className="rf-dialog-history">
             <Button
               variant="outline"
@@ -310,7 +316,9 @@ export function EditResumeDialog({
               <fieldset className="rf-form-group">
                 <legend>Contact details</legend>
                 <p className="rf-field-hint">
-                  Demo contact fields only. Nothing is sent to a server or AI.
+                  These details belong to this private resume. Saving stores
+                  them with the resume, separately from your master profile.
+                  They are not sent to AI.
                 </p>
                 <div className="rf-form-grid">
                   <TextField name="sampleContact.phone" label="Phone number" />
@@ -321,6 +329,46 @@ export function EditResumeDialog({
                   <TextField name="header.state" label="State" />
                   <TextField name="header.country" label="Country" />
                 </div>
+              </fieldset>
+              <fieldset className="rf-form-group">
+                <legend>Profile links</legend>
+                {headerLinks.fields.map((link, i) => (
+                  <div className="rf-link-form" key={link.id}>
+                    <div className="rf-form-grid">
+                      <TextField
+                        name={
+                          `header.links.${String(i)}.label` as Path<EditorFormValues>
+                        }
+                        label={`Profile link ${String(i + 1)} label`}
+                      />
+                      <TextField
+                        name={
+                          `header.links.${String(i)}.url` as Path<EditorFormValues>
+                        }
+                        label={`Profile link ${String(i + 1)} URL`}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        headerLinks.remove(i);
+                      }}
+                      aria-label={`Remove profile link ${String(i + 1)}`}
+                    >
+                      <Trash2 size={14} /> Remove link
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    headerLinks.append({ id: newId(), label: "", url: "" });
+                  }}
+                >
+                  <Plus size={14} /> Add profile link
+                </Button>
               </fieldset>
             </>
           ) : target.type === "entry" ? (

@@ -26,9 +26,7 @@ export function resolveProtectedRoute(
 }
 
 export function sessionHome(identity: SessionIdentity): string {
-  return identity.isOnboarded
-    ? `/w/${identity.workspaceId}/resumes`
-    : "/onboarding";
+  return `/w/${identity.workspaceId}/resumes`;
 }
 
 /** Remount drafts/selections on actor or authoritative workspace changes. */

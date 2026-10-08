@@ -1,16 +1,4 @@
 /* Forge tools stay separate from the paper and reuse shared light/dark tokens. */
-@media (min-width: 761px) {
-  /* Stable editing gutters fit the section-footer toolbar without covering text.
-     Hover never changes geometry; Preview retains the user's actual spacing. */
-  .rf-paper-stage[data-editor-mode="editor"]
-    .rf-resume-section
-    + .rf-resume-section {
-    margin-top: max(52px, var(--paper-sectionGap, 18px));
-  }
-  .rf-paper-stage[data-editor-mode="editor"] .rf-resume-header {
-    margin-bottom: 52px;
-  }
-}
 .rf-tools-workspace {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr);
@@ -56,8 +44,6 @@
 .rf-rail-tabs {
   display: grid;
   gap: 10px;
-  position: sticky;
-  top: 16px;
 }
 .rf-editor-rail .rf-panel-toggle {
   margin-top: 8px;
@@ -338,11 +324,21 @@
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
+@media (min-width: 761px) {
+  .rf-editor-rail {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
 @media (min-width: 1200px) {
   .rf-editor-tool-panel {
     position: sticky;
-    top: 84px;
-    max-height: calc(100dvh - 96px);
+    top: calc(var(--editor-header-height, 72px) + 12px);
+    max-height: calc(100dvh - var(--editor-header-height, 72px) - 24px);
     overflow-y: auto;
   }
 }

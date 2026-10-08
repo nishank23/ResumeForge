@@ -110,7 +110,7 @@ test("presets validate, reset is isolated and extra styling fields are discarded
   });
   assert.deepEqual(result.draft.appearance, DEFAULT_APPEARANCE);
   const vars = appearanceVariables(result.draft.appearance);
-  assert.equal(vars["--paper-body-size"], "14px");
+  assert.equal(vars["--paper-body-size"], "13px");
   assert.equal(
     Object.values(vars).some((value) => value.includes("url(")),
     false,

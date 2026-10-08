@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { editorDocumentSchema } from "@resume-forge/shared-types";
 
 export type ResumeErrorCode =
   | "unauthenticated"
@@ -85,7 +86,9 @@ export const resumeEducationEntrySchema = z
   })
   .strict();
 
-export type ResumeEducationEntryDto = z.infer<typeof resumeEducationEntrySchema>;
+export type ResumeEducationEntryDto = z.infer<
+  typeof resumeEducationEntrySchema
+>;
 
 export const resumeSkillGroupSchema = z
   .object({
@@ -146,6 +149,7 @@ export const parsedResumeContentSchema = z
       .strict(),
     sections: z.array(resumeSectionSchema).default([]),
     rawText: z.string().max(500000).optional(),
+    editorDraft: editorDocumentSchema.optional(),
   })
   .strict();
 
@@ -240,3 +244,13 @@ export interface ResumeVersionDto {
 }
 
 export type ResumeDownloadFormat = "json" | "markdown" | "text" | "html";
+
+export const resumeCreateRequestSchema = z
+  .object({ id: z.string().uuid(), content: parsedResumeContentSchema })
+  .strict()
+  .refine(
+    (v) =>
+      v.content.editorDraft?.synthetic === false &&
+      v.content.title === v.content.editorDraft.title,
+    "A real editor document is required",
+  );

@@ -22,7 +22,12 @@ import { createGoogleProvider } from "../dist/google.js";
 
 const root = new URL("../../../", import.meta.url);
 const local = parseEnv(
-  readFileSync(new URL(".local/database.env", root), "utf8"),
+  readFileSync(
+    process.env.RESUME_FORGE_LOCAL_ROOT
+      ? `${process.env.RESUME_FORGE_LOCAL_ROOT}/.local/database.env`
+      : new URL(".local/database.env", root),
+    "utf8",
+  ),
 );
 const url = new URL(local.DATABASE_URL);
 assert.equal(url.hostname, "127.0.0.1");

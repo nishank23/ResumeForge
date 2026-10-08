@@ -22,11 +22,19 @@ import { createAuthApp } from "../../auth-service/dist/app.js";
 import { createWorkspaceAuditApp } from "../../workspace-service/dist/app.js";
 import { createProfileApp } from "../dist/app.js";
 import { createProfileUseCases } from "../dist/profile.js";
+import { createGatewayApp } from "../../gateway/dist/app.js";
+import { createSessionController } from "../../../packages/shared/src/auth/session.ts";
+import {
+  createProfileClient,
+  profileFields,
+} from "../../../apps/profile-mfe/src/profile-api.ts";
 
 const base = new URL(
   parseEnv(
     readFileSync(
-      new URL("../../../.local/database.env", import.meta.url),
+      process.env.RESUME_FORGE_LOCAL_ROOT
+        ? `${process.env.RESUME_FORGE_LOCAL_ROOT}/.local/database.env`
+        : new URL("../../../.local/database.env", import.meta.url),
       "utf8",
     ),
   ).DATABASE_URL,
@@ -93,7 +101,7 @@ test("private profile API with real actor transport, restricted persistence and 
         names[service],
       );
     const people = {};
-    for (const name of ["alice", "bob", "charlie", "dana", "erin"])
+    for (const name of ["alice", "bob", "charlie", "dana", "erin", "frank"])
       people[name] = await owner.user.create({
         data: {
           email: `${name}@example.invalid`,
@@ -105,7 +113,7 @@ test("private profile API with real actor transport, restricted persistence and 
             },
           },
           personalWorkspace: { create: { type: "individual" } },
-          ...(["charlie", "dana", "erin"].includes(name)
+          ...(["charlie", "dana", "erin", "frank"].includes(name)
             ? {}
             : {
                 profile: {
@@ -1292,6 +1300,97 @@ test("private profile API with real actor transport, restricted persistence and 
           }),
           { code: "event_conflict" },
         );
+      },
+    );
+    await t.test(
+      "browser session/client/gateway save, reload and conflict use real restricted persistence",
+      async () => {
+        let refreshCookie = credentials.frank.cookie;
+        const gateway = createGatewayApp((target, options) =>
+          fetch(
+            endpoint + new URL(target).pathname.replace("/api/v1/profile", ""),
+            options,
+          ),
+        );
+        const controller = createSessionController({
+          exclusive: (operation) => operation(),
+          notifyLogout() {},
+          request: async (target, options = {}) => {
+            const headers = new Headers(options.headers);
+            headers.set("Origin", "http://localhost:3000");
+            if (target.startsWith("http://localhost:4001/")) {
+              headers.set("Cookie", refreshCookie);
+              const reply = await auth.request(new URL(target).pathname, {
+                ...options,
+                headers,
+              });
+              refreshCookie = cookie(reply, "refresh_token") ?? refreshCookie;
+              return reply;
+            }
+            return gateway.request(new URL(target).pathname, {
+              ...options,
+              headers,
+            });
+          },
+        });
+        await controller.restore();
+        assert.equal(controller.getSnapshot().status, "authenticated");
+        const workspace = controller.getSnapshot().identity.workspaceId;
+        const client = createProfileClient(controller.requestApi, workspace);
+        assert.equal(await client.load(), null);
+        const created = await client.save(
+          {
+            fullName: "Synthetic browser fixture",
+            location: "Example City",
+            professionalSummary: "Supported synthetic facts.",
+          },
+          null,
+          true,
+        );
+        assert.equal(created.revision, 1);
+        const reloaded = await createProfileClient(
+          controller.requestApi,
+          workspace,
+        ).load();
+        assert.deepEqual(reloaded, created);
+        const saved = await client.save(
+          { ...profileFields(created), location: "" },
+          created,
+          true,
+        );
+        assert.equal(saved.location, null);
+        assert.equal(saved.revision, 2);
+        await assert.rejects(
+          client.save(
+            { ...profileFields(created), fullName: "Stale tab edit" },
+            created,
+            true,
+          ),
+          (error) => error.code === "revision_conflict",
+        );
+        assert.deepEqual(await client.load(), saved);
+        assert.equal(
+          await owner.userContact.count({ where: { profileId: created.id } }),
+          0,
+        );
+        assert.equal(
+          (
+            await owner.userProfile.findUniqueOrThrow({
+              where: { id: created.id },
+            })
+          ).onboardingCompletedAt,
+          null,
+        );
+        const denied = createProfileClient(
+          controller.requestApi,
+          people.bob.personalWorkspace.id,
+        );
+        await assert.rejects(
+          denied.load(),
+          (error) => error.code === "forbidden",
+        );
+        await controller.logout();
+        await assert.rejects(client.load(), /Session unavailable/);
       },
     );
     await t.test(

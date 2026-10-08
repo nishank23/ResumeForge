@@ -1359,3 +1359,156 @@
     min-width: 44px;
   }
 }
+
+.rf-save-error {
+  margin: 0 24px 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--destructive);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.rf-save-error p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+/* A4 geometry is stable at every breakpoint; only the surrounding view zooms. */
+.rf-page-view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.rf-page-view-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.rf-page-view-controls button {
+  padding: 7px 9px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.rf-page-view-controls button[aria-pressed="true"] {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.rf-page-view-controls output {
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rf-page-viewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: clip;
+  padding-bottom: 6px;
+}
+.rf-page-zoom-frame {
+  position: relative;
+  margin: 0 auto;
+}
+.rf-page-zoom-surface {
+  width: 794px;
+  transform-origin: top left;
+}
+.rf-page-zoom-surface .rf-resume-document {
+  width: 794px;
+  max-width: none;
+  min-height: 1123px;
+  margin: 0;
+  padding: var(--paper-top) var(--paper-right) var(--paper-bottom)
+    var(--paper-left);
+  font-size: var(--paper-body-size);
+}
+.rf-page-zoom-surface .rf-resume-header {
+  margin-bottom: 12px;
+}
+.rf-page-zoom-surface .rf-resume-header h2 {
+  font-size: 28px;
+}
+.rf-page-zoom-surface .rf-resume-headline {
+  font-size: 13px;
+}
+.rf-page-zoom-surface .rf-resume-contacts {
+  font-size: 11px;
+  gap: 3px 12px;
+  margin-top: 6px;
+}
+.rf-page-zoom-surface .rf-resume-section h3 {
+  font-size: var(--paper-section-size);
+}
+.rf-page-zoom-surface .rf-resume-entry-heading,
+.rf-page-zoom-surface .rf-resume-entry-subheading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+}
+.rf-page-zoom-surface .rf-resume-period,
+.rf-page-zoom-surface .rf-resume-entry-subheading p + p {
+  text-align: right;
+}
+.rf-page-zoom-surface .rf-resume-technologies,
+.rf-page-zoom-surface .rf-resume-period {
+  font-size: var(--paper-body-size);
+}
+.rf-page-zoom-surface .rf-resume-skills > div {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 8px;
+}
+.rf-page-zoom-surface .rf-resume-skills dd {
+  margin-left: 0;
+}
+.rf-page-overflow {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+/* Selection actions stay outside the sheet, so editing adds no printable gaps. */
+@media (min-width: 761px) {
+  .rf-editor-bar > .rf-floating-actions {
+    position: relative;
+    inset: auto;
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: 100%;
+    margin-right: auto;
+  }
+  .rf-editor-bar .rf-floating-target {
+    position: static;
+    width: auto;
+    height: auto;
+    max-width: 180px;
+    clip-path: none;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    padding-inline: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .rf-page-view-controls button {
+    min-height: 44px;
+  }
+}
+@media print {
+  .rf-page-view-controls,
+  .rf-page-overflow {
+    display: none;
+  }
+  .rf-page-zoom-frame {
+    width: auto !important;
+    height: auto !important;
+  }
+  .rf-page-zoom-surface {
+    transform: none !important;
+  }
+  .rf-page-viewport {
+    overflow: visible;
+  }
+}

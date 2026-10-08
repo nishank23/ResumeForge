@@ -6,6 +6,7 @@ import {
   richTextPlain,
   targetValue,
   validateEntry,
+  safeLink,
   type DraftEntry,
   type DraftItem,
   type DraftLanguage,
@@ -35,7 +36,7 @@ export function formValues(
   const value = targetValue(draft, target);
   return structuredClone({
     title: draft.title,
-    header: draft.header,
+    header: { ...draft.header, links: draft.header.links ?? [] },
     sampleContact: draft.sampleContact,
     label: section?.label ?? "",
     summary: section?.summary ?? emptyRichText(),
@@ -109,6 +110,13 @@ export function validateForm(
         path: "sampleContact.email",
         message: "Enter a valid email address or leave it empty.",
       });
+    (values.header.links ?? []).forEach((link, i) => {
+      if (link.url && !safeLink(link.url))
+        issues.push({
+          path: `header.links.${String(i)}.url`,
+          message: "Use an http or https link.",
+        });
+    });
     return issues;
   }
   if (!targetValue(draft, target))

@@ -116,7 +116,7 @@ export function ResumeDocument({
   return (
     <article
       className="rf-resume-document"
-      aria-label={`Synthetic resume for ${name || "unnamed person"}`}
+      aria-label={`Resume for ${name || "unnamed person"}`}
     >
       <header
         {...headerProps}
@@ -196,6 +196,15 @@ export function ResumeDocument({
               </span>
             </li>
           ) : null}
+          {(draft.header.links ?? [])
+            .filter((link) => safeLink(link.url))
+            .map((link) => (
+              <li key={link.id}>
+                <a href={link.url} target="_blank" rel="noopener noreferrer">
+                  {link.label || link.url}
+                </a>
+              </li>
+            ))}
         </ul>
       </header>
       {draft.sections
@@ -368,7 +377,7 @@ export function ResumeDocument({
                                   ·{" "}
                                 </>
                               ) : null}
-                              {editable || entry.location
+                              {entry.location
                                 ? text(
                                     entryTarget,
                                     "location",
@@ -393,8 +402,7 @@ export function ResumeDocument({
                               )}
                             </p>
                           ) : null}
-                          {editable ||
-                          richTextPlain(entry.description).trim() ? (
+                          {richTextPlain(entry.description).trim() ? (
                             <div className="rf-entry-description">
                               <SummaryEditor
                                 value={entry.description}
@@ -446,7 +454,7 @@ export function ResumeDocument({
                                 })}
                             </ul>
                           ) : null}
-                          {editable || entry.technologies ? (
+                          {entry.technologies ? (
                             <p className="rf-resume-technologies">
                               <strong>Technologies / tools used:</strong>{" "}
                               {text(
@@ -568,8 +576,7 @@ export function ResumeDocument({
               !section.groups.some((g) => g.items.length) &&
               !section.languages.length ? (
                 <p className="rf-empty-paper">
-                  Empty section · choose Edit or click Skills, then Auto-fill
-                  sample details if you want fictional examples.
+                  Choose Edit to add your details to this section.
                 </p>
               ) : null}
             </section>

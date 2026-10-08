@@ -108,26 +108,13 @@ export function SignInRoute({
   return children;
 }
 
-export function OnboardingEntry({ session }: { session: SessionState }) {
-  if (session.status !== "authenticated") return null;
-  if (session.identity.isOnboarded)
-    return <Navigate to={sessionHome(session.identity)} replace />;
-  return (
-    <div className="rf-empty">
-      <h1>Set up your profile</h1>
-      <p>
-        Profile setup is being connected. You don’t need to enter personal
-        details yet.
-      </p>
-      <p>
-        The sample workspace is available to explore; its changes aren’t saved.
-      </p>
-      <Link
-        className="rf-text-link"
-        to={`/w/${session.identity.workspaceId}/resumes`}
-      >
-        Explore sample workspace
-      </Link>
-    </div>
-  );
+export function OnboardingEntry({
+  session,
+}: {
+  session: SessionState;
+  children?: ReactNode;
+}) {
+  return session.status === "authenticated" ? (
+    <Navigate to={sessionHome(session.identity)} replace />
+  ) : null;
 }

@@ -30,7 +30,8 @@ declare module "resume_mfe/ResumeRemoteRoot" {
 
   export interface RemoteRootProps {
     readonly context?: ShellFederationContext;
-    readonly view?: "create" | "editor";
+    readonly view?: "library" | "create" | "editor" | "upload";
+    readonly resumeId?: string;
   }
 
   export const ResumeRemoteRoot: ComponentType<RemoteRootProps>;

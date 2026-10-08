@@ -50,3 +50,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# User-supplied private resumes are local manual-check inputs
+/check_resumes/

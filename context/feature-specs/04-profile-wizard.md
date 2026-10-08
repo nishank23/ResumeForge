@@ -1,5 +1,9 @@
 # F04 — Individual Profile Wizard
 
+## Resume-first entry correction — 2026-10-04
+
+The user removed mandatory Create profile onboarding. Google account identity is shown directly and the shell opens My resumes. LinkedIn awaits credentials. Missing professional data does not block blank creation or file review. A required database FK uses an empty internal anchor only; existing master fields remain unchanged. Optional professional field editing is connected. Resume extraction supplies reviewable resume-local facts; deriving a master profile requires a separate confirmation flow. The former required wizard below is historical/planned professional enrichment, not an entry gate. Full section/contact/completion UI remains pending.
+
 **Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — professional draft and Experience list/add/update APIs verified; browser wizard pending
 
 ## Goal and dependencies
@@ -51,3 +55,7 @@ Use the selected shared UI styling and purposeful step motion. Completing the wi
 References: [frontend integration](../frontend-integration.md), [contextual editing contract](../resume-editing-contract.md).
 
 - [ ] Wizard completion preserves separate contacts and passes only authorized profile identity/revision to the resume flow.
+
+## Professional browser slice — 2026-10-04
+
+The frontend now explicitly creates/loads/saves professional full name, nullable location and nullable summary using existing personal APIs and the shared session. Incomplete setup uses changed-field revisioned drafts; completed accounts use full updates. Failed input remains mounted, stale saves require explicit reload, and save does not mark onboarding complete. The shell's onboarding entry uses this same form. Contacts and section/completion UI are pending. [README](../../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) records actual tests, runtime repair and manual checks. This is a bounded partial slice, not full F04/F12 acceptance.

@@ -8,16 +8,19 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "node --test test/extractor.test.mjs test/parser.test.mjs test/route.test.mjs test/jd-parser.test.mjs test/generator.test.mjs test/gap-analyzer.test.mjs",
-    "test:db": "node --test test/resume.test.mjs test/jd.test.mjs test/generator.db.test.mjs test/gap-analysis.db.test.mjs"
+    "test": "node --test test/extractor.test.mjs test/parser.test.mjs test/pdf-text.test.mjs test/route.test.mjs test/jd-parser.test.mjs test/generator.test.mjs test/gap-analyzer.test.mjs test/upload.test.mjs",
+    "test:db": "node --test test/resume.test.mjs test/jd.test.mjs test/generator.db.test.mjs test/gap-analysis.db.test.mjs",
+    "test:editor:db": "node --experimental-strip-types --test test/editor.db.test.mjs"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
     "@resume-forge/access-policy": "workspace:*",
     "@resume-forge/audit-contracts": "workspace:*",
     "@resume-forge/prisma-client": "workspace:*",
     "@resume-forge/shared-types": "workspace:*",
     "hono": "^4.7.0",
-    "@hono/node-server": "^1.13.7",
+    "mammoth": "1.13.0",
+    "pdfjs-dist": "5.4.624",
     "zod": "3.25.76"
   },
   "devDependencies": {

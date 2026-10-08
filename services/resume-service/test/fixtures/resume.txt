@@ -1,0 +1,5 @@
+Synthetic Person
+SUMMARY
+Built tools using supported user supplied facts.
+SKILLS
+Python, TypeScript

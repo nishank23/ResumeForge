@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { Hono, type Context } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
+import type { BlankEnv } from "hono/types";
+import { parseUploadedResume } from "./upload.js";
 import type { ActorResolution } from "@resume-forge/access-policy/server";
 import type { createResumeUseCases } from "./resume.js";
 import { ResumeError } from "./contracts.js";
@@ -8,6 +11,7 @@ import { ResumeError } from "./contracts.js";
 export function createResumeApp(config: {
   resolveActor: (authorization: string | undefined) => Promise<ActorResolution>;
   resumes: ReturnType<typeof createResumeUseCases>;
+  personalEditorOnly?: boolean;
 }) {
   const app = new Hono();
 
@@ -29,6 +33,30 @@ export function createResumeApp(config: {
   app.use("/api/v1/jd", localCors);
   app.use("/api/v1/task-run/*", localCors);
   app.use("/api/v1/task-run", localCors);
+
+  if (config.personalEditorOnly)
+    app.use("/api/v1/*", async (c, next) => {
+      const path = c.req.path,
+        method = c.req.method;
+      const allowed =
+        (path === "/api/v1/resume" &&
+          ["GET", "POST", "OPTIONS"].includes(method)) ||
+        (path === "/api/v1/resume/parse" &&
+          ["POST", "OPTIONS"].includes(method)) ||
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}$/i.test(path) &&
+          ["GET", "PUT", "OPTIONS"].includes(method));
+      if (!allowed)
+        return c.json(
+          {
+            error: {
+              code: "not_found",
+              message: "Route is unavailable in the personal editor.",
+            },
+          },
+          404,
+        );
+      await next();
+    });
 
   app.onError((_error, c) =>
     c.json(
@@ -84,9 +112,81 @@ export function createResumeApp(config: {
     };
   }
 
-  // Parse-only endpoint (can be public or authenticated)
+  app.use(
+    "/api/v1/resume/*",
+    async (c: Context<BlankEnv, string>, next: Next) =>
+      bodyLimit({
+        maxSize: ["/api/v1/resume/parse", "/api/v1/resume/import"].includes(
+          c.req.path,
+        )
+          ? 15_000_000
+          : 2_000_000,
+        onError: (c) =>
+          c.json(
+            {
+              error: {
+                code: "file_too_large",
+                message: "Upload is too large.",
+              },
+            },
+            413,
+          ),
+      })(c, next),
+  );
+  app.use(
+    "/api/v1/resume",
+    bodyLimit({
+      maxSize: 2_000_000,
+      onError: (c) =>
+        c.json(
+          {
+            error: {
+              code: "file_too_large",
+              message: "Document is too large.",
+            },
+          },
+          413,
+        ),
+    }),
+  );
+  app.post("/api/v1/resume", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+    try {
+      return c.json(
+        {
+          data: await config.resumes.createResume(
+            auth.context,
+            await c.req.json(),
+          ),
+          requestId,
+        },
+        201,
+      );
+    } catch (err) {
+      return fail(
+        c,
+        err instanceof ResumeError ? err.code : "resume_unavailable",
+        "Could not create resume.",
+        err instanceof ResumeError
+          ? err.code === "revision_conflict"
+            ? 409
+            : err.code === "forbidden"
+              ? 403
+              : 422
+          : 503,
+        requestId,
+      );
+    }
+  });
+
+  // Authenticated review staging: parsing never persists a resume.
   app.post("/api/v1/resume/parse", async (c) => {
     const requestId = randomUUID();
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
     c.header("X-Request-Id", requestId);
 
     try {
@@ -97,7 +197,13 @@ export function createResumeApp(config: {
         const formData = await c.req.formData();
         const file = formData.get("file");
         if (!file || typeof file === "string") {
-          return fail(c, "invalid_input", "File is required in form-data", 422, requestId);
+          return fail(
+            c,
+            "invalid_input",
+            "File is required in form-data",
+            422,
+            requestId,
+          );
         }
         const fileObj = file as File;
         const arrayBuffer = await fileObj.arrayBuffer();
@@ -119,13 +225,20 @@ export function createResumeApp(config: {
         );
       }
 
-      const result = await config.resumes.parseResumeOnly(
+      await config.resumes.authorizeUpload(auth.context);
+      const result = await parseUploadedResume(
         body as Parameters<typeof config.resumes.parseResumeOnly>[0],
       );
+      const currentAuth = await authenticate(c, requestId);
+      if (!currentAuth.authenticated) return currentAuth.response;
+      await config.resumes.authorizeUpload(currentAuth.context);
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        const statusMap: Record<string, 400 | 401 | 403 | 404 | 413 | 415 | 422 | 503> = {
+        const statusMap: Record<
+          string,
+          400 | 401 | 403 | 404 | 413 | 415 | 422 | 503
+        > = {
           invalid_input: 422,
           file_too_large: 413,
           unsupported_media_type: 415,
@@ -134,9 +247,21 @@ export function createResumeApp(config: {
           not_found: 404,
           resume_unavailable: 503,
         };
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to parse resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to parse resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -156,7 +281,13 @@ export function createResumeApp(config: {
         const formData = await c.req.formData();
         const file = formData.get("file");
         if (!file || typeof file === "string") {
-          return fail(c, "invalid_input", "File is required in form-data", 422, requestId);
+          return fail(
+            c,
+            "invalid_input",
+            "File is required in form-data",
+            422,
+            requestId,
+          );
         }
         const fileObj = file as File;
         const arrayBuffer = await fileObj.arrayBuffer();
@@ -169,7 +300,9 @@ export function createResumeApp(config: {
           mimeType: fileObj.type || "application/pdf",
           fileBase64: base64,
           ...(title && typeof title === "string" ? { title } : {}),
-          ...(templateId && typeof templateId === "string" ? { templateId } : {}),
+          ...(templateId && typeof templateId === "string"
+            ? { templateId }
+            : {}),
         };
       } else if (contentType.includes("application/json")) {
         body = await c.req.json();
@@ -190,7 +323,10 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId }, 201);
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        const statusMap: Record<string, 400 | 401 | 403 | 404 | 413 | 415 | 422 | 503> = {
+        const statusMap: Record<
+          string,
+          400 | 401 | 403 | 404 | 413 | 415 | 422 | 503
+        > = {
           invalid_input: 422,
           file_too_large: 413,
           unsupported_media_type: 415,
@@ -199,13 +335,28 @@ export function createResumeApp(config: {
           not_found: 404,
           resume_unavailable: 503,
         };
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to import resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to import resume",
+        503,
+        requestId,
+      );
     }
   });
 
-  const statusMap: Record<string, 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503> = {
+  const statusMap: Record<
+    string,
+    400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503
+  > = {
     invalid_input: 422,
     file_too_large: 413,
     unsupported_media_type: 415,
@@ -230,9 +381,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to retrieve resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to retrieve resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -248,7 +411,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.updateResume(
@@ -259,9 +428,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to update resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to update resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -279,9 +460,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to delete resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to delete resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -296,20 +489,41 @@ export function createResumeApp(config: {
     const id = c.req.param("id");
     const formatQuery = c.req.query("format") || "markdown";
     const validFormats = ["json", "markdown", "text", "html"] as const;
-    const format = validFormats.includes(formatQuery as typeof validFormats[number])
-      ? (formatQuery as typeof validFormats[number])
+    const format = validFormats.includes(
+      formatQuery as (typeof validFormats)[number],
+    )
+      ? (formatQuery as (typeof validFormats)[number])
       : "markdown";
 
     try {
-      const result = await config.resumes.downloadResume(auth.context, id, format);
+      const result = await config.resumes.downloadResume(
+        auth.context,
+        id,
+        format,
+      );
       c.header("Content-Type", result.mimeType);
-      c.header("Content-Disposition", `attachment; filename="${result.fileName}"`);
+      c.header(
+        "Content-Disposition",
+        `attachment; filename="${result.fileName}"`,
+      );
       return c.body(result.content);
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to download resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to download resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -327,9 +541,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to list versions", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to list versions",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -346,16 +572,30 @@ export function createResumeApp(config: {
       let title: string | undefined;
       const contentType = c.req.header("Content-Type") ?? "";
       if (contentType.includes("application/json")) {
-        const body = (await c.req.json().catch(() => ({}))) as { title?: string };
+        const body = (await c.req.json().catch(() => ({}))) as {
+          title?: string;
+        };
         title = body.title;
       }
       const result = await config.resumes.cloneResume(auth.context, id, title);
       return c.json({ data: result, requestId }, 201);
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to clone resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to clone resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -368,13 +608,28 @@ export function createResumeApp(config: {
     if (!auth.authenticated) return auth.response;
 
     try {
-      const result = await config.resumes.listResumes(auth.context);
+      const result = await config.resumes.listResumes(
+        auth.context,
+        c.req.query("cursor"),
+      );
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, 503, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 503,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to list resumes", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to list resumes",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -390,7 +645,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.tailorResume(
@@ -401,9 +662,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to tailor resume", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to tailor resume",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -430,9 +703,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to run gap analysis", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to run gap analysis",
+        503,
+        requestId,
+      );
     }
   };
 
@@ -447,7 +732,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.parseJdOnly(
@@ -456,9 +747,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to parse job description", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to parse job description",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -473,7 +776,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.parseAndSaveJD(
@@ -483,9 +792,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId }, 201);
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to save job description", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to save job description",
+        503,
+        requestId,
+      );
     }
   };
 
@@ -505,9 +826,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, 503, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 503,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to list job descriptions", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to list job descriptions",
+        503,
+        requestId,
+      );
     }
   };
 
@@ -528,9 +861,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to get job description", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to get job description",
+        503,
+        requestId,
+      );
     }
   };
 
@@ -551,9 +896,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to delete job description", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to delete job description",
+        503,
+        requestId,
+      );
     }
   };
 
@@ -581,9 +938,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId }, 201);
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to generate resume from profile", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to generate resume from profile",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -599,7 +968,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.generateSectionSuggestion(
@@ -610,9 +985,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to generate suggestion", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to generate suggestion",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -628,7 +1015,13 @@ export function createResumeApp(config: {
     try {
       const contentType = c.req.header("Content-Type") ?? "";
       if (!contentType.includes("application/json")) {
-        return fail(c, "unsupported_media_type", "Content-Type must be application/json", 415, requestId);
+        return fail(
+          c,
+          "unsupported_media_type",
+          "Content-Type must be application/json",
+          415,
+          requestId,
+        );
       }
       const body: unknown = await c.req.json();
       const result = await config.resumes.applySectionSuggestion(
@@ -639,9 +1032,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 422, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 422,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to apply suggestion", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to apply suggestion",
+        503,
+        requestId,
+      );
     }
   });
 
@@ -659,9 +1064,21 @@ export function createResumeApp(config: {
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {
-        return fail(c, err.code, err.message, statusMap[err.code] ?? 404, requestId);
+        return fail(
+          c,
+          err.code,
+          err.message,
+          statusMap[err.code] ?? 404,
+          requestId,
+        );
       }
-      return fail(c, "resume_unavailable", "Failed to get task run", 503, requestId);
+      return fail(
+        c,
+        "resume_unavailable",
+        "Failed to get task run",
+        503,
+        requestId,
+      );
     }
   });
 

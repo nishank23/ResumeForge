@@ -5,15 +5,14 @@ import {
   resolvedActorSchema,
   type ResolvedActor,
 } from "@resume-forge/access-policy/server";
-import {
-  type AuditEventIntent,
-} from "@resume-forge/audit-contracts";
+import { type AuditEventIntent } from "@resume-forge/audit-contracts";
 import {
   withPersonalAuditTransaction,
   type createDatabaseClient,
 } from "@resume-forge/prisma-client";
 import {
   ResumeError,
+  resumeCreateRequestSchema,
   resumeImportRequestSchema,
   resumeParseRequestSchema,
   resumeUpdateRequestSchema,
@@ -65,6 +64,8 @@ import {
 import { analyzeKeywordGaps } from "./gap-analyzer.js";
 
 type Database = ReturnType<typeof createDatabaseClient>;
+
+class ResumeCreationReplay extends Error {}
 
 type JsonObject = { [Key in string]?: JsonValue | null };
 type JsonArray = (JsonValue | null)[];
@@ -161,6 +162,82 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     return workspace;
   }
 
+  async function createResume(
+    context: ResumeServiceContext,
+    input: unknown,
+  ): Promise<ResumeDetailDto> {
+    const parsed = resumeCreateRequestSchema.safeParse(input);
+    if (!parsed.success)
+      throw new ResumeError("invalid_input", "Invalid editor document");
+    const workspace = await authorizeWorkspace(context, "resume.create");
+    const { id, content } = parsed.data;
+    const versionId = randomUUID();
+    try {
+      await withPersonalAuditTransaction(
+        db,
+        context.actor.userId,
+        createAuditIntent(context, "resume.created", id, {
+          versionId,
+          status: "draft",
+        }),
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${context.actor.userId}))`;
+          const existing = await tx.resume.findUnique({ where: { id } });
+          if (existing) {
+            if (
+              existing.ownerUserId !== context.actor.userId ||
+              existing.workspaceId !== workspace.id
+            )
+              throw new ResumeError(
+                "revision_conflict",
+                "Creation ID already used",
+              );
+            // A repeated creation request retrieves the original; never re-applies content.
+            throw new ResumeCreationReplay();
+          }
+          // Current schema requires this FK. Keep this anchor empty; uploaded facts
+          // never overwrite a master professional profile or UserContact.
+          let profile = await tx.userProfile.findUnique({
+            where: { userId: context.actor.userId },
+            select: { id: true },
+          });
+          if (!profile) {
+            const profileId = randomUUID();
+            await tx.$executeRaw`INSERT INTO "UserProfile" ("id", "userId", "fullName", "createdAt", "updatedAt") VALUES (${profileId}::uuid, ${context.actor.userId}::uuid, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
+            profile = { id: profileId };
+          }
+          const json = JSON.parse(JSON.stringify(content)) as JsonObject;
+          await tx.resume.create({
+            data: {
+              id,
+              profileId: profile.id,
+              ownerUserId: context.actor.userId,
+              workspaceType: "individual",
+              workspaceId: workspace.id,
+              createdByUserId: context.actor.userId,
+              templateId: "default",
+              content: json,
+              status: "draft",
+            },
+          });
+          await tx.resumeVersion.create({
+            data: {
+              id: versionId,
+              resumeId: id,
+              versionNumber: 1,
+              content: json,
+              createdByUserId: context.actor.userId,
+            },
+          });
+        },
+      );
+    } catch (error) {
+      // A replay rolls back before audit capture, then returns the owned original.
+      if (!(error instanceof ResumeCreationReplay)) throw error;
+    }
+    return getResumeById(context, id);
+  }
+
   /**
    * Imports a resume file, extracts text, parses structured sections,
    * and persists Resume + ResumeVersion records in the database.
@@ -221,7 +298,8 @@ export function createResumeUseCases(db: Database, now = Date.now) {
             ? `${parsedContent.header.city}${parsedContent.header.state ? `, ${parsedContent.header.state}` : ""}`
             : null,
           professionalSummary:
-            parsedContent.sections.find((s) => s.kind === "summary")?.summary || null,
+            parsedContent.sections.find((s) => s.kind === "summary")?.summary ||
+            null,
         },
         select: { id: true },
       });
@@ -373,15 +451,30 @@ export function createResumeUseCases(db: Database, now = Date.now) {
    */
   async function listResumes(
     context: ResumeServiceContext,
+    cursor?: string,
   ): Promise<ResumeSummaryDto[]> {
     await authorizeWorkspace(context, "resume.read");
-
+    if (cursor && !z.string().uuid().safeParse(cursor).success)
+      throw new ResumeError("invalid_input");
+    const boundary = cursor
+      ? await db.resume.findFirst({
+          where: {
+            id: cursor,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+          select: { id: true, updatedAt: true },
+        })
+      : null;
+    if (cursor && !boundary) throw new ResumeError("not_found");
     const resumes = await db.resume.findMany({
       where: {
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
       },
-      orderBy: { updatedAt: "desc" },
+      ...(boundary ? { cursor: { id: boundary.id }, skip: 1 } : {}),
+      take: 50,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
     });
 
     return resumes.map((r) => {
@@ -421,6 +514,13 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       );
     }
     const data = parsedInput.data;
+    const contentToSave = {
+      ...data.content,
+      ...(data.title ? { title: data.title } : {}),
+      ...(data.content.editorDraft && data.title
+        ? { editorDraft: { ...data.content.editorDraft, title: data.title } }
+        : {}),
+    };
     await authorizeWorkspace(context, "resume.update");
 
     const versionId = randomUUID();
@@ -434,6 +534,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       context.actor.userId,
       auditIntent,
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
             id: resumeId,
@@ -458,22 +559,21 @@ export function createResumeUseCases(db: Database, now = Date.now) {
             id: versionId,
             resumeId,
             versionNumber: newVersionNumber,
-            content: JSON.parse(JSON.stringify(data.content)) as JsonObject,
+            content: JSON.parse(JSON.stringify(contentToSave)) as JsonObject,
             createdByUserId: context.actor.userId,
           },
         });
 
-        const contentToSave = {
-          ...data.content,
-          ...(data.title ? { title: data.title } : {}),
-        };
-
         const resumeRecord = await tx.resume.update({
-          where: { id: resumeId },
+          where: { id: resumeId, currentVersion: data.expectedVersion },
           data: {
             currentVersion: newVersionNumber,
+            atsScore: null,
+            pdfR2Key: null,
             content: JSON.parse(JSON.stringify(contentToSave)) as JsonObject,
-            ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
+            ...(data.templateId !== undefined
+              ? { templateId: data.templateId }
+              : {}),
             ...(data.status ? { status: data.status } : {}),
           },
         });
@@ -491,7 +591,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       currentVersion: updated.currentVersion,
       status: updated.status,
       atsScore: updated.atsScore,
-      content: data.content,
+      content: contentToSave,
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
     };
@@ -509,13 +609,19 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     }
     await authorizeWorkspace(context, "resume.delete");
 
-    const auditIntent = createAuditIntent(context, "resume.deleted", resumeId, {});
+    const auditIntent = createAuditIntent(
+      context,
+      "resume.deleted",
+      resumeId,
+      {},
+    );
 
     await withPersonalAuditTransaction(
       db,
       context.actor.userId,
       auditIntent,
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
             id: resumeId,
@@ -552,9 +658,14 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     }
     await authorizeWorkspace(context, "resume.read");
 
-    const auditIntent = createAuditIntent(context, "resume.downloaded", resumeId, {
-      status: "succeeded",
-    });
+    const auditIntent = createAuditIntent(
+      context,
+      "resume.downloaded",
+      resumeId,
+      {
+        status: "succeeded",
+      },
+    );
 
     const result = await withPersonalAuditTransaction(
       db,
@@ -574,8 +685,12 @@ export function createResumeUseCases(db: Database, now = Date.now) {
           throw new ResumeError("not_found", "Resume not found");
         }
 
-        const rawContent = (resume.content ?? {}) as unknown as ParsedResumeContentDto;
-        const title = (rawContent.title || "Resume").replace(/[^a-zA-Z0-9_-]/g, "_");
+        const rawContent = (resume.content ??
+          {}) as unknown as ParsedResumeContentDto;
+        const title = (rawContent.title || "Resume").replace(
+          /[^a-zA-Z0-9_-]/g,
+          "_",
+        );
 
         let output: string;
         let mimeType: string;
@@ -675,7 +790,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       throw new ResumeError("not_found", "Resume not found");
     }
 
-    const content = JSON.parse(JSON.stringify(source.content ?? {})) as ParsedResumeContentDto;
+    const content = JSON.parse(
+      JSON.stringify(source.content ?? {}),
+    ) as ParsedResumeContentDto;
     const title = newTitle || `${content.title || "Resume"} (Copy)`;
     content.title = title;
 
@@ -750,7 +867,11 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         parsedInput.error.errors.map((e) => e.message).join(", "),
       );
     }
-    return parseJdText(parsedInput.data.rawJD, parsedInput.data.jobTitle, parsedInput.data.company);
+    return parseJdText(
+      parsedInput.data.rawJD,
+      parsedInput.data.jobTitle,
+      parsedInput.data.company,
+    );
   }
 
   /**
@@ -809,9 +930,15 @@ export function createResumeUseCases(db: Database, now = Date.now) {
             jobTitle: parsedContent.jobTitle,
             company: parsedContent.company,
             rawJD: data.rawJD,
-            parsedKeywords: JSON.parse(JSON.stringify(parsedContent.keywords)) as JsonValue,
-            parsedRequirements: JSON.parse(JSON.stringify(parsedContent.requirements)) as JsonValue,
-            parsedResponsibilities: JSON.parse(JSON.stringify(parsedContent.responsibilities)) as JsonValue,
+            parsedKeywords: JSON.parse(
+              JSON.stringify(parsedContent.keywords),
+            ) as JsonValue,
+            parsedRequirements: JSON.parse(
+              JSON.stringify(parsedContent.requirements),
+            ) as JsonValue,
+            parsedResponsibilities: JSON.parse(
+              JSON.stringify(parsedContent.responsibilities),
+            ) as JsonValue,
             experienceLevel: parsedContent.experienceLevel,
             roleType: parsedContent.roleType,
           },
@@ -1022,8 +1149,11 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       parsedJd = {
         jobTitle: jdRecord.jobTitle,
         company: jdRecord.company,
-        experienceLevel: (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
-        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+        experienceLevel:
+          (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ??
+          "unknown",
+        roleType:
+          (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
         keywords: toKeywords(jdRecord.parsedKeywords),
         requirements: toStringArray(jdRecord.parsedRequirements),
         responsibilities: toStringArray(jdRecord.parsedResponsibilities),
@@ -1053,20 +1183,30 @@ export function createResumeUseCases(db: Database, now = Date.now) {
           jobTitle: parsedJd.jobTitle,
           company: parsedJd.company,
           rawJD: data.rawJD,
-          parsedKeywords: JSON.parse(JSON.stringify(parsedJd.keywords)) as JsonValue,
-          parsedRequirements: JSON.parse(JSON.stringify(parsedJd.requirements)) as JsonValue,
-          parsedResponsibilities: JSON.parse(JSON.stringify(parsedJd.responsibilities)) as JsonValue,
+          parsedKeywords: JSON.parse(
+            JSON.stringify(parsedJd.keywords),
+          ) as JsonValue,
+          parsedRequirements: JSON.parse(
+            JSON.stringify(parsedJd.requirements),
+          ) as JsonValue,
+          parsedResponsibilities: JSON.parse(
+            JSON.stringify(parsedJd.responsibilities),
+          ) as JsonValue,
           experienceLevel: parsedJd.experienceLevel,
           roleType: parsedJd.roleType,
         },
       });
       jdHistoryId = newJd.id;
     } else {
-      throw new ResumeError("invalid_input", "Either jdHistoryId or rawJD must be provided");
+      throw new ResumeError(
+        "invalid_input",
+        "Either jdHistoryId or rawJD must be provided",
+      );
     }
 
     const rawContent = resume.content ?? resume.versions[0]?.content;
-    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+    const resumeContent = (rawContent ??
+      {}) as unknown as ParsedResumeContentDto;
 
     const atsBreakdown = computeAtsScore(resumeContent, parsedJd);
 
@@ -1084,7 +1224,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
           where: { id: resumeId },
           data: {
             atsScore: atsBreakdown.overallScore,
-            atsBreakdown: JSON.parse(JSON.stringify(atsBreakdown)) as JsonObject,
+            atsBreakdown: JSON.parse(
+              JSON.stringify(atsBreakdown),
+            ) as JsonObject,
             jdHistoryId,
           },
         });
@@ -1094,7 +1236,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
             where: { id: resume.versions[0].id },
             data: {
               atsScore: atsBreakdown.overallScore,
-              atsBreakdown: JSON.parse(JSON.stringify(atsBreakdown)) as JsonObject,
+              atsBreakdown: JSON.parse(
+                JSON.stringify(atsBreakdown),
+              ) as JsonObject,
             },
           });
         }
@@ -1179,8 +1323,11 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       const parsedJd: ParsedJdContentDto = {
         jobTitle: jdRecord.jobTitle,
         company: jdRecord.company,
-        experienceLevel: (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
-        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+        experienceLevel:
+          (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ??
+          "unknown",
+        roleType:
+          (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
         keywords: toKeywords(jdRecord.parsedKeywords),
         requirements: toStringArray(jdRecord.parsedRequirements),
         responsibilities: toStringArray(jdRecord.parsedResponsibilities),
@@ -1294,54 +1441,78 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     }
 
     const rawContent = resume.content ?? resume.versions[0]?.content;
-    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+    const resumeContent = (rawContent ??
+      {}) as unknown as ParsedResumeContentDto;
 
     // Locate target content to improve
     let originalContent = "";
     if (data.sectionKind === "summary") {
-      const summarySec = resumeContent.sections.find((s) => s.kind === "summary");
+      const summarySec = resumeContent.sections.find(
+        (s) => s.kind === "summary",
+      );
       originalContent = summarySec?.summary ?? "";
     } else if (data.sectionKind === "experience") {
-      const expSec = resumeContent.sections.find((s) => s.kind === "experience");
+      const expSec = resumeContent.sections.find(
+        (s) => s.kind === "experience",
+      );
       if (expSec) {
         if (data.entryId) {
           const entry = expSec.entries.find((e) => e["id"] === data.entryId);
           if (entry) {
-            const rawBullets = Array.isArray(entry["bullets"]) ? entry["bullets"] : [];
+            const rawBullets = Array.isArray(entry["bullets"])
+              ? entry["bullets"]
+              : [];
             const bullets: Record<string, unknown>[] = rawBullets.filter(
-              (bp): bp is Record<string, unknown> => typeof bp === "object" && bp !== null,
+              (bp): bp is Record<string, unknown> =>
+                typeof bp === "object" && bp !== null,
             );
             if (data.bulletId) {
               const b = bullets.find((bp) => bp["id"] === data.bulletId);
-              originalContent = typeof b?.["text"] === "string" ? b["text"] : "";
+              originalContent =
+                typeof b?.["text"] === "string" ? b["text"] : "";
             } else {
-              originalContent = typeof entry["description"] === "string" && entry["description"] ? entry["description"] : typeof entry["title"] === "string" ? entry["title"] : "";
+              originalContent =
+                typeof entry["description"] === "string" && entry["description"]
+                  ? entry["description"]
+                  : typeof entry["title"] === "string"
+                    ? entry["title"]
+                    : "";
             }
           }
         } else if (expSec.entries.length > 0) {
           const first = expSec.entries[0];
-          const rawBullets = Array.isArray(first?.["bullets"]) ? first["bullets"] : [];
+          const rawBullets = Array.isArray(first?.["bullets"])
+            ? first["bullets"]
+            : [];
           const firstBullet: unknown = rawBullets[0];
-          originalContent = typeof firstBullet === "object" && firstBullet !== null && typeof (firstBullet as Record<string, unknown>)["text"] === "string"
-            ? ((firstBullet as Record<string, unknown>)["text"] as string)
-            : "";
+          originalContent =
+            typeof firstBullet === "object" &&
+            firstBullet !== null &&
+            typeof (firstBullet as Record<string, unknown>)["text"] === "string"
+              ? ((firstBullet as Record<string, unknown>)["text"] as string)
+              : "";
         }
       }
     } else if (data.sectionKind === "projects") {
       const projSec = resumeContent.sections.find((s) => s.kind === "projects");
       if (projSec && projSec.entries.length > 0) {
         const first = projSec.entries[0];
-        originalContent = typeof first?.["description"] === "string" ? first["description"] : "";
+        originalContent =
+          typeof first?.["description"] === "string"
+            ? first["description"]
+            : "";
       }
     } else {
       const skillSec = resumeContent.sections.find((s) => s.kind === "skills");
       if (skillSec && skillSec.groups.length > 0) {
-        originalContent = skillSec.groups[0]?.items.map((i) => i.text).join(", ") ?? "";
+        originalContent =
+          skillSec.groups[0]?.items.map((i) => i.text).join(", ") ?? "";
       }
     }
 
     if (!originalContent.trim()) {
-      originalContent = "Experienced professional delivering high impact solutions across software projects.";
+      originalContent =
+        "Experienced professional delivering high impact solutions across software projects.";
     }
 
     // Load profile skills for grounding
@@ -1448,6 +1619,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       context.actor.userId,
       auditIntent,
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
             id: resumeId,
@@ -1471,7 +1643,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         }
 
         const rawContent = existing.content ?? existing.versions[0]?.content;
-        const content = JSON.parse(JSON.stringify(rawContent ?? {})) as ParsedResumeContentDto;
+        const content = JSON.parse(
+          JSON.stringify(rawContent ?? {}),
+        ) as ParsedResumeContentDto;
 
         // Apply suggestion to target location
         if (data.sectionKind === "summary") {
@@ -1494,10 +1668,14 @@ export function createResumeUseCases(db: Database, now = Date.now) {
           const expSec = content.sections.find((s) => s.kind === "experience");
           if (expSec) {
             if (data.entryId) {
-              const entry = expSec.entries.find((e) => e["id"] === data.entryId);
+              const entry = expSec.entries.find(
+                (e) => e["id"] === data.entryId,
+              );
               if (entry) {
                 if (data.bulletId && Array.isArray(entry["bullets"])) {
-                  const b = (entry["bullets"] as Array<Record<string, unknown>>).find((bp) => bp["id"] === data.bulletId);
+                  const b = (
+                    entry["bullets"] as Array<Record<string, unknown>>
+                  ).find((bp) => bp["id"] === data.bulletId);
                   if (b) {
                     b["text"] = data.appliedContent;
                   }
@@ -1507,7 +1685,11 @@ export function createResumeUseCases(db: Database, now = Date.now) {
               }
             } else if (expSec.entries.length > 0) {
               const first = expSec.entries[0];
-              if (first && Array.isArray(first["bullets"]) && first["bullets"].length > 0) {
+              if (
+                first &&
+                Array.isArray(first["bullets"]) &&
+                first["bullets"].length > 0
+              ) {
                 const b0: unknown = first["bullets"][0];
                 if (typeof b0 === "object" && b0 !== null) {
                   (b0 as Record<string, unknown>)["text"] = data.appliedContent;
@@ -1529,14 +1711,18 @@ export function createResumeUseCases(db: Database, now = Date.now) {
             content: JSON.parse(JSON.stringify(content)) as JsonObject,
             createdByUserId: context.actor.userId,
             atsScore: existing.atsScore,
-            atsBreakdown: existing.atsBreakdown ? (existing.atsBreakdown as JsonObject) : undefined,
+            atsBreakdown: existing.atsBreakdown
+              ? (existing.atsBreakdown as JsonObject)
+              : undefined,
           },
         });
 
         const updatedResume = await tx.resume.update({
-          where: { id: resumeId },
+          where: { id: resumeId, currentVersion: data.expectedVersion },
           data: {
             currentVersion: newVersionNumber,
+            atsScore: null,
+            pdfR2Key: null,
             content: JSON.parse(JSON.stringify(content)) as JsonObject,
           },
         });
@@ -1545,7 +1731,8 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       },
     );
 
-    const rawUpdatedContent = updated.content as unknown as ParsedResumeContentDto;
+    const rawUpdatedContent =
+      updated.content as unknown as ParsedResumeContentDto;
 
     return {
       id: updated.id,
@@ -1587,7 +1774,10 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     }
 
     const revisions = record.inputRevisions as Record<string, unknown> | null;
-    const result = (revisions?.result ? (revisions.result as Record<string, unknown>) : revisions) ?? null;
+    const result =
+      (revisions?.result
+        ? (revisions.result as Record<string, unknown>)
+        : revisions) ?? null;
 
     return {
       id: record.id,
@@ -1665,8 +1855,10 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         jobTitle: jdRecord.jobTitle,
         company: jdRecord.company,
         experienceLevel:
-          (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
-        roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+          (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ??
+          "unknown",
+        roleType:
+          (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
         keywords: toKeywords(jdRecord.parsedKeywords),
         requirements: toStringArray(jdRecord.parsedRequirements),
         responsibilities: toStringArray(jdRecord.parsedResponsibilities),
@@ -1691,8 +1883,10 @@ export function createResumeUseCases(db: Database, now = Date.now) {
           jobTitle: jdRecord.jobTitle,
           company: jdRecord.company,
           experienceLevel:
-            (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ?? "unknown",
-          roleType: (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
+            (jdRecord.experienceLevel as ParsedJdContentDto["experienceLevel"]) ??
+            "unknown",
+          roleType:
+            (jdRecord.roleType as ParsedJdContentDto["roleType"]) ?? "unknown",
           keywords: toKeywords(jdRecord.parsedKeywords),
           requirements: toStringArray(jdRecord.parsedRequirements),
           responsibilities: toStringArray(jdRecord.parsedResponsibilities),
@@ -1735,7 +1929,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         id: e.id,
         company: e.company,
         title: e.title,
-        bulletPoints: Array.isArray(e.bulletPoints) ? (e.bulletPoints as string[]) : [],
+        bulletPoints: Array.isArray(e.bulletPoints)
+          ? (e.bulletPoints as string[])
+          : [],
       })),
       educations: (profile?.educations ?? []).map((e) => ({
         id: e.id,
@@ -1754,7 +1950,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         id: p.id,
         name: p.name,
         description: p.description,
-        technologies: Array.isArray(p.technologies) ? (p.technologies as string[]) : [],
+        technologies: Array.isArray(p.technologies)
+          ? (p.technologies as string[])
+          : [],
       })),
       certifications: (profile?.certifications ?? []).map((c) => ({
         id: c.id,
@@ -1764,7 +1962,8 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     };
 
     const rawContent = resume.content ?? resume.versions[0]?.content;
-    const resumeContent = (rawContent ?? {}) as unknown as ParsedResumeContentDto;
+    const resumeContent = (rawContent ??
+      {}) as unknown as ParsedResumeContentDto;
     const resumeTitle = resumeContent.title || "Untitled Resume";
 
     return analyzeKeywordGaps(resumeContent, parsedJd, masterProfileFacts, {
@@ -1780,6 +1979,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
   return {
     importResume,
+    authorizeUpload: (context: ResumeServiceContext) =>
+      authorizeWorkspace(context, "resume.create"),
+    createResume,
     parseResumeOnly,
     getResumeById,
     listResumes,

@@ -1,6 +1,7 @@
 import type { PrismaClient } from "./generated/client.js";
 
-export type RuntimeService = "auth" | "profile" | "auditRelay" | "auditIngest";
+export type RuntimeService =
+  "auth" | "profile" | "resume" | "auditRelay" | "auditIngest";
 export interface RuntimeGrant {
   table: string;
   privilege: "SELECT" | "INSERT" | "UPDATE" | "DELETE";
@@ -14,6 +15,7 @@ export function runtimeRoleNames(
   return {
     auth: `${prefix}_auth`,
     profile: `${prefix}_profile`,
+    resume: `${prefix}_resume`,
     auditRelay: `${prefix}_audit_relay`,
     auditIngest: `${prefix}_audit_ingest`,
   };
@@ -62,6 +64,36 @@ export const RUNTIME_GRANTS: Readonly<
       })),
     ),
     workspaceScope,
+    { table: "AuditOutbox", privilege: "INSERT" },
+  ],
+  resume: [
+    workspaceScope,
+    { table: "UserProfile", privilege: "SELECT", columns: ["id", "userId"] },
+    {
+      table: "UserProfile",
+      privilege: "INSERT",
+      columns: ["id", "userId", "fullName", "createdAt", "updatedAt"],
+    },
+    ...["Resume", "ResumeVersion"].flatMap((table) =>
+      (["SELECT", "INSERT"] as const).map((privilege) => ({
+        table,
+        privilege,
+      })),
+    ),
+    {
+      table: "Resume",
+      privilege: "UPDATE",
+      columns: [
+        "content",
+        "currentVersion",
+        "updatedAt",
+        "templateId",
+        "status",
+        "atsScore",
+        "atsBreakdown",
+        "pdfR2Key",
+      ],
+    },
     { table: "AuditOutbox", privilege: "INSERT" },
   ],
   auditRelay: [

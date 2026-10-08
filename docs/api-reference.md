@@ -1,6 +1,6 @@
 # Planned API Reference
 
-**Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
+**Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, bounded personal editor routes described below, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
 
 ## Shared rules
 
@@ -32,28 +32,42 @@ Google local redirect lands directly on auth-service port 4001; no authorization
 
 POST, GET and PUT `/profile` and PUT `/profile/draft` are implemented locally on profile-service port 4002. POST initializes a missing owned master from an explicit full name and optional nullable location/summary; no auth/provider facts are copied. It returns 201 at revision 1, or 409 `profile_exists` without overwriting/duplicating an existing master. GET/PUT operate only on an existing profile; normal PUT requires these three professional fields plus `expectedRevision`. Draft PUT requires at least one of those fields and `expectedRevision`, preserves omitted values and allows null clearing of location/summary during incomplete onboarding only. It shares the master's revision and never completes/reopens setup; completed onboarding returns 409 `onboarding_complete`. The professional DTO contains only `id`, `fullName`, nullable `location`, nullable `professionalSummary` and `revision`. No client profile/user ID, contacts, onboarding state or unknown fields are accepted. All query parameters are rejected. The optional workspace header is checked against verified ownership. Every use case resolves a fresh server actor, enforces action/scope and commits content-free audit capture before returning. Revision conflicts return 409; absent profiles return 404 without implicit creation. Work Experience GET/POST and entry PUT are also implemented under the same parent revision; see [its separate contract](experience-api.md). Entry deletion/reorder, other section/contact APIs, final setup and browser/gateway integration remain pending. See [profile contract and verification](profile-api.md).
 
-| Method       | Path                          | Contract / permission                                                               |
-| ------------ | ----------------------------- | ----------------------------------------------------------------------------------- |
-| GET          | `/profile`                    | Authorized professional DTO; `profile.read`; contact excluded by default            |
-| POST         | `/profile`                    | Explicit professional initialization; `profile.create`; owned personal scope, 201 or existing-profile 409 |
-| PUT          | `/profile`                    | Validate allowlisted professional fields + revision; `profile.update`               |
-| PUT          | `/profile/draft`              | Partial professional save on an existing incomplete master + revision; `profile.update` |
-| POST         | `/profile/setup`              | Validate and complete onboarding; own profile or expressly authorized creation      |
-| GET / PUT    | `/profile/contact`            | Separate DTO/write schema; `profile.contact.read` / `profile.contact.update`        |
-| GET / POST   | `/profile/education`          | List/create a scoped education row                                                  |
-| PUT / DELETE | `/profile/education/:id`      | Update/delete via authorized parent profile                                         |
+| Method       | Path                          | Contract / permission                                                                                                   |
+| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| GET          | `/profile`                    | Authorized professional DTO; `profile.read`; contact excluded by default                                                |
+| POST         | `/profile`                    | Explicit professional initialization; `profile.create`; owned personal scope, 201 or existing-profile 409               |
+| PUT          | `/profile`                    | Validate allowlisted professional fields + revision; `profile.update`                                                   |
+| PUT          | `/profile/draft`              | Partial professional save on an existing incomplete master + revision; `profile.update`                                 |
+| POST         | `/profile/setup`              | Validate and complete onboarding; own profile or expressly authorized creation                                          |
+| GET / PUT    | `/profile/contact`            | Separate DTO/write schema; `profile.contact.read` / `profile.contact.update`                                            |
+| GET / POST   | `/profile/education`          | List/create a scoped education row                                                                                      |
+| PUT / DELETE | `/profile/education/:id`      | Update/delete via authorized parent profile                                                                             |
 | GET / POST   | `/profile/experience`         | Implemented local owned list/add; contact-free DTO, shared parent revision and audit; `profile.read` / `profile.update` |
-| PUT          | `/profile/experience/:id`     | Implemented local owned full-field replacement + parent revision; `profile.update` |
-| DELETE       | `/profile/experience/:id`     | Planned owned-entry deletion                                                            |
-| GET / POST   | `/profile/skills`             | List/create skills                                                                  |
-| PUT / DELETE | `/profile/skills/:id`         | Update/delete skills                                                                |
-| GET / POST   | `/profile/projects`           | List/create professional projects                                                   |
-| PUT / DELETE | `/profile/projects/:id`       | Update/delete projects                                                              |
-| GET / POST   | `/profile/certifications`     | List/create certifications                                                          |
-| PUT / DELETE | `/profile/certifications/:id` | Update/delete certifications                                                        |
-| POST         | `/profile/import/linkedin`    | Phase 5: validate upload reference, create preview; proposed confirm endpoint below |
+| PUT          | `/profile/experience/:id`     | Implemented local owned full-field replacement + parent revision; `profile.update`                                      |
+| DELETE       | `/profile/experience/:id`     | Planned owned-entry deletion                                                                                            |
+| GET / POST   | `/profile/skills`             | List/create skills                                                                                                      |
+| PUT / DELETE | `/profile/skills/:id`         | Update/delete skills                                                                                                    |
+| GET / POST   | `/profile/projects`           | List/create professional projects                                                                                       |
+| PUT / DELETE | `/profile/projects/:id`       | Update/delete projects                                                                                                  |
+| GET / POST   | `/profile/certifications`     | List/create certifications                                                                                              |
+| PUT / DELETE | `/profile/certifications/:id` | Update/delete certifications                                                                                            |
+| POST         | `/profile/import/linkedin`    | Phase 5: validate upload reference, create preview; proposed confirm endpoint below                                     |
 
 Section reads require `profile.read`; section writes require `profile.update` on the parent. Local Experience GET/POST and entry PUT are implemented: bounded owned entries, append order, strict dates/plain bullets, parent revisions and atomic content-free audit. Entry deletion/reorder and other section/contact routes remain planned; see [Experience contract and verification](experience-api.md). Dedicated contact permissions cannot be bypassed through `/profile`, `/profile/draft`, `/profile/experience` or import. Draft PUT covers only the three professional master fields. Proposed additions: `DELETE /profile` for an approved profile-deletion lifecycle, `GET /profile/import/:id` for review, and `POST /profile/import/:id/confirm` for explicit merge. D03/D11 govern destructive/shared effects.
+
+## Implemented personal editor routes — 2026-10-04
+
+These routes are enabled through the loopback gateway and restricted personal resume runtime. Resolve the Bearer actor and recheck personal workspace ownership; `X-Workspace-Id` is only a selector. No shared workspace is accepted.
+
+| Method | Path            | Current contract                                                                                                                                                                                                                                     |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/resume`       | At most 50 owned metadata rows ordered updatedAt/ID descending. Optional `?cursor=<owned resume UUID>`; use the last ID only for a full page. Lists are arrays, not the proposed nextCursor envelope. Concurrent updates have no snapshot guarantee. |
+| POST   | `/resume`       | Strict `{id: UUID, content}` with matching title and non-synthetic editorDraft. Creates draft/version 1/audit atomically. An owned ID replay returns the original without reapplying input or duplicating audit.                                     |
+| GET    | `/resume/:id`   | Owned current private content and version metadata.                                                                                                                                                                                                  |
+| PUT    | `/resume/:id`   | Strict bounded content and expectedVersion; creates a new immutable version/audit atomically. Stale revision returns 409. Saved JSON retains editorDraft rich text/IDs/dates/visibility/languages/appearance.                                        |
+| POST   | `/resume/parse` | Authenticated local PDF/DOCX/TXT/MD extraction into review only; access checked again after processing. 10 MB, 30 pages, bounded archive/text/worker limits. No persistence until reviewed create.                                                   |
+
+Document bodies are bounded to 2,000,000 bytes. Parse transport allows 15,000,000 bytes for multipart/base64 overhead while decoded files remain capped at 10 MB. Personal owner-only snapshots may contain resume-local contacts; master UserContact/professional fields are never imported. Original bytes are discarded, confirmed text remains private version data. Full D12/F19 contact separation/staging/export remain pending. AI, generation, legacy direct import, JD, delete, sharing and export are blocked in this runtime. Wider route tables below remain planned or merged backend capabilities, not enabled frontend promises.
 
 ## Resume service
 
@@ -122,7 +136,7 @@ The complete payload, lifecycle, idempotency and conflict rules are in [editing 
 | POST   | `/resume/:id/suggestions/:suggestionId/apply`   | Expected revision + idempotency; apply stored validated proposal as one new version; resume.read + resume.update                           |
 | POST   | `/resume/:id/suggestions/:suggestionId/discard` | Mark unapplied suggestion discarded; resume.update; late worker completion cannot reactivate it                                            |
 
-Resolve all inputs under workspace/profile policy. Requests cannot set arbitrary patch paths, generated replacement bodies or authority fields. Apply returns 409 for stale base/target/context; retries with matching identity return the existing result. Manual saves remain PUT `/resume/:id`. Scoring requires a JD and exact version; basic drafts return absent score metadata. F19 import routes below are proposals only; no upload endpoint may be enabled before D14 and implementation verification.
+Resolve all inputs under workspace/profile policy. Requests cannot set arbitrary patch paths, generated replacement bodies or authority fields. Apply returns 409 for stale base/target/context; retries with matching identity return the existing result. Manual saves remain PUT `/resume/:id`. Scoring requires a JD and exact version; basic drafts return absent score metadata. Full F19 staging routes below remain proposals. The bounded local personal parse/review/create slice above has its own resolved D14 choices and verification.
 
 ## Proposed U06 dashboard, feedback and Phase 6 routes
 
@@ -153,3 +167,7 @@ F19 uses existing authorized storage presign with an import-specific purpose and
 Body: the existing AuditEventIntent fields (`eventId`, `actorUserId`, optional `targetUserId`, `workspaceType`, `workspaceId`, `action`, `resourceType`, `resourceId`, `outcome`, `occurredAt`, `correlationId`, optional allowlisted `metadata`), maximum 16 KiB. Unknown fields are rejected. Local ingestion accepts approved successful individual-workspace intents whose actor owns the workspace, plus `authorization.denied`/`denied` intents whose resource is that owned workspace. Denied profile/foreign-workspace resource IDs, other failed outcomes and shared scope remain rejected. The producer must already have verified the actor, action and resource when capturing the history.
 
 Committed success: HTTP 200 `{ data: { eventId, duplicate } }`. Equivalent retries return the same event ID with `duplicate: true`; conflicting ID reuse returns 409. Errors are `{ error: { code } }`: 400 malformed JSON, 413 size, 415 media type, 422 invalid intent/scope, 503 temporary ingestion failure. Acknowledgement is sent only after SQL COMMIT. The client validates the bounded reply/event identity, rejects redirects, and retries authentication/unavailability failures through its durable outbox. This is a local credential and loopback policy only; production identity, scheduling and database privileges remain gated. See [setup and verification](database-foundation.md).
+
+## Local professional browser transport — 2026-10-04
+
+The local gateway on loopback port 4000 now forwards GET/POST/PUT `/api/v1/profile` and PUT `/api/v1/profile/draft` to loopback profile-service port 4002. Browser requests originate at `http://localhost:3000` and carry the existing opaque Bearer plus personal workspace selector. Profile-service independently resolves/authorizes every actor/resource; the gateway supplies no identity authority. Cookies and arbitrary actor headers are dropped, upstream error/request IDs are preserved, and responses are no-store. Contacts, sections, completion, internal auth and resume routes remain unavailable through this gateway. This transport is refused in production; hosted topology remains D10. [README](../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) records current scope/manual checks.

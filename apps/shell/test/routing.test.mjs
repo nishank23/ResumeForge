@@ -80,8 +80,8 @@ test("only the verified personal workspace selector is allowed", () => {
       kind: "deny",
     });
 });
-test("entry destination follows server onboarding state and authoritative workspace", () => {
-  assert.equal(sessionHome(identity), "/onboarding");
+test("entry destination opens resumes without professional onboarding", () => {
+  assert.equal(sessionHome(identity), `/w/${identity.workspaceId}/resumes`);
   assert.equal(
     sessionHome({ ...identity, isOnboarded: true }),
     `/w/${identity.workspaceId}/resumes`,
@@ -236,14 +236,33 @@ test("OAuth handoff cannot follow injected return URLs or hide callback errors",
   );
 });
 
-test("onboarding entry does not fabricate a completed wizard or profile fields", () => {
+test("legacy onboarding never mounts profile creation or sample content", () => {
   const html = renderToStaticMarkup(
-    h(MemoryRouter, null, h(OnboardingEntry, { session: authenticated })),
+    h(
+      MemoryRouter,
+      null,
+      h(
+        OnboardingEntry,
+        { session: authenticated },
+        h("p", null, "Connected professional form sentinel"),
+      ),
+    ),
   );
-  assert.match(html, /Set up your profile/);
-  assert.match(html, /Profile setup is being connected/);
-  assert.match(html, new RegExp(`/w/${identity.workspaceId}/resumes`));
-  assert.equal(html.includes("<input"), false);
+  assert.equal(html, "");
+  assert.equal(
+    renderToStaticMarkup(
+      h(
+        MemoryRouter,
+        null,
+        h(
+          OnboardingEntry,
+          { session: { status: "anonymous" } },
+          h("p", null, "Private sentinel"),
+        ),
+      ),
+    ),
+    "",
+  );
   assert.equal(
     renderToStaticMarkup(
       h(

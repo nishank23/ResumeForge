@@ -5,7 +5,7 @@ export interface EditorHistory<T> {
   readonly future: readonly T[];
 }
 export type HistoryAction<T> =
-  { type: "edit"; value: T } | { type: "undo" | "redo" | "save" | "cancel" };
+  { type: "edit" | "checkpoint"; value: T } | { type: "undo" | "redo" | "save" | "cancel" };
 const equal = <T>(a: T, b: T) => JSON.stringify(a) === JSON.stringify(b);
 export const isDirty = <T>(state: EditorHistory<T>) =>
   !equal(state.current, state.saved);
@@ -51,6 +51,8 @@ export function editorHistory<T>(
             future: state.future.slice(1),
           };
     }
+    case "checkpoint":
+      return { ...state, saved: action.value };
     case "save":
       return { ...state, saved: state.current };
     case "cancel":

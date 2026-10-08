@@ -1,0 +1,41 @@
+.rf-profile-error {
+  border: 1px solid var(--destructive);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.rf-profile-error button {
+  margin-top: 14px;
+}
+.rf-profile-state,
+.rf-profile-save-status {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.rf-profile-save-status {
+  margin-top: 24px;
+}
+.rf-profile-summary > div {
+  min-width: 0;
+}
+.rf-profile-summary h2 {
+  overflow-wrap: anywhere;
+}
+.rf-profile-avatar {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .rf-profile-summary {
+    flex-wrap: wrap;
+  }
+  .rf-profile-summary > span:last-child {
+    margin-left: 0;
+  }
+  .rf-profile-form .rf-form-actions {
+    flex-wrap: wrap;
+  }
+}
