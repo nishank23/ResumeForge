@@ -135,6 +135,9 @@ export function createSessionController(transport: SessionTransport) {
   ): Promise<Response> {
     if (
       !/^\/api\/v1\/[a-z][a-z0-9/-]*$/.test(path) &&
+      !/^\/api\/v1\/resume\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/pdf\?version=[1-9][0-9]{0,8}$/i.test(
+        path,
+      ) &&
       !/^\/api\/v1\/resume\?cursor=[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
         path,
       )
@@ -151,6 +154,7 @@ export function createSessionController(transport: SessionTransport) {
       state.identity.id === actor &&
       state.identity.workspaceId === workspace &&
       Boolean(token);
+    const timeout = path.includes("/pdf?version=") ? 30_000 : 10_000;
     const send = () => {
       const headers = new Headers(options.headers);
       headers.set("Authorization", `Bearer ${token ?? ""}`);
@@ -160,8 +164,8 @@ export function createSessionController(transport: SessionTransport) {
         credentials: "omit",
         cache: "no-store",
         signal: options.signal
-          ? AbortSignal.any([options.signal, AbortSignal.timeout(10_000)])
-          : AbortSignal.timeout(10_000),
+          ? AbortSignal.any([options.signal, AbortSignal.timeout(timeout)])
+          : AbortSignal.timeout(timeout),
       });
     };
     let response = await send();

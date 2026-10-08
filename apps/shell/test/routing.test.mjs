@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { createSessionController } from "../../../packages/shared/src/auth/session.ts";
 import {
+  isResumeWorkspace,
   resolveProtectedRoute,
   sessionHome,
   sessionRouteKey,
@@ -278,4 +279,22 @@ test("legacy onboarding never mounts profile creation or sample content", () => 
     ),
     "",
   );
+});
+
+test("resume editor and intake routes hide workspace chrome; the library restores it", () => {
+  for (const path of [
+    "/w/personal/resumes/resume-id",
+    "/w/personal/resumes/resume-id/",
+    "/w/personal/resumes/new",
+    "/w/personal/resumes/upload",
+  ])
+    assert.equal(isResumeWorkspace(path), true, path);
+  for (const path of [
+    "/w/personal/resumes",
+    "/w/personal/resumes/",
+    "/w/personal/profile",
+    "/sign-in",
+    "/w/personal/resumes/id/nested",
+  ])
+    assert.equal(isResumeWorkspace(path), false, path);
 });

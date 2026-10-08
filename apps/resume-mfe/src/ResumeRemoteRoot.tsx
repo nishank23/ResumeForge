@@ -14,6 +14,7 @@ import {
   type SavedResume,
 } from "./resume-api";
 import type { ResumeDraft } from "./editor-draft";
+import { downloadResumePdf } from "./download-resume";
 import "./resume-library.css";
 export interface ResumeRemoteRootProps {
   readonly context?: ShellFederationContext;
@@ -122,6 +123,9 @@ export function ResumeRemoteRoot({
           context={context}
           initialDraft={fromResumeContent(saved.content)}
           savedVersion={saved.currentVersion}
+          onDownload={() =>
+            downloadResumePdf(api, saved.id, saved.currentVersion, saved.title)
+          }
           onSave={async (draft) => {
             const next = await api.save(
               saved.id,

@@ -35,3 +35,8 @@ export function sessionRouteKey(session: SessionState): string {
     ? `${session.identity.id}:${session.identity.workspaceId}`
     : session.status;
 }
+
+/** Library chrome gives way to the resume editor and intake workspace. */
+export function isResumeWorkspace(pathname: string): boolean {
+  return /^\/w\/[^/]+\/resumes\/[^/]+\/?$/.test(pathname);
+}

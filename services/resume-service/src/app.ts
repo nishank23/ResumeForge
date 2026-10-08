@@ -44,7 +44,11 @@ export function createResumeApp(config: {
         (path === "/api/v1/resume/parse" &&
           ["POST", "OPTIONS"].includes(method)) ||
         (/^\/api\/v1\/resume\/[0-9a-f-]{36}$/i.test(path) &&
-          ["GET", "PUT", "OPTIONS"].includes(method));
+          ["GET", "PUT", "DELETE", "OPTIONS"].includes(method)) ||
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/pdf$/i.test(path) &&
+          ["GET", "OPTIONS"].includes(method)) ||
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/restore$/i.test(path) &&
+          ["POST", "OPTIONS"].includes(method));
       if (!allowed)
         return c.json(
           {
@@ -367,6 +371,100 @@ export function createResumeApp(config: {
     resume_unavailable: 503,
   };
 
+  app.post("/api/v1/resume/:id/restore", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+    try {
+      const result = await config.resumes.restoreResume(
+        auth.context,
+        c.req.param("id"),
+        await c.req.json().catch(() => {
+          throw new ResumeError("invalid_input");
+        }),
+      );
+      return c.json({ data: result, requestId });
+    } catch (error) {
+      if (error instanceof ResumeError)
+        return fail(
+          c,
+          error.code,
+          error.message,
+          statusMap[error.code] ?? 422,
+          requestId,
+        );
+      return fail(
+        c,
+        "resume_unavailable",
+        "Could not restore resume.",
+        503,
+        requestId,
+      );
+    }
+  });
+  app.get("/api/v1/resume/:id/pdf", async (c) => {
+    const requestId = randomUUID();
+    c.header("X-Request-Id", requestId);
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+    const version = c.req.query("version");
+    if (
+      new URL(c.req.url).searchParams.getAll("version").length !== 1 ||
+      !version ||
+      !/^[1-9][0-9]{0,8}$/.test(version) ||
+      Array.from(new URL(c.req.url).searchParams.keys()).some(
+        (key) => key !== "version",
+      )
+    )
+      return fail(
+        c,
+        "invalid_input",
+        "Choose a saved version.",
+        422,
+        requestId,
+      );
+    try {
+      const result = await config.resumes.downloadPdf(
+        auth.context,
+        c.req.param("id"),
+        Number(version),
+      );
+      const latest = await authenticate(c, requestId);
+      if (!latest.authenticated) return latest.response;
+      if (
+        latest.context.actor.userId !== auth.context.actor.userId ||
+        latest.context.actor.personalWorkspaceId !==
+          auth.context.actor.personalWorkspaceId
+      )
+        return fail(c, "unauthenticated", "Session changed.", 401, requestId);
+      c.header("Content-Type", "application/pdf");
+      c.header(
+        "Content-Disposition",
+        `attachment; filename="${result.fileName}"`,
+      );
+      c.header("X-Resume-Version", String(result.version));
+      c.header("X-Content-Type-Options", "nosniff");
+      return c.body(new Uint8Array(result.bytes));
+    } catch (error) {
+      if (error instanceof ResumeError)
+        return fail(
+          c,
+          error.code,
+          error.message,
+          statusMap[error.code] ?? 422,
+          requestId,
+        );
+      return fail(
+        c,
+        "resume_unavailable",
+        "Could not prepare PDF. Retry.",
+        503,
+        requestId,
+      );
+    }
+  });
+
   // Get single resume by ID
   app.get("/api/v1/resume/:id", async (c) => {
     const requestId = randomUUID();
@@ -456,7 +554,15 @@ export function createResumeApp(config: {
 
     const id = c.req.param("id");
     try {
-      const result = await config.resumes.deleteResume(auth.context, id);
+      const result = config.personalEditorOnly
+        ? await config.resumes.removeResume(
+            auth.context,
+            id,
+            await c.req.json().catch(() => {
+              throw new ResumeError("invalid_input");
+            }),
+          )
+        : await config.resumes.deleteResume(auth.context, id);
       return c.json({ data: result, requestId });
     } catch (err: unknown) {
       if (err instanceof ResumeError) {

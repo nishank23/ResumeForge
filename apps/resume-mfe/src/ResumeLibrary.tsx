@@ -4,14 +4,18 @@ import {
   FileText,
   Search,
   Upload,
-  ArrowUpRight,
+  LoaderCircle,
+  Download,
+  Trash2,
 } from "lucide-react";
 import {
   Button,
+  ConfirmDeleteDialog,
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 import { blankResume, createResumeApi, type ResumeRow } from "./resume-api";
+import { downloadResumePdf } from "./download-resume";
 import "./resume-library.css";
 
 export function ResumeLibrary({
@@ -33,6 +37,14 @@ export function ResumeLibrary({
   const [loadingMore, setLoadingMore] = useState(false);
   const [creating, setCreating] = useState(false),
     [retry, setRetry] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<ResumeRow | null>(null);
+  const [deletedRow, setDeletedRow] = useState<ResumeRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [notice, setNotice] = useState("");
+  const listHeading = useRef<HTMLHeadingElement>(null);
   const createId = useRef(crypto.randomUUID()),
     busy = useRef(false);
   useEffect(() => {
@@ -98,6 +110,77 @@ export function ResumeLibrary({
       setLoadingMore(false);
     }
   };
+  const remove = async () => {
+    if (!deleteTarget || busy.current) return;
+    busy.current = true;
+    setDeleting(true);
+    setDeleteError("");
+    const target = deleteTarget;
+    try {
+      await api.remove(target.id, target.currentVersion);
+      setRows((current) => current.filter((row) => row.id !== target.id));
+      setDeletedRow(target);
+      setDeleteTarget(null);
+      setNotice(`Deleted “${target.title}” from your resumes.`);
+      requestAnimationFrame(() => {
+        listHeading.current?.focus();
+      });
+    } catch (e) {
+      setDeleteError(
+        e instanceof Error ? e.message : "Could not delete resume. Retry.",
+      );
+    } finally {
+      busy.current = false;
+      setDeleting(false);
+    }
+  };
+  const restore = async () => {
+    if (!deletedRow || busy.current) return;
+    busy.current = true;
+    setRestoring(true);
+    setError("");
+    try {
+      const restored = await api.restore(
+        deletedRow.id,
+        deletedRow.currentVersion,
+      );
+      setRows((current) => [
+        restored,
+        ...current.filter((row) => row.id !== restored.id),
+      ]);
+      setDeletedRow(null);
+      setNotice(`Restored “${restored.title}”.`);
+      requestAnimationFrame(() => {
+        listHeading.current?.focus();
+      });
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not restore resume. Retry.",
+      );
+    } finally {
+      busy.current = false;
+      setRestoring(false);
+    }
+  };
+  const download = async (row: ResumeRow) => {
+    if (busy.current) return;
+    busy.current = true;
+    setDownloading(row.id);
+    setError("");
+    try {
+      await downloadResumePdf(api, row.id, row.currentVersion, row.title);
+      setNotice(
+        `PDF download started for “${row.title}”, saved version ${String(row.currentVersion)}.`,
+      );
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not download PDF. Retry.",
+      );
+    } finally {
+      busy.current = false;
+      setDownloading(null);
+    }
+  };
   const shown = rows
     .filter((r) =>
       r.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
@@ -136,7 +219,9 @@ export function ResumeLibrary({
         <div className="rf-library-start-actions">
           <Button
             onClick={() => context.onNavigate?.(`${prefix}/upload`)}
-            disabled={creating || loadingMore}
+            disabled={
+              creating || loadingMore || deleting || restoring || !!downloading
+            }
           >
             <Upload size={17} /> Upload resume
           </Button>
@@ -145,7 +230,9 @@ export function ResumeLibrary({
             onClick={() => {
               void create();
             }}
-            disabled={creating || loadingMore}
+            disabled={
+              creating || loadingMore || deleting || restoring || !!downloading
+            }
           >
             <FilePlus2 size={17} />
             {creating ? "Creating…" : "Create resume"}
@@ -153,7 +240,9 @@ export function ResumeLibrary({
         </div>
       </section>
       <div className="rf-library-list-heading">
-        <h2>Continue where you left off</h2>
+        <h2 ref={listHeading} tabIndex={-1}>
+          Continue where you left off
+        </h2>
         <span>
           {loading
             ? "Loading…"
@@ -187,6 +276,23 @@ export function ResumeLibrary({
           </select>
         </label>
       </div>
+      {notice ? (
+        <div className="rf-library-notice" role="status">
+          <p>{notice}</p>
+          {deletedRow ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={restoring || !!downloading || deleting}
+              onClick={() => {
+                void restore();
+              }}
+            >
+              {restoring ? "Restoring…" : "Undo delete"}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {error ? (
         <div className="rf-library-error" role="alert">
           <p>{error}</p>
@@ -195,7 +301,7 @@ export function ResumeLibrary({
             onClick={() => {
               setRetry((v) => v + 1);
             }}
-            disabled={loading}
+            disabled={loading || deleting || restoring || !!downloading}
           >
             Retry loading
           </Button>
@@ -253,8 +359,14 @@ export function ResumeLibrary({
                       </span>
                       <span>
                         {r.title}
-                        <small>
-                          {r.status === "draft" ? "Draft" : r.status}
+                        <small
+                          title={
+                            r.status === "draft"
+                              ? "Saved to your account; reopen to keep editing."
+                              : undefined
+                          }
+                        >
+                          {r.status === "draft" ? "Saved" : r.status}
                         </small>
                       </span>
                     </button>
@@ -272,14 +384,59 @@ export function ResumeLibrary({
                     </time>
                   </td>
                   <td>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Open ${r.title}`}
-                      onClick={() => context.onNavigate?.(`${prefix}/${r.id}`)}
-                    >
-                      Open <ArrowUpRight size={16} />
-                    </Button>
+                    <div className="rf-library-row-actions">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={
+                          downloading === r.id
+                            ? `Preparing ${r.title} as PDF`
+                            : `Download ${r.title} as PDF`
+                        }
+                        aria-busy={downloading === r.id}
+                        title={
+                          downloading === r.id
+                            ? "Preparing PDF…"
+                            : "Download saved version as PDF"
+                        }
+                        disabled={
+                          creating ||
+                          loadingMore ||
+                          !!downloading ||
+                          deleting ||
+                          restoring
+                        }
+                        onClick={() => {
+                          void download(r);
+                        }}
+                      >
+                        {downloading === r.id ? (
+                          <LoaderCircle size={18} aria-hidden="true" />
+                        ) : (
+                          <Download size={18} aria-hidden="true" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-library-delete"
+                        aria-label={`Delete ${r.title}`}
+                        title="Delete resume"
+                        disabled={
+                          creating ||
+                          loadingMore ||
+                          !!downloading ||
+                          deleting ||
+                          restoring
+                        }
+                        onClick={() => {
+                          setDeleteError("");
+                          setDeleteTarget(r);
+                        }}
+                      >
+                        <Trash2 size={18} aria-hidden="true" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -290,7 +447,9 @@ export function ResumeLibrary({
       {more ? (
         <Button
           variant="outline"
-          disabled={loadingMore || loading}
+          disabled={
+            loadingMore || loading || deleting || restoring || !!downloading
+          }
           onClick={() => {
             void loadMore();
           }}
@@ -298,6 +457,24 @@ export function ResumeLibrary({
           {loadingMore ? "Loading…" : "Load more resumes"}
         </Button>
       ) : null}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+            setDeleteError("");
+          }
+        }}
+        title="Delete this resume?"
+        resourceName={deleteTarget?.title}
+        description={`Remove saved version ${String(deleteTarget?.currentVersion ?? "")} from your resumes. You can undo your most recent deletion while this page is open.`}
+        confirmLabel="Delete resume"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={() => {
+          void remove();
+        }}
+      />
     </div>
   );
 }

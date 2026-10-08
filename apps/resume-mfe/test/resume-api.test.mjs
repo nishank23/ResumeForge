@@ -301,3 +301,71 @@ test("imported profile links, project details and language values survive the ed
   duplicate.header.links[0].id = "project-link";
   assert.equal(editorDocumentSchema.safeParse(duplicate).success, false);
 });
+
+test("delete and restore send explicit saved versions, reject mismatched responses and never delete on stale data", async () => {
+  const calls = [];
+  const api = createResumeApi(async (path, options) => {
+    calls.push({ path, options });
+    return envelope({ deleted: true, id });
+  }, workspaceId);
+  await api.remove(id, 4);
+  assert.equal(calls[0].options.method, "DELETE");
+  assert.equal(JSON.parse(calls[0].options.body).expectedVersion, 4);
+  await assert.rejects(api.remove(id, 0));
+  assert.equal(calls.length, 1);
+  const wrong = createResumeApi(
+    async () => envelope({ deleted: true, id: workspaceId }),
+    workspaceId,
+  );
+  await assert.rejects(
+    wrong.remove(id, 4),
+    (e) => e.code === "invalid_response",
+  );
+  const restored = createResumeApi(async (path, options) => {
+    assert.equal(path, `/api/v1/resume/${id}/restore`);
+    assert.equal(JSON.parse(options.body).expectedVersion, 4);
+    return envelope({
+      id,
+      workspaceId,
+      title: "Restored",
+      currentVersion: 4,
+      status: "draft",
+      updatedAt: new Date().toISOString(),
+      content: toResumeContent(blankResume()),
+    });
+  }, workspaceId);
+  assert.equal((await restored.restore(id, 4)).currentVersion, 4);
+});
+test("PDF downloads validate the saved version, binary signature and response headers", async () => {
+  const api = createResumeApi(async (path, options) => {
+    assert.equal(path, `/api/v1/resume/${id}/pdf?version=4`);
+    assert.equal(options.headers["X-Workspace-Id"], workspaceId);
+    return new Response("%PDF-valid", {
+      headers: { "Content-Type": "application/pdf", "X-Resume-Version": "4" },
+    });
+  }, workspaceId);
+  assert.equal(await (await api.download(id, 4)).text(), "%PDF-valid");
+  for (const response of [
+    new Response("%PDF-valid", {
+      headers: { "Content-Type": "text/html", "X-Resume-Version": "4" },
+    }),
+    new Response("%PDF-valid", {
+      headers: { "Content-Type": "application/pdf", "X-Resume-Version": "3" },
+    }),
+    new Response("wrong", {
+      headers: { "Content-Type": "application/pdf", "X-Resume-Version": "4" },
+    }),
+  ])
+    await assert.rejects(
+      createResumeApi(async () => response, workspaceId).download(id, 4),
+      (e) => e.code === "invalid_response",
+    );
+  await assert.rejects(
+    createResumeApi(
+      async () =>
+        new Response('{"error":{"code":"revision_conflict"}}', { status: 409 }),
+      workspaceId,
+    ).download(id, 4),
+    (e) => e.code === "revision_conflict",
+  );
+});

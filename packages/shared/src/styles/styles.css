@@ -1503,3 +1503,8 @@ summary {
     display: none;
   }
 }
+
+/* Editor routes have their own tools; the workspace navigation returns on exit. */
+.rf-workspace.rf-workspace-editor {
+  grid-template-columns: minmax(0, 1fr);
+}

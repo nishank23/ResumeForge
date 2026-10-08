@@ -262,3 +262,35 @@ test("resume pagination allows only a UUID cursor on the fixed owned-list route"
   ])
     await assert.rejects(client.requestApi(path), /Invalid API path/);
 });
+
+test("PDF requests keep the bearer private and accept only one bounded version on the owned endpoint", async () => {
+  const calls = [];
+  const client = make(async (url, options) => {
+    calls.push({ url, options });
+    return url.endsWith("/refresh")
+      ? token()
+      : url.endsWith("/me")
+        ? me()
+        : new Response("%PDF-valid");
+  });
+  await client.restore();
+  const id = identity.id;
+  await client.requestApi(`/api/v1/resume/${id}/pdf?version=4`);
+  assert.equal(
+    calls.at(-1).url,
+    `http://localhost:4000/api/v1/resume/${id}/pdf?version=4`,
+  );
+  assert.equal(calls.at(-1).options.credentials, "omit");
+  for (const query of [
+    "version=0",
+    "version=-1",
+    "version=1&version=2",
+    "version=1&token=private",
+    "version=1000000000",
+    "version=1#fragment",
+  ])
+    await assert.rejects(
+      client.requestApi(`/api/v1/resume/${id}/pdf?${query}`),
+      /Invalid API path/,
+    );
+});

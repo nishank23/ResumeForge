@@ -53,6 +53,7 @@ import { ImproveWithAiDialog } from "./ImproveWithAiDialog";
 import { acceptLocalAiPreview } from "./editor-ai-preview";
 import { ResumeDocument } from "./ResumeDocument";
 import { ResumePage } from "./ResumePage";
+import { SectionActions } from "./SectionActions";
 import {
   EditorRail,
   EDITOR_PANELS,
@@ -80,12 +81,14 @@ export function ManualResumeEditor({
   context,
   initialDraft,
   onSave,
+  onDownload,
   savedVersion = 0,
   saveLabel = "Save changes",
 }: {
   context?: ShellFederationContext;
   initialDraft: ResumeDraft;
   onSave: (draft: ResumeDraft) => Promise<number>;
+  onDownload?: () => Promise<void>;
   savedVersion?: number;
   saveLabel?: string;
 }) {
@@ -95,6 +98,8 @@ export function ManualResumeEditor({
     sampleDraft,
     createHistory,
   );
+  const [downloading, setDownloading] = useState(false);
+  const downloadingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveFailure, setSaveFailure] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -207,6 +212,30 @@ export function ManualResumeEditor({
       setSaving(false);
     }
   }, [onSave, conflict, announce]);
+  const download = async () => {
+    if (
+      !onDownload ||
+      downloadingRef.current ||
+      savingRef.current ||
+      dirty ||
+      inlinePending ||
+      !savedVersion
+    )
+      return;
+    downloadingRef.current = true;
+    setDownloading(true);
+    try {
+      await onDownload();
+      announce(
+        `PDF download started for saved version ${String(savedVersion)}.`,
+      );
+    } catch (e) {
+      error(e instanceof Error ? e.message : "Could not download PDF. Retry.");
+    } finally {
+      downloadingRef.current = false;
+      setDownloading(false);
+    }
+  };
   const closeAiPreview = () => {
     if (!aiSession) return;
     const target = aiSession.target;
@@ -219,10 +248,28 @@ export function ManualResumeEditor({
       });
     });
   };
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelHover = useCallback(() => {
+    if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+  }, []);
+  useEffect(() => {
+    cancelHover();
+    return cancelHover;
+  }, [cancelHover, mode, session, aiSession]);
   const select = (target: DraftTarget) => {
+    cancelHover();
     setSelected((current) =>
       JSON.stringify(current) === JSON.stringify(target) ? current : target,
     );
+  };
+  const hover = (target: DraftTarget) => {
+    cancelHover();
+    // Crossing another section on the way to its predecessor's actions must
+    // not relocate the toolbar before the pointer can reach it.
+    hoverTimer.current = setTimeout(() => {
+      select(target);
+    }, 150);
   };
   const addEntry = (targetSection = section, base = history.current) => {
     if (!targetSection) return;
@@ -538,104 +585,30 @@ export function ManualResumeEditor({
             <Button
               size="sm"
               variant="outline"
-              disabled
+              disabled={
+                !onDownload ||
+                !savedVersion ||
+                saving ||
+                downloading ||
+                dirty ||
+                inlinePending ||
+                !!session ||
+                !!aiSession
+              }
+              title={
+                dirty || inlinePending
+                  ? "Save changes before downloading PDF"
+                  : `Download saved version ${String(savedVersion)}`
+              }
               aria-describedby="rf-pdf-limit"
+              onClick={() => {
+                void download();
+              }}
             >
-              <Download size={14} /> Export PDF
+              <Download size={14} />{" "}
+              {downloading ? "Preparing PDF…" : "Download PDF"}
             </Button>
           </div>
-          {mode === "editor" && section?.kind !== "skills" ? (
-            <div
-              ref={toolbarRef}
-              hidden={!!session || !!aiSession}
-              className="rf-floating-actions"
-              aria-label="Selected content actions"
-            >
-              <span
-                className="rf-floating-target"
-                title={targetLabel(history.current, selection)}
-              >
-                {targetLabel(history.current, selection)}
-              </span>
-              {selection.type !== "header" ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setAiSession({
-                      base: structuredClone(historyRef.current.current),
-                      target: structuredClone(selection),
-                    });
-                  }}
-                >
-                  <Sparkles size={14} /> Improve with AI
-                </Button>
-              ) : null}
-              {itemArrows ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Move selected item up"
-                    onClick={() => {
-                      act("up");
-                    }}
-                  >
-                    <ArrowUp size={15} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Move selected item down"
-                    onClick={() => {
-                      act("down");
-                    }}
-                  >
-                    <ArrowDown size={15} />
-                  </Button>
-                </>
-              ) : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                data-selection-edit
-                aria-label="Edit selected content"
-                onClick={() => {
-                  startEdit();
-                }}
-              >
-                <Pencil size={15} />
-              </Button>
-              {selection.type !== "header" ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={
-                      hidden
-                        ? "Show selected content in preview"
-                        : "Hide selected content from preview"
-                    }
-                    onClick={() => {
-                      act("hide");
-                    }}
-                  >
-                    {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Delete selected content"
-                    onClick={() => {
-                      setDeleting(selection);
-                    }}
-                  >
-                    <Trash2 size={15} />
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          ) : null}
         </header>
         <div className="rf-local-draft-note">
           <span>
@@ -647,7 +620,11 @@ export function ManualResumeEditor({
                 : "Saved to your account"}
           </span>
           <span id="rf-pdf-limit">
-            AI, ATS and PDF services are not connected.
+            {onDownload
+              ? dirty || inlinePending
+                ? "Save changes before downloading PDF."
+                : `PDF uses saved version ${String(savedVersion)}. AI and ATS are not connected.`
+              : "Save this resume to enable PDF download. AI and ATS are not connected."}
           </span>
         </div>
         {saveFailure ? (
@@ -725,6 +702,8 @@ export function ManualResumeEditor({
                   editable={mode === "editor" && !session && !aiSession}
                   onPending={setInlinePending}
                   onSelect={select}
+                  onHover={hover}
+                  onHoverExit={cancelHover}
                   onEdit={(target) => {
                     requestAnimationFrame(() => {
                       startEdit(target, historyRef.current.current);
@@ -735,12 +714,108 @@ export function ManualResumeEditor({
                   onRichChange={editRich}
                 />
               </ResumePage>
+              {mode === "editor" && section?.kind !== "skills" ? (
+                <SectionActions
+                  containerRef={canvasRef}
+                  toolbarRef={toolbarRef}
+                  target={selection}
+                  layoutKey={`${String(panelOpen)}:${panel}`}
+                  draft={draft}
+                  hidden={!!session || !!aiSession}
+                  onPointerEnter={cancelHover}
+                >
+                  <span
+                    className="rf-floating-target"
+                    title={targetLabel(history.current, selection)}
+                  >
+                    {targetLabel(history.current, selection)}
+                  </span>
+                  {selection.type !== "header" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setAiSession({
+                          base: structuredClone(historyRef.current.current),
+                          target: structuredClone(selection),
+                        });
+                      }}
+                    >
+                      <Sparkles size={14} /> Improve with AI
+                    </Button>
+                  ) : null}
+                  {itemArrows ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Move selected item up"
+                        onClick={() => {
+                          act("up");
+                        }}
+                      >
+                        <ArrowUp size={15} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Move selected item down"
+                        onClick={() => {
+                          act("down");
+                        }}
+                      >
+                        <ArrowDown size={15} />
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    data-selection-edit
+                    aria-label="Edit selected content"
+                    onClick={() => {
+                      startEdit();
+                    }}
+                  >
+                    <Pencil size={15} />
+                  </Button>
+                  {selection.type !== "header" ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={
+                          hidden
+                            ? "Show selected content in preview"
+                            : "Hide selected content from preview"
+                        }
+                        onClick={() => {
+                          act("hide");
+                        }}
+                      >
+                        {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete selected content"
+                        onClick={() => {
+                          setDeleting(selection);
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </>
+                  ) : null}
+                </SectionActions>
+              ) : null}
             </div>
             <p className="rf-paper-caption">
               Save changes stores a new version in your account. Text edits
               apply on blur or Enter; Escape cancels the active text edit. Alt
               Enter opens details. AI suggestions are temporary previews; ATS
-              and PDF export remain unavailable.
+              remains unavailable. PDF downloads use your saved version and
+              exclude unsaved edits.
             </p>
           </div>
         </div>
@@ -749,6 +824,7 @@ export function ManualResumeEditor({
         <div className="rf-editor-toast" key={noticeKey}>
           <StatusBanner
             tone={notice.error ? "error" : "info"}
+            showToneLabel={notice.error}
             title={notice.message}
             onDismiss={() => {
               setNotice(null);

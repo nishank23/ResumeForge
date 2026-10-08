@@ -9,8 +9,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-08T17:30:52.871Z",
-  "lastResult": "Release validated: check 31/31, test 201 cases, build 14/14, DB 11/11. features workflow ready; integration uses one reviewed PR."
+  "updatedAt": "2026-10-08T19:53:07.631Z",
+  "lastResult": "Reviewed 41 authorized files for features commit; diff check and credential scan pass. Earlier recorded build/test/UI results retained."
 }
 ```
 <!-- END:CURRENT_TASK -->
@@ -40,6 +40,80 @@ The completed account/profile integration, resume library/upload/review/database
 After the merge, remove `origin/codex/frontend` and `origin/codex/backend`, create **features** from the merged main commit, and push its upstream as `origin/features`. Continue using `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. The separate backend checkout/local edits remain intact. Updated AGENTS and scheduled-work instructions use `features`; earlier branch references below are historical. [Current workflow](docs/parallel-development.md#current-branch-workflow--2026-10-08).
 
 Release validation: frozen offline install passed; `pnpm check` **31/31**, `pnpm test` **25/25 tasks / 201 cases**, `pnpm build` **14/14** and the disposable resume-editor database suite **11/11** passed. Existing browser/manual evidence is recorded below. This checkpoint adds no deployment, provider integration or database migration.
+
+## Saved resume label — 2026-10-08
+
+The library now labels persisted editable resumes **Saved**, rather than **Draft**. The API's `draft` lifecycle means an editable document; it is independent of storage. Creating or confirming an upload stores version 1, and each successful **Save changes** stores the next immutable version and advances the update time. A failed/conflicted save keeps the previous version; unsaved browser edits do not change the library record. Generation states remain visible. Saving does not declare a document complete, ATS-ready or generated, and no database status migration is required. Existing saved drafts receive the corrected label when the list reloads.
+
+Manual check: save a resume and wait for **Saved version N**, then click **Back to all resumes**. Its row must show **Saved**, **Version N** and its updated time. Reload the library and reopen the same resume; the saved fields must remain. Make an unsaved change and discard it before leaving: the row must still show the last acknowledged saved version. Save errors must retain edits and must not advance the row version.
+
+Verification: resume-MFE build and lint passed. Live Chrome checked existing version 1/version 3 labels, reopening version 3, returning to the list and reload persistence. No stored resume content was changed during this label check.
+
+## Delete resumes and download saved PDFs — 2026-10-08
+
+Implemented on **features** in the frontend worktree. This section supersedes earlier statements that deletion and PDF downloads are unavailable in the personal editor.
+
+- Click a resume name to open its editor. Each saved row has icon-only **Download PDF** and **Delete** controls, with tooltips and screen-reader labels; the separate Open button is removed. PDF preparation displays a loading icon and exposes its busy state. Delete opens an accessible confirmation naming the resume and saved version. Cancel leaves it unchanged; failed deletion keeps the confirmation open with a readable error. Success removes only that row and moves keyboard focus to the list heading.
+- Deletion is a recoverable database tombstone (`status = deleted`). The latest deletion offers **Undo delete** while the library page remains open; Undo restores it as a draft without changing its immutable content/version. Reload still excludes deleted records. Loading, saving, recreating the same ID and exporting deleted records are denied. This is not permanent erasure: immutable versions and audit events remain retained. Trash browsing, purge/retention policy and object-storage cleanup are not implemented.
+- **Download PDF** in the editor and **PDF** in the library render the latest saved immutable version on the server and download real PDF bytes privately. Unsaved edits and open edit/AI dialogs disable editor export; save first. Upload review must be confirmed and saved before export is available. If another tab saves or deletes during rendering, the server rejects retrieval instead of silently downloading stale content.
+- Output has selectable text, A4 pages, saved margins/type settings, supported bold/italic text, links, dates, entries, achievements, skills and languages. Hidden content, empty sections, input placeholders, source extraction text, ATS controls and unapplied suggestions are excluded. Long content paginates without shortening it. The PDF renderer is separate from the HTML preview; exact line wrapping and page count can differ.
+- This is an authenticated personal-owner export of that user's private saved resume, including its resume-local contacts. No public URL, provider upload or shared-workspace export is enabled. Actor, ownership, workspace, version and expiry are checked before rendering and again before retrieval. Sanitized audit capture must succeed. No database migration, new grant or credential change was needed.
+- Pinned renderer: `@react-pdf/renderer` 4.9.0 with React 19.3.0. Local macOS system fonts match the editor; portable deployments use bundled Noto Serif/Sans fallback fonts, whose metrics can differ. Font characters are checked before rendering; unsupported glyphs produce an error instead of missing text. Two isolated workers, 25-second rendering timeout, 256 MB worker heap, 200,000 rendered characters and 15 MB output cap bound each request. Gateway/session PDF timeout is 30 seconds. The full F09 R2/cache/durable-task/shared-variant pipeline remains pending.
+
+### Manual deletion and download check
+
+1. Open [the local app](http://localhost:3000/), sign in, and open **My resumes**. Create a disposable test resume, enter your intended fields, and click **Save changes**. Wait for **Saved version N**. Download using **Download PDF**; finish the browser's Save As prompt if enabled. Open the file and select/copy its text. Confirm visible fields and page breaks.
+2. Change text without saving. **Download PDF** must be disabled. Save it, then download again; the filename includes the new version. Hidden sections/achievements must be absent. Cancel an upload review; it has no downloadable saved resume.
+3. Return **Back to all resumes**. Click the row's **Download PDF** icon; it downloads that row's latest saved version. If another tab changed it, refresh the list and retry after reviewing the current version.
+4. Click the **Delete** trash icon on the disposable test row. Confirm its name/version, then **Cancel**; it stays listed. Repeat and click **Delete resume**; it disappears. Click **Undo delete** before leaving the page; it returns with the same saved version. Delete again, then reload: it stays absent and its old editor URL cannot load it. Only use a disposable resume for this last check; the current UI has no trash browser after reload.
+5. Keyboard users can Tab through row actions, Cancel/confirm in the dialog, and Undo. Check the 390px layout: the clickable resume name and both icon actions remain reachable.
+
+### Verification
+
+Final commands and browser/PDF evidence are recorded in the [tracker](context/progress-tracker.md#saved-pdf-downloads-and-confirmed-deletion--2026-10-08). No commit, push or deployment is implied by these local changes.
+
+## Editor sidebar, ATS meter and section actions — 2026-10-08
+
+Work is on **features** in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. This frontend correction supersedes the earlier Fit page/100% controls, desktop header actions and mobile bottom dock described below.
+
+- The first workspace sidebar is hidden on resume editor/intake routes. **Back to all resumes** restores it with the existing expanded/collapsed preference. The editor's own tool rail remains available. No sidebar preference is written to browser storage.
+- The paper now defaults to **Fit to width**, with no zoom buttons or percentage control. A stable ResizeObserver measures width and content height; hover/selection no longer reinitializes it or changes scale according to header height. Fixed 794 × 1123 A4 geometry, overflow notices and all resume content remain intact.
+- **Improve with AI** and the existing Edit/Move/Hide/Delete controls are centred 6px below the selected entry in Work experience, Education or Projects. Hovering an achievement uses its enclosing entry's footer. Section headings and Summary keep a section footer; hovering the first, second or third experience moves the bar to that individual experience. This is an overlay outside the scaled document, so it adds no printable gutters or saved formatting. Phone screens use the same target position with 44px touch targets. Skills continues to open its category dialog.
+- Hover selection waits 150ms so the pointer can cross the following section and reach the toolbar. Entering the toolbar, leaving the paper, selecting by click/keyboard, or opening a dialog cancels pending hover selection. Selection and actions do not resize the header or paper. Preview hides the toolbar; dialogs restore focus to the contextual actions.
+- **ATS Score** has an original calibrated 0–100 meter, explicit **Not evaluated** state and an unavailable-score label. **Run ATS check** remains disabled because scoring is not connected to this personal editor. Suggested-action filters explain the unavailable evaluation. No numeric score, rating threshold, issue count or completed action is invented. This UI adds no API, rubric, provider, database migration or saved version.
+
+### Manual controls check
+
+1. Reload [the local app](http://localhost:3000/), then open a saved resume or click **Create resume**. The workspace sidebar disappears; the editor tool rail remains. Expect **A4 · 1 page** for a compact draft and **Fit to width**, without Fit page, Fit width or 100% buttons.
+2. Move the pointer across the blank resume's Summary, Work experience, Education, Projects and Skills. The page/header must stay steady. Hover briefly on a section or click its text. Hover each Work experience entry: actions must follow the bottom centre of that individual entry, including when hovering its bullets. Projects and Education entries behave the same; heading/Summary selection uses the section footer. Move to **Improve with AI**; it must remain reachable and open the Projects preview dialog. Cancel without accepting.
+3. Open **Edit selected content**, then Cancel. Focus returns to that action. For an empty Projects section this opens a temporary new-entry form; Cancel must keep the saved blank resume unchanged. Switch **Preview** and back: actions disappear in Preview and A4 layout remains the same. View-only actions leave **Save changes** disabled.
+4. Open **ATS Score**. Expect the empty calibrated meter, **Not evaluated**, **— / 100**, and disabled **Run ATS check**. Pending, Completed and Deleted each display the corresponding unavailable-actions state. These controls do not run a real evaluation.
+5. Click **Back to all resumes**: the workspace sidebar returns. Collapse it, reopen a resume, and go back again; the 72px collapsed preference must return. On a phone, verify there is no extra workspace navigation row while editing. The ATS meter and section actions must fit the screen.
+6. Reopen the corrected import and compare populated fields, dates, links and Skills. Collapse/reopen the tool panel and scroll through the document. Customize Template, ATS Score, Optimize for JD and Collapse remain distinct controls. Unsaved content still requires Save changes or explicit discard before leaving.
+
+### Controls verification
+
+Editor info messages now omit the redundant **Notice** label. The message and information icon are vertically centred with the dismiss button, including wrapped text; error labels remain visible. To check, open Personal information and Cancel without editing. Expect **Dialog changes discarded.** at the bottom right, aligned with the cross icon; dismiss it using the cross.
+
+Entry-position follow-up: resume-MFE build and lint passed. Live Chrome keyboard selection verified all three experience footers, a nested achievement, a Project entry, panel resizing, section-heading fallback and Preview hiding. Each selected entry measured a 6px gap and zero horizontal centre error. Fresh pointer-hover and phone checks remain manual; the existing hover delay is unchanged. No saved resume content was modified.
+
+- Affected shared/shell/resume lint and production builds passed. Shared TypeScript check passed. Tests passed **54/54**: shared 12, shell 9 and resume editor 33. The shell regression covers editor/intake, library and unrelated route classification. The existing nonfatal federation `vm` build warning remains.
+- Chrome at 1280×538, 900×800 and 390×844 retained the 794×1123 paper. Tablet/phone toolbar measurements placed it 6px below the section and within 0.01px of its centre; the body had no horizontal overflow. Selecting blank sections kept the desktop header at 72px and paper scale unchanged. The pointer transition that previously hid Projects actions now opens its AI dialog correctly.
+- Expanded and 72px collapsed sidebar restoration, Edit/Cancel focus, AI Cancel focus, responsive ATS unavailable state, Preview, and unchanged Save state were checked. The saved corrected import retained all **69 checked populated fields**. No existing resume was changed or resaved; one blank account resume was created locally to reproduce the reported issue.
+- The final fresh browser tab recorded no warning/error logs. The intermediate tab retained transient Vite HMR errors while shared assets were rebuilt; a full reload loaded the final frontend.
+- Backend/DB tests and live AI, ATS, PDF or fresh OAuth consent were not run for this frontend slice. The earlier database persistence evidence remains below. Screenshots remain temporary local verification artifacts, outside the repository.
+
+Commands used for this slice:
+
+```sh
+pnpm --filter @resume-forge/shared --filter @resume-forge/shell --filter @resume-forge/resume-mfe lint
+pnpm --filter @resume-forge/shared --filter @resume-forge/shell --filter @resume-forge/resume-mfe test
+pnpm --filter @resume-forge/shared --filter @resume-forge/shell --filter @resume-forge/resume-mfe build
+pnpm --filter @resume-forge/shared typecheck
+git diff --check
+```
+
+The resume-MFE lint/build/tests were rerun after the pointer change; its final build includes the responsive section-toolbar CSS.
 
 ## A4 resume page and scroll controls — 2026-10-08
 

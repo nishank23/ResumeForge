@@ -1,5 +1,9 @@
 # F10 — Resume Dashboard
 
+## Saved label clarification — 2026-10-08
+
+Personal library rows are validated persisted records with a positive current version. Display their `draft` lifecycle as **Saved**, with a tooltip explaining that they can be reopened for editing. Keep generation/error states distinct and keep the saved version/update metadata authoritative. Unsaved edits belong to the open editor and do not change a library row until save succeeds. Saving is not a readiness/completion or ATS transition; no storage enum, migration or automatic `completed` mutation is introduced.
+
 ## Personal library slice — 2026-10-04
 
 Implemented actual owned list/create/open, title editing through editor Save changes, bounded 50-row pages, Load more, search/sort of loaded rows and honest saved-version/update metadata. Empty/loading/error/retry/no-match states replace sample rows. Dark/light desktop and 390px layout were checked. No readiness score, PDF action, clone/delete, version restoration or active/default selection is implied. Concurrent list mutation does not have snapshot pagination guarantees. Full F10 acceptance remains partial. [User checks](../../README.md#resume-library-upload-and-database-saves--2026-10-04).
@@ -56,3 +60,7 @@ Active/default resume is a per-actor, per-workspace preference. Setting it requi
 - [ ] Search/sort/pagination never disclose inaccessible titles or mix scopes, and reset appropriately when inputs change.
 - [ ] Rename/clone retries and concurrent saves do not corrupt versions; a clone can be edited without changing its source.
 - [ ] Active selection is isolated by actor/workspace and invalidated by deletion/revocation.
+
+## Confirmed deletion and PDF actions — 2026-10-08
+
+Rows now expose named Delete confirmation and a saved-version PDF action. Successful deletion tombstones the owned database resource, removes it from listing and denies load/save/create-retry/download. Failed or stale deletion preserves the row and reports the error. The latest deletion can be undone while the page remains open; restore preserves immutable content/version and sets draft status. Deletion and rendering share save's advisory lock and expected-version checks. No permanent version erasure, storage purge, cross-page trash UI or bulk operation is enabled. PDF scope is the personal owner stream in F09/D12. Remaining clone/history/default/global search/shared acceptance stays partial. [Manual verification](../../README.md#manual-deletion-and-download-check).

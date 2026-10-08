@@ -18,6 +18,8 @@ export interface ResumeDocumentProps {
   editable: boolean;
   onPending: (pending: boolean) => void;
   onSelect: (target: DraftTarget) => void;
+  onHover: (target: DraftTarget) => void;
+  onHoverExit: () => void;
   onEdit: (target: DraftTarget) => void;
   onActions: () => void;
   onInlineCommit: (
@@ -33,6 +35,8 @@ export function ResumeDocument({
   editable,
   onPending,
   onSelect,
+  onHover,
+  onHoverExit,
   onEdit,
   onActions,
   onInlineCommit,
@@ -51,7 +55,7 @@ export function ResumeDocument({
           "data-editor-target": JSON.stringify(target),
           className: `rf-paper-selectable${sameTarget(selected, target) ? " is-selected" : ""}${hidden ? " is-hidden" : ""}`,
           onMouseEnter: () => {
-            onSelect(target);
+            onHover(target);
           },
           onClick: (event) => {
             event.stopPropagation();
@@ -116,10 +120,12 @@ export function ResumeDocument({
   return (
     <article
       className="rf-resume-document"
+      onMouseLeave={onHoverExit}
       aria-label={`Resume for ${name || "unnamed person"}`}
     >
       <header
         {...headerProps}
+        data-editor-header
         className={`rf-resume-header ${headerProps.className ?? ""}`}
       >
         <h2>
@@ -225,7 +231,7 @@ export function ResumeDocument({
                   "data-skills-dialog": true,
                   className: `rf-paper-selectable rf-skills-clickable${sameTarget(selected, target) ? " is-selected" : ""}${section.hidden ? " is-hidden" : ""}`,
                   onMouseEnter: () => {
-                    onSelect(target);
+                    onHover(target);
                   },
                   onFocus: () => {
                     onSelect(target);
@@ -247,6 +253,7 @@ export function ResumeDocument({
             <section
               {...props}
               key={section.id}
+              data-editor-section={section.id}
               className={`rf-resume-section ${props.className ?? ""}`}
               aria-labelledby={
                 dialogOnly && editable ? undefined : `paper-${section.id}`
@@ -296,6 +303,7 @@ export function ResumeDocument({
                         <div
                           {...entryProps}
                           key={entry.id}
+                          data-editor-entry={entry.id}
                           className={`rf-resume-entry ${entryProps.className ?? ""}`}
                         >
                           <div className="rf-resume-entry-heading">

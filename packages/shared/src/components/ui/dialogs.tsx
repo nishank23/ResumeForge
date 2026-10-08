@@ -185,6 +185,7 @@ export interface ConfirmDeleteDialogProps {
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
   readonly loading?: boolean;
+  readonly error?: string;
   readonly onConfirm: () => void;
 }
 
@@ -197,6 +198,7 @@ export function ConfirmDeleteDialog({
   confirmLabel = "Delete permanently",
   cancelLabel = "Cancel",
   loading = false,
+  error,
   onConfirm,
 }: ConfirmDeleteDialogProps) {
   const baseId = useId();
@@ -254,6 +256,11 @@ export function ConfirmDeleteDialog({
           </div>
         </div>
 
+        {error ? (
+          <p role="alert" className="mt-4 text-sm text-[var(--destructive)]">
+            {error}
+          </p>
+        ) : null}
         <div className="mt-6 flex justify-end gap-3">
           <Button
             variant="outline"
@@ -423,6 +430,7 @@ export type StatusBannerTone = "info" | "success" | "warning" | "error";
 
 export interface StatusBannerProps extends HTMLAttributes<HTMLDivElement> {
   readonly tone?: StatusBannerTone;
+  readonly showToneLabel?: boolean;
   readonly title: string;
   readonly description?: string;
   readonly onDismiss?: () => void;
@@ -437,6 +445,7 @@ const TONE_LABELS: Record<StatusBannerTone, string> = {
 
 export function StatusBanner({
   tone = "info",
+  showToneLabel = true,
   title,
   description,
   onDismiss,
@@ -486,9 +495,11 @@ export function StatusBanner({
         />
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              {TONE_LABELS[tone]}
-            </span>
+            {showToneLabel ? (
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                {TONE_LABELS[tone]}
+              </span>
+            ) : null}
             <p className="text-sm font-semibold text-[var(--foreground)]">
               {title}
             </p>

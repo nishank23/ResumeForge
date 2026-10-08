@@ -13,9 +13,13 @@ export function createGatewayApp(request: typeof fetch = fetch) {
     "/api/v1/*",
     cors({
       origin: "http://localhost:3000",
-      allowMethods: ["GET", "POST", "PUT"],
+      allowMethods: ["GET", "POST", "PUT", "DELETE"],
       allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
-      exposeHeaders: ["X-Request-Id"],
+      exposeHeaders: [
+        "X-Request-Id",
+        "X-Resume-Version",
+        "Content-Disposition",
+      ],
     }),
   );
   app.get("/api/v1/health", (c) =>
@@ -30,7 +34,9 @@ export function createGatewayApp(request: typeof fetch = fetch) {
   app.put("/api/v1/profile/draft", proxy);
   app.on(["GET", "POST"], "/api/v1/resume", proxy);
   app.post("/api/v1/resume/parse", proxy);
-  app.on(["GET", "PUT"], "/api/v1/resume/:id", proxy);
+  app.on(["GET", "PUT", "DELETE"], "/api/v1/resume/:id", proxy);
+  app.post("/api/v1/resume/:id/restore", proxy);
+  app.get("/api/v1/resume/:id/pdf", proxy);
   async function proxy(c: Context) {
     const origin = c.req.header("Origin");
     if (origin && origin !== "http://localhost:3000")
@@ -59,14 +65,29 @@ export function createGatewayApp(request: typeof fetch = fetch) {
             ? {}
             : { body: c.req.raw.body, duplex: "half" }),
           redirect: "manual",
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(
+            c.req.path.endsWith("/pdf") ? 30_000 : 10_000,
+          ),
         },
       );
       const responseHeaders = new Headers({
-        "Content-Type": "application/json",
+        "Content-Type":
+          c.req.path.endsWith("/pdf") && upstream.ok
+            ? "application/pdf"
+            : "application/json",
         "Cache-Control": "no-store",
         "Referrer-Policy": "no-referrer",
       });
+      if (c.req.path.endsWith("/pdf") && upstream.ok) {
+        for (const name of [
+          "Content-Disposition",
+          "X-Resume-Version",
+          "X-Content-Type-Options",
+        ]) {
+          const value = upstream.headers.get(name);
+          if (value) responseHeaders.set(name, value);
+        }
+      }
       const requestId = upstream.headers.get("X-Request-Id");
       if (requestId) responseHeaders.set("X-Request-Id", requestId);
       return new Response(upstream.body, {
@@ -77,7 +98,9 @@ export function createGatewayApp(request: typeof fetch = fetch) {
       return c.json(
         {
           error: {
-            code: c.req.path.startsWith("/api/v1/resume") ? "resume_unavailable" : "profile_unavailable",
+            code: c.req.path.startsWith("/api/v1/resume")
+              ? "resume_unavailable"
+              : "profile_unavailable",
             message: "Service is temporarily unavailable.",
           },
         },

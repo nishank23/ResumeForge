@@ -899,6 +899,20 @@
   max-width: 440px;
   width: calc(100% - 40px);
 }
+.rf-editor-toast > [role="status"],
+.rf-editor-toast > [role="alert"],
+.rf-editor-toast > [role] > div {
+  align-items: center;
+}
+.rf-editor-toast > [role] > div {
+  min-width: 0;
+}
+.rf-editor-toast > [role] > div > svg {
+  margin-top: 0;
+}
+.rf-editor-toast > [role] > button {
+  flex-shrink: 0;
+}
 .rf-discard-notice {
   border: 1px solid var(--warning);
   padding: 12px;
@@ -1175,11 +1189,6 @@
     right: auto;
   }
   .rf-floating-actions {
-    position: fixed;
-    left: 12px !important;
-    right: 12px;
-    top: auto !important;
-    bottom: 12px;
     max-width: calc(100% - 24px);
     justify-content: center;
     flex-wrap: wrap;
@@ -1191,9 +1200,6 @@
   .rf-floating-actions button {
     min-height: 44px;
   }
-  .rf-paper-stage {
-    padding-bottom: 110px;
-  }
   .rf-editor-toast {
     bottom: 80px;
   }
@@ -1202,14 +1208,11 @@
   .rf-editor-toast {
     bottom: 130px;
   }
-  .rf-paper-stage {
-    padding-bottom: 150px;
-  }
 }
 .rf-floating-actions[hidden] {
   display: none;
 }
-/* Hover changes only the outline; section-footer actions never reflow the paper. */
+/* Hover changes only the outline; contextual actions never reflow the paper. */
 .rf-paper-selectable:hover:has(.rf-paper-selectable:hover) {
   outline: none;
 }
@@ -1383,27 +1386,6 @@
   color: var(--muted-foreground);
   font-size: 11px;
 }
-.rf-page-view-controls > div {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.rf-page-view-controls button {
-  padding: 7px 9px;
-  min-height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-}
-.rf-page-view-controls button[aria-pressed="true"] {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-.rf-page-view-controls output {
-  min-width: 36px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
 .rf-page-viewport {
   width: 100%;
   overflow-x: auto;
@@ -1470,33 +1452,15 @@
   font-size: 12px;
   margin-bottom: 12px;
 }
-/* Selection actions stay outside the sheet, so editing adds no printable gaps. */
-@media (min-width: 761px) {
-  .rf-editor-bar > .rf-floating-actions {
-    position: relative;
-    inset: auto;
-    flex-wrap: wrap;
-    width: max-content;
-    max-width: 100%;
-    margin-right: auto;
-  }
-  .rf-editor-bar .rf-floating-target {
-    position: static;
-    width: auto;
-    height: auto;
-    max-width: 180px;
-    clip-path: none;
-    text-overflow: ellipsis;
-    font-size: 11px;
-    padding-inline: 6px;
-  }
-}
-@media (max-width: 760px) {
-  .rf-page-view-controls button {
-    min-height: 44px;
-  }
+/* The overlay follows the selected entry or section, independently of paper and header flow. */
+.rf-document-container > .rf-floating-actions {
+  transform: translateX(-50%);
+  width: max-content;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 @media print {
+  .rf-floating-actions,
   .rf-page-view-controls,
   .rf-page-overflow {
     display: none;

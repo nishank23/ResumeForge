@@ -306,7 +306,7 @@ test("owned editor persistence through client, gateway, service and restricted P
       },
     );
     await t.test(
-      "gateway keeps AI, direct import, deletion and sharing disconnected",
+      "gateway keeps AI, direct import and sharing disconnected",
       async () => {
         for (const path of [
           "/api/v1/resume/import",
@@ -323,7 +323,7 @@ test("owned editor persistence through client, gateway, service and restricted P
               method: "DELETE",
             })
           ).status,
-          404,
+          401,
         );
       },
     );
@@ -339,6 +339,142 @@ test("owned editor persistence through client, gateway, service and restricted P
           await owner.userProfile.count({ where: { userId: bob.id } }),
           0,
         );
+      },
+    );
+    await t.test(
+      "saved PDF traverses client/gateway/service; owner/version checks and private audit",
+      async () => {
+        saved = await a.load(saved.id);
+        const bytes = await a.download(saved.id, saved.currentVersion);
+        assert.equal(await bytes.slice(0, 5).text(), "%PDF-");
+        await assert.rejects(
+          b.download(saved.id, saved.currentVersion),
+          (e) => e.code === "not_found",
+        );
+        await assert.rejects(
+          a.download(saved.id, 1),
+          (e) => e.code === "revision_conflict",
+        );
+        for (const query of [
+          "version=0",
+          "version=3&version=3",
+          "version=3&token=private",
+          "",
+        ]) {
+          const response = await app.request(
+            `/api/v1/resume/${saved.id}/pdf?${query}`,
+            { headers: { Authorization: "Bearer alice" } },
+          );
+          assert.equal(response.status, 422);
+        }
+        const events = await owner.auditOutbox.findMany();
+        assert.ok(
+          events.some((e) => JSON.stringify(e).includes("resume.downloaded")),
+        );
+        assert.ok(!JSON.stringify(events).includes("User supplied fact"));
+      },
+    );
+    await t.test(
+      "confirmed recoverable deletion survives reads; stale/foreign writes fail; Undo preserves immutable versions",
+      async () => {
+        const r = await a.create(randomUUID(), blankResume("Deletion Check"));
+        await assert.rejects(b.remove(r.id, 1), (e) => e.code === "not_found");
+        await assert.rejects(b.restore(r.id, 1), (e) => e.code === "not_found");
+        await assert.rejects(
+          a.remove(r.id, 2),
+          (e) => e.code === "revision_conflict",
+        );
+        const before = await owner.resumeVersion.count({
+          where: { resumeId: r.id },
+        });
+        const malformed = await app.request(`/api/v1/resume/${r.id}`, {
+          method: "DELETE",
+          headers: { Authorization: "Bearer alice" },
+          body: "{",
+        });
+        assert.equal(malformed.status, 422);
+        await a.remove(r.id, 1);
+        await a.remove(r.id, 1);
+        assert.ok(
+          !(await client("alice").list()).some((row) => row.id === r.id),
+        );
+        await assert.rejects(a.load(r.id), (e) => e.code === "not_found");
+        await assert.rejects(
+          a.save(r.id, 1, blankResume()),
+          (e) => e.code === "not_found",
+        );
+        await assert.rejects(
+          a.create(r.id, blankResume()),
+          (e) => e.code === "not_found",
+        );
+        await assert.rejects(
+          a.download(r.id, 1),
+          (e) => e.code === "not_found",
+        );
+        const restored = await a.restore(r.id, 1);
+        assert.equal(restored.currentVersion, 1);
+        assert.equal(restored.status, "draft");
+        assert.equal(
+          await owner.resumeVersion.count({ where: { resumeId: r.id } }),
+          before,
+        );
+        assert.deepEqual(
+          fromResumeContent((await a.load(r.id)).content),
+          blankResume("Deletion Check"),
+        );
+        await a.remove(r.id, 1);
+      },
+    );
+    await t.test(
+      "deletion, saves and expiry during rendering deny retrieval and leave no successful download audit",
+      async () => {
+        const r = await a.create(randomUUID(), blankResume("Race Check"));
+        const context = {
+          actor: {
+            userId: alice.id,
+            personalWorkspaceId: alice.personalWorkspace.id,
+            expiresAt: Date.now() + 60000,
+          },
+          workspaceId: alice.personalWorkspace.id,
+          correlationId: randomUUID(),
+        };
+        const auditBefore = await owner.auditOutbox.count();
+        let release, started;
+        const start = new Promise((resolve) => (started = resolve));
+        const usecases = createResumeUseCases(runtime, Date.now, async () => {
+          started();
+          return new Promise((resolve) => (release = resolve));
+        });
+        const pending = usecases.downloadPdf(context, r.id, 1);
+        const rejected = assert.rejects(pending, (e) => e.code === "not_found");
+        await start;
+        await a.remove(r.id, 1);
+        release(new Uint8Array(Buffer.from("%PDF-")));
+        await rejected;
+        assert.equal(await owner.auditOutbox.count(), auditBefore + 1);
+        await a.restore(r.id, 1);
+        let now = Date.now();
+        const expired = createResumeUseCases(
+          runtime,
+          () => now,
+          async () => {
+            now = context.actor.expiresAt + 1;
+            return new Uint8Array(Buffer.from("%PDF-"));
+          },
+        );
+        await assert.rejects(
+          expired.downloadPdf(context, r.id, 1),
+          (e) => e.code === "unauthenticated",
+        );
+        const changed = createResumeUseCases(runtime, Date.now, async () => {
+          await a.save(r.id, 1, { ...blankResume(), title: "New save" });
+          return new Uint8Array(Buffer.from("%PDF-"));
+        });
+        await assert.rejects(
+          changed.downloadPdf(context, r.id, 1),
+          (e) => e.code === "revision_conflict",
+        );
+        await a.remove(r.id, 2);
       },
     );
     await t.test(

@@ -528,11 +528,42 @@ export function AtsPanel() {
   );
   return (
     <div className="rf-service-tools">
-      <div className="rf-readiness">
-        <h3>Readiness rating</h3>
-        <strong>Not evaluated</strong>
-        <p>No ATS evaluation has been run for this local draft.</p>
-      </div>
+      <section
+        className="rf-ats-readiness"
+        aria-labelledby="rf-ats-meter-heading"
+      >
+        <div className="rf-ats-meter-heading">
+          <h3 id="rf-ats-meter-heading">Resume readiness</h3>
+          <span className="rf-ats-status">Not evaluated</span>
+        </div>
+        <div className="rf-ats-score-value" aria-label="ATS score unavailable">
+          <span aria-hidden="true">—</span>
+          <span> / 100</span>
+        </div>
+        <div
+          className="rf-ats-scale"
+          role="img"
+          aria-label="ATS score not evaluated. Scale from 0 to 100."
+        >
+          <div className="rf-ats-track" />
+          <div className="rf-ats-ticks" aria-hidden="true">
+            {[0, 25, 50, 75, 100].map((tick) => (
+              <span key={tick}>{tick}</span>
+            ))}
+          </div>
+        </div>
+        <p id="rf-ats-unavailable">
+          Your resume has no score yet. ATS evaluation is not available yet.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled
+          aria-describedby="rf-ats-unavailable"
+        >
+          Run ATS check
+        </Button>
+      </section>
       <h3>Suggested actions</h3>
       <div className="rf-issue-filters" aria-label="Suggested action status">
         {(["Pending", "Completed", "Deleted"] as const).map((name) => (
@@ -551,8 +582,8 @@ export function AtsPanel() {
       <div className="rf-panel-empty" role="status">
         <strong>{filter} actions unavailable</strong>
         <p>
-          Saved resume versions and the scoring service are required. No scores
-          or completed actions are simulated.
+          Suggestions will appear after an ATS evaluation. Your saved resume
+          content stays unchanged.
         </p>
       </div>
     </div>

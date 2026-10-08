@@ -4,9 +4,13 @@
 
 The requested personal resume integration is now connected: no profile setup gate, owned library, blank creation, authenticated file review and immutable version saves. Use the [README manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04) before adding another slice. Reproducible installation, fixed gateway routing, a strict lossless editor mapping and an approved restricted resume runtime role resolve the corresponding historical blockers below for this personal flow. Workspace business service remains stopped; its separate startup conflicts are not resolved globally.
 
-Next useful work is reviewed extraction/master-profile derivation or remaining resume management. Real AI must wait for grounding, persisted suggestion binding and provider checks. ATS/PDF/shared activation still needs its own policy and integration acceptance. Existing endpoints alone do not justify more API surface.
+Next useful work is reviewed extraction/master-profile derivation or remaining resume management. Real AI must wait for grounding, persisted suggestion binding and provider checks. Personal owner PDF downloads and confirmed recoverable deletion are connected as of 2026-10-08. ATS, shared activation and the full durable PDF pipeline still need their own policy and integration acceptance. Existing endpoints alone do not justify more API surface.
 
-Search/sort cover loaded 50-row pages, not global server search. File review is local PDF/DOCX/TXT/MD with limits; full F19 private staging/provenance/OCR remains pending. Private owner-only resume header snapshots are stored without writing UserContact or master professional fields; D12 shared/export variants remain unresolved. LinkedIn needs credentials.
+Search/sort cover loaded 50-row pages, not global server search. File review is local PDF/DOCX/TXT/MD with limits; full F19 private staging/provenance/OCR remains pending. Private owner-only resume header snapshots are stored without writing UserContact or master professional fields; D12 permits current-version personal owner PDF streams; shared/contact-free variants remain unresolved. LinkedIn needs credentials.
+
+## Saved resume management — 2026-10-08
+
+Connected DELETE `/api/v1/resume/:id` with `{ expectedVersion }`, POST `/:id/restore` with the same version guard, and GET `/:id/pdf?version=N`. Deletion is a retained tombstone; PDF uses the latest immutable saved editor version. No database grants were expanded. The browser must confirm a reviewed upload/save before downloading. [Current manual checks and limits](../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
 
 ## Historical baseline assessment
 

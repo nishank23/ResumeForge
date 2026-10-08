@@ -1,6 +1,6 @@
 # F09 — PDF Export and R2 Storage
 
-**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Not started
+**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Partial — personal saved-version stream implemented; durable R2/shared pipeline pending
 
 ## Goal and dependencies
 
@@ -48,3 +48,9 @@ F20 extends export identity with versioned render settings, font/renderer versio
 ## Requested editor export control — 2026-10-03
 
 The user explicitly requests **Export PDF** in the compact Editor/Preview toolbar. The [frontend editor plan](../../docs/frontend-editor-plan.md) adds its pending acceptance criteria: explain unavailability before the real pipeline exists, identify the saved version, resolve unsaved changes explicitly, show preparing/ready/error/retry states, and preserve exact-version/privacy rendering. No fake download, browser-print substitute or export of unapplied proposals. Hidden sections, editor controls, ATS panels and placeholders never enter output. F09/D10/D12 dependencies remain open; this documentation does not implement export.
+
+## Personal saved-version stream — 2026-10-08
+
+The explicit owner-download request enables an authenticated PDF stream for the latest saved immutable editor version. Both library and editor use the same route; unsaved edits must be saved first. Server rendering checks personal workspace ownership, resume.download scope, version and expiry before and after rendering, with sanitized successful retrieval audit. Hidden content, source text, empty placeholders and app controls are excluded. A4 text pagination preserves supported facts; glyph errors fail visibly. Renderer and HTML preview are separate, so wrapping can differ. Local worker limits and font fallbacks are documented in the [README](../../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
+
+No PDF is stored, cached or published to R2. Export is owner-only and current-version-only; shared/contact-free variants, durable jobs, checksums/object identity, retained artifact history and purge remain unimplemented. Full F09 acceptance above stays open. D12 explicitly records this bounded personal export decision.

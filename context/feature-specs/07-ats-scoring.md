@@ -62,3 +62,7 @@ Use an **ATS Score** tool panel beside the document with **Readiness Rating**, *
 - [ ] Completing a manual edit alone cannot mark a rule resolved; dismiss/restore preserve immutable evidence and score math.
 
 UI fixtures may be explicitly synthetic; actual readiness/scoring and issue persistence are not implemented by this requirements update.
+
+## Frontend meter implementation — 2026-10-08
+
+The ATS tool panel now shows an original calibrated 0–100 scale with an unavailable score, Not evaluated status, disabled Run ATS check and honest action-filter empty states. This implements presentation only, without adding rating thresholds, rubric weights, counts, issue lifecycle or scoring calls. F07 acceptance remains incomplete until authenticated/version-bound evaluation and freshness handling are connected. [Frontend verification](../../README.md#editor-sidebar-ats-meter-and-section-actions--2026-10-08).

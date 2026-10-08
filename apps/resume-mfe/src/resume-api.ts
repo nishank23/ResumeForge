@@ -303,6 +303,18 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
     fromResumeContent(content);
     return { ...row(data, workspaceId), content };
   }
+  function savedTarget(id: string, version: number) {
+    if (
+      !uuid.test(id) ||
+      !Number.isSafeInteger(version) ||
+      version < 1 ||
+      version > 999999999
+    )
+      throw new ResumeApiError(
+        "invalid_input",
+        "Choose a saved resume version.",
+      );
+  }
   return {
     list: async (signal?: AbortSignal, cursor?: string) => {
       const data = await call(
@@ -353,6 +365,78 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
           },
         }),
       ),
+    remove: async (id: string, version: number) => {
+      savedTarget(id, version);
+      const result = record(
+        await call(`/api/v1/resume/${id}`, "DELETE", {
+          expectedVersion: version,
+        }),
+      );
+      if (result.deleted !== true || result.id !== id)
+        throw new ResumeApiError(
+          "invalid_response",
+          "Deletion could not be confirmed. Refresh your library.",
+        );
+    },
+    restore: async (id: string, version: number) => {
+      savedTarget(id, version);
+      return detail(
+        await call(`/api/v1/resume/${id}/restore`, "POST", {
+          expectedVersion: version,
+        }),
+      );
+    },
+    download: async (id: string, version: number) => {
+      savedTarget(id, version);
+      let response: Response;
+      try {
+        response = await request(
+          `/api/v1/resume/${id}/pdf?version=${String(version)}`,
+          { headers: { "X-Workspace-Id": workspaceId } },
+        );
+      } catch {
+        throw new ResumeApiError(
+          "unavailable",
+          "Could not download PDF. Retry when the service is available.",
+        );
+      }
+      if (!response.ok) {
+        const error = record(
+          record(await response.json().catch(() => null)).error,
+        );
+        const code = str(error.code);
+        throw new ResumeApiError(
+          code,
+          code === "revision_conflict"
+            ? "A newer saved version exists. Refresh your library or reopen this resume before downloading."
+            : code === "not_found"
+              ? "This resume is no longer available."
+              : code === "invalid_input"
+                ? "PDF could not render this saved resume. Check its characters, then save again."
+                : "Could not prepare PDF. Your saved resume is unchanged; retry.",
+        );
+      }
+      if (
+        response.headers.get("Content-Type")?.split(";")[0] !==
+          "application/pdf" ||
+        response.headers.get("X-Resume-Version") !== String(version)
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "The downloaded file did not match this saved version.",
+        );
+      const blob = await response.blob();
+      if (
+        !blob.size ||
+        blob.size > 15 * 1024 * 1024 ||
+        (await blob.slice(0, 5).text()) !== "%PDF-"
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "The downloaded PDF could not be read. Retry.",
+        );
+      return blob;
+    },
     parse: async (file: File) => {
       const extensions: Record<string, string> = {
         pdf: "application/pdf",

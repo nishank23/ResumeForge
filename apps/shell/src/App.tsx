@@ -39,7 +39,7 @@ import {
   ProtectedRoute,
   SignInRoute,
 } from "./SessionRoutes";
-import { sessionRouteKey } from "./routing";
+import { isResumeWorkspace, sessionRouteKey } from "./routing";
 
 function createRetryableLazy<P extends object>(
   factory: () => Promise<{ default: React.ComponentType<P> }>,
@@ -145,9 +145,7 @@ function WorkspaceShell() {
             : location.pathname === "/sign-in"
               ? "Welcome"
               : "My resumes";
-  const isResumeEditor =
-    /^\/w\/[^/]+\/resumes\/[^/]+$/.test(location.pathname) &&
-    !location.pathname.endsWith("/new");
+  const isResumeEditor = isResumeWorkspace(location.pathname);
   const remote = (
     name: "auth" | "profile" | "resume",
     child: React.ReactNode,
@@ -165,143 +163,147 @@ function WorkspaceShell() {
   );
   return (
     <div
-      className={`rf-workspace ${isResumeEditor ? "rf-workspace-editor" : ""} ${sidebarCollapsed ? "rf-workspace-collapsed" : ""}`}
+      className={`rf-workspace ${isResumeEditor ? "rf-workspace-editor" : ""} ${sidebarCollapsed && !isResumeEditor ? "rf-workspace-collapsed" : ""}`}
       data-shell-root="resume-forge"
       data-react-version={React.version}
     >
       <a href="#main-content" className="rf-skip">
         Skip to main content
       </a>
-      <aside id="workspace-sidebar" className="rf-sidebar rf-app-chrome">
-        <Link
-          className="rf-brand"
-          to="/"
-          aria-label="resume-forge home"
-          title={sidebarCollapsed ? "resume-forge home" : undefined}
-        >
-          <span className="rf-brand-mark">
-            <FileText size={21} aria-hidden="true" />
-          </span>
-          <span className="rf-brand-text">
-            resume-forge<span className="rf-brand-dot">.</span>
-          </span>
-        </Link>
-        <Button
-          variant="ghost"
-          className="rf-sidebar-toggle"
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!sidebarCollapsed}
-          aria-controls="workspace-sidebar"
-          onClick={() => {
-            setSidebarCollapsed((value) => !value);
-          }}
-        >
-          {sidebarCollapsed ? (
-            <PanelLeftOpen size={19} aria-hidden="true" />
-          ) : (
-            <PanelLeftClose size={19} aria-hidden="true" />
-          )}
-          <span className="rf-sidebar-toggle-label">Collapse sidebar</span>
-        </Button>
-        <div className="rf-workspace-label" title="Personal workspace">
-          <span className="rf-avatar">P</span>
-          <div>
-            <strong>Personal workspace</strong>
-            <span>Make your experience count</span>
-          </div>
-        </div>
-        <button
-          className="rf-mobile-menu"
-          aria-expanded={menuOpen}
-          aria-controls="workspace-nav"
-          onClick={() => {
-            setMenuOpen(!menuOpen);
-          }}
-          aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </button>
-        <nav
-          id="workspace-nav"
-          className={`rf-nav ${menuOpen ? "is-open" : ""}`}
-          aria-label="Workspace navigation"
-        >
-          {session.status === "authenticated" ? (
-            items.map((item) => (
-              <Link
-                key={item.path}
-                onClick={() => {
-                  setMenuOpen(false);
-                }}
-                to={item.path}
-                aria-label={item.label}
-                title={sidebarCollapsed ? item.label : undefined}
-                aria-current={
-                  location.pathname.startsWith(item.path) ? "page" : undefined
-                }
-              >
-                <item.icon size={19} aria-hidden="true" />
-                <span className="rf-nav-label">{item.label}</span>
-              </Link>
-            ))
-          ) : (
-            <Link
-              to="/sign-in"
-              aria-label="Sign in"
-              title={sidebarCollapsed ? "Sign in" : undefined}
-            >
-              <UserRound size={19} aria-hidden="true" />
-              <span className="rf-nav-label">Sign in</span>
-            </Link>
-          )}
-          {session.status === "authenticated" ? (
-            <Link
-              to={`${prefix}/settings`}
-              aria-label="Preferences"
-              title={sidebarCollapsed ? "Preferences" : undefined}
-              aria-current={current === "Preferences" ? "page" : undefined}
-            >
-              <Settings size={19} aria-hidden="true" />
-              <span className="rf-nav-label">Preferences</span>
-            </Link>
-          ) : null}
-        </nav>
-        <div className="rf-sidebar-bottom">
-          <div className="rf-preview-note">
-            <span className="rf-status-dot" />
-            Personal workspace
-            <p>
-              Upload your resume, edit your experience, and save your work.
-            </p>
-          </div>
+      {!isResumeEditor ? (
+        <aside id="workspace-sidebar" className="rf-sidebar rf-app-chrome">
           <Link
-            className="rf-account"
-            to="/sign-in"
-            aria-label="Account and sign-in"
-            title={sidebarCollapsed ? "Account and sign-in" : undefined}
+            className="rf-brand"
+            to="/"
+            aria-label="resume-forge home"
+            title={sidebarCollapsed ? "resume-forge home" : undefined}
           >
-            <span className="rf-avatar">
-              {session.status === "authenticated" ? "✓" : "G"}
+            <span className="rf-brand-mark">
+              <FileText size={21} aria-hidden="true" />
             </span>
-            <span>
-              {session.status === "authenticated"
-                ? (session.identity.name ?? "Signed in")
-                : session.status === "loading"
-                  ? "Checking session…"
-                  : session.status === "error"
-                    ? "Session unavailable"
-                    : "Signed out"}
-              <small>
-                {session.status === "authenticated"
-                  ? "Signed in · Personal workspace"
-                  : "Sign in to open your workspace"}
-              </small>
+            <span className="rf-brand-text">
+              resume-forge<span className="rf-brand-dot">.</span>
             </span>
-            <ArrowRight size={16} aria-hidden="true" />
           </Link>
-        </div>
-      </aside>
+          <Button
+            variant="ghost"
+            className="rf-sidebar-toggle"
+            aria-label={
+              sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="workspace-sidebar"
+            onClick={() => {
+              setSidebarCollapsed((value) => !value);
+            }}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen size={19} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={19} aria-hidden="true" />
+            )}
+            <span className="rf-sidebar-toggle-label">Collapse sidebar</span>
+          </Button>
+          <div className="rf-workspace-label" title="Personal workspace">
+            <span className="rf-avatar">P</span>
+            <div>
+              <strong>Personal workspace</strong>
+              <span>Make your experience count</span>
+            </div>
+          </div>
+          <button
+            className="rf-mobile-menu"
+            aria-expanded={menuOpen}
+            aria-controls="workspace-nav"
+            onClick={() => {
+              setMenuOpen(!menuOpen);
+            }}
+            aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+          >
+            {menuOpen ? <X /> : <Menu />}
+          </button>
+          <nav
+            id="workspace-nav"
+            className={`rf-nav ${menuOpen ? "is-open" : ""}`}
+            aria-label="Workspace navigation"
+          >
+            {session.status === "authenticated" ? (
+              items.map((item) => (
+                <Link
+                  key={item.path}
+                  onClick={() => {
+                    setMenuOpen(false);
+                  }}
+                  to={item.path}
+                  aria-label={item.label}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  aria-current={
+                    location.pathname.startsWith(item.path) ? "page" : undefined
+                  }
+                >
+                  <item.icon size={19} aria-hidden="true" />
+                  <span className="rf-nav-label">{item.label}</span>
+                </Link>
+              ))
+            ) : (
+              <Link
+                to="/sign-in"
+                aria-label="Sign in"
+                title={sidebarCollapsed ? "Sign in" : undefined}
+              >
+                <UserRound size={19} aria-hidden="true" />
+                <span className="rf-nav-label">Sign in</span>
+              </Link>
+            )}
+            {session.status === "authenticated" ? (
+              <Link
+                to={`${prefix}/settings`}
+                aria-label="Preferences"
+                title={sidebarCollapsed ? "Preferences" : undefined}
+                aria-current={current === "Preferences" ? "page" : undefined}
+              >
+                <Settings size={19} aria-hidden="true" />
+                <span className="rf-nav-label">Preferences</span>
+              </Link>
+            ) : null}
+          </nav>
+          <div className="rf-sidebar-bottom">
+            <div className="rf-preview-note">
+              <span className="rf-status-dot" />
+              Personal workspace
+              <p>
+                Upload your resume, edit your experience, and save your work.
+              </p>
+            </div>
+            <Link
+              className="rf-account"
+              to="/sign-in"
+              aria-label="Account and sign-in"
+              title={sidebarCollapsed ? "Account and sign-in" : undefined}
+            >
+              <span className="rf-avatar">
+                {session.status === "authenticated" ? "✓" : "G"}
+              </span>
+              <span>
+                {session.status === "authenticated"
+                  ? (session.identity.name ?? "Signed in")
+                  : session.status === "loading"
+                    ? "Checking session…"
+                    : session.status === "error"
+                      ? "Session unavailable"
+                      : "Signed out"}
+                <small>
+                  {session.status === "authenticated"
+                    ? "Signed in · Personal workspace"
+                    : "Sign in to open your workspace"}
+                </small>
+              </span>
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
+        </aside>
+      ) : null}
       <div className="rf-workspace-body">
         <header className="rf-topbar rf-app-chrome">
           <span>

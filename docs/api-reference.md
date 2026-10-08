@@ -71,6 +71,13 @@ Document bodies are bounded to 2,000,000 bytes. Parse transport allows 15,000,00
 
 ## Resume service
 
+### Enabled personal deletion and PDF transport — 2026-10-08
+
+Current local gateway routes are `/api/v1/resume/:id` DELETE with strict `{ expectedVersion: positiveInteger }`, `/api/v1/resume/:id/restore` POST with that same body, and `/api/v1/resume/:id/pdf?version=N` GET with exactly one positive bounded version query. Each requires authenticated personal workspace ownership; the workspace header is only a selector. DELETE tombstones the row and invalidates its artifact key; POST restores draft status with unchanged immutable content/version. Wrong owner/deleted reads return 404, stale versions 409, malformed input 422, unavailable rendering/audit 503. Deleted resources cannot save, download or be recreated by retrying creation. No physical purge is enabled.
+
+PDF GET accepts only the current saved editor version, rechecks actor/resource/version after rendering, and captures a sanitized `resume.downloaded` event with the immutable version ID. It returns `application/pdf`, attachment filename, `X-Resume-Version`, `nosniff`, and `Cache-Control: no-store`. Errors remain JSON. The gateway exposes only those necessary attachment/version headers to the shell, strips upstream cookies, and preserves no-store. PDF transport timeout is 30 seconds; renderer timeout is 25 seconds. D12 authorizes resume-local contacts for this personal-owner stream; shared/contact-free variants stay unavailable. The older `/download` formats and broader planned table below are not enabled in the personal gateway. [Current export limits](../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
+
+
 | Method | Path                   | Contract / permission                                                                                               |
 | ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/jd/parse`            | profileId + bounded rawJD → saved parsed JD; profile access and `resume.create` in this draft                       |

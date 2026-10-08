@@ -1,3 +1,5 @@
+import { editorDocumentSchema } from "@resume-forge/shared-types";
+import { renderSavedResumePdf } from "./pdf.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { authorizePersonalScope } from "@resume-forge/access-policy";
@@ -85,7 +87,11 @@ function toStringArray(val: unknown): string[] {
   return Array.isArray(val) ? (val as string[]) : [];
 }
 
-export function createResumeUseCases(db: Database, now = Date.now) {
+export function createResumeUseCases(
+  db: Database,
+  now = Date.now,
+  renderPdf = renderSavedResumePdf,
+) {
   function assertContext(context: ResumeServiceContext) {
     if (
       !resolvedActorSchema.safeParse(context.actor).success ||
@@ -127,6 +133,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       | "resume.read"
       | "resume.update"
       | "resume.delete"
+      | "resume.download"
       | "skillgap.analyze"
       | "ats.run"
       | "ats.view",
@@ -412,6 +419,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
     const resume = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -459,6 +467,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     const boundary = cursor
       ? await db.resume.findFirst({
           where: {
+            status: { not: "deleted" },
             id: cursor,
             ownerUserId: context.actor.userId,
             workspaceId: context.actor.personalWorkspaceId,
@@ -469,6 +478,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     if (cursor && !boundary) throw new ResumeError("not_found");
     const resumes = await db.resume.findMany({
       where: {
+        status: { not: "deleted" },
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
       },
@@ -537,6 +547,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
+            status: { not: "deleted" },
             id: resumeId,
             ownerUserId: context.actor.userId,
             workspaceId: context.actor.personalWorkspaceId,
@@ -624,6 +635,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
+            status: { not: "deleted" },
             id: resumeId,
             ownerUserId: context.actor.userId,
             workspaceId: context.actor.personalWorkspaceId,
@@ -643,6 +655,150 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     );
 
     return { deleted: true, id: resumeId };
+  }
+
+  /** Reversible personal deletion uses existing UPDATE grants; history is immutable. */
+  async function removeResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: unknown,
+  ) {
+    if (!z.string().uuid().safeParse(resumeId).success)
+      throw new ResumeError("invalid_input");
+    const parsed = z
+      .object({ expectedVersion: z.number().int().positive() })
+      .strict()
+      .safeParse(input);
+    if (!parsed.success) throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "resume.delete");
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      createAuditIntent(context, "resume.deleted", resumeId, {
+        status: "deleted",
+      }),
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
+        const existing = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+        });
+        if (!existing) throw new ResumeError("not_found");
+        if (existing.currentVersion !== parsed.data.expectedVersion)
+          throw new ResumeError("revision_conflict");
+        await tx.resume.update({
+          where: { id: resumeId },
+          data: { status: "deleted", pdfR2Key: null },
+        });
+      },
+    );
+    return { deleted: true as const, id: resumeId };
+  }
+  async function restoreResume(
+    context: ResumeServiceContext,
+    resumeId: string,
+    input: unknown,
+  ) {
+    if (!z.string().uuid().safeParse(resumeId).success)
+      throw new ResumeError("invalid_input");
+    const parsed = z
+      .object({ expectedVersion: z.number().int().positive() })
+      .strict()
+      .safeParse(input);
+    if (!parsed.success) throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "resume.update");
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      createAuditIntent(context, "resume.updated", resumeId, {
+        status: "restored",
+      }),
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
+        const existing = await tx.resume.findFirst({
+          where: {
+            id: resumeId,
+            ownerUserId: context.actor.userId,
+            workspaceId: context.actor.personalWorkspaceId,
+          },
+        });
+        if (!existing) throw new ResumeError("not_found");
+        if (existing.currentVersion !== parsed.data.expectedVersion)
+          throw new ResumeError("revision_conflict");
+        if (existing.status === "deleted")
+          await tx.resume.update({
+            where: { id: resumeId },
+            data: { status: "draft" },
+          });
+      },
+    );
+    return getResumeById(context, resumeId);
+  }
+  async function downloadPdf(
+    context: ResumeServiceContext,
+    resumeId: string,
+    version: number,
+  ) {
+    if (
+      !z.string().uuid().safeParse(resumeId).success ||
+      !Number.isSafeInteger(version) ||
+      version < 1
+    )
+      throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "resume.download");
+    const where = {
+      id: resumeId,
+      ownerUserId: context.actor.userId,
+      workspaceId: context.actor.personalWorkspaceId,
+      status: { not: "deleted" },
+    };
+    const resume = await db.resume.findFirst({
+      where,
+      select: { id: true, currentVersion: true },
+    });
+    if (!resume) throw new ResumeError("not_found");
+    if (resume.currentVersion !== version)
+      throw new ResumeError("revision_conflict");
+    const snapshot = await db.resumeVersion.findUnique({
+      where: { resumeId_versionNumber: { resumeId, versionNumber: version } },
+    });
+    if (!snapshot) throw new ResumeError("not_found");
+    const content = snapshot.content as Record<string, unknown>;
+    const document = editorDocumentSchema.safeParse(content.editorDraft);
+    if (!document.success)
+      throw new ResumeError(
+        "invalid_input",
+        "Reopen and save this resume before downloading.",
+      );
+    const bytes = await renderPdf(document.data);
+    // Rendering happens outside the transaction. Deletion, edits or expiry during
+    // rendering must deny retrieval, without publishing a stale private artifact.
+    await authorizeWorkspace(context, "resume.download");
+    await withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      createAuditIntent(context, "resume.downloaded", resumeId, {
+        versionId: snapshot.id,
+        status: "succeeded",
+      }),
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
+        const current = await tx.resume.findFirst({
+          where,
+          select: { currentVersion: true },
+        });
+        if (!current) throw new ResumeError("not_found");
+        if (current.currentVersion !== version)
+          throw new ResumeError("revision_conflict");
+      },
+    );
+    const title =
+      document.data.title.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 100) ||
+      "Resume";
+    return { bytes, fileName: `${title}-v${String(version)}.pdf`, version };
   }
 
   /**
@@ -674,6 +830,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
       async (tx) => {
         const resume = await tx.resume.findFirst({
           where: {
+            status: { not: "deleted" },
             id: resumeId,
             ownerUserId: context.actor.userId,
             workspaceId: context.actor.personalWorkspaceId,
@@ -739,6 +896,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
     const resume = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -780,6 +938,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
     const source = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -1116,6 +1275,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     // Fetch existing resume
     const resume = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -1424,6 +1584,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
 
     const resume = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -1622,6 +1783,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${resumeId}))`;
         const existing = await tx.resume.findFirst({
           where: {
+            status: { not: "deleted" },
             id: resumeId,
             ownerUserId: context.actor.userId,
             workspaceId: context.actor.personalWorkspaceId,
@@ -1819,6 +1981,7 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     // Fetch resume with latest version
     const resume = await db.resume.findFirst({
       where: {
+        status: { not: "deleted" },
         id: resumeId,
         ownerUserId: context.actor.userId,
         workspaceId: context.actor.personalWorkspaceId,
@@ -1987,6 +2150,9 @@ export function createResumeUseCases(db: Database, now = Date.now) {
     listResumes,
     updateResume,
     deleteResume,
+    removeResume,
+    restoreResume,
+    downloadPdf,
     downloadResume,
     listResumeVersions,
     cloneResume,
