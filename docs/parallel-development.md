@@ -1,5 +1,18 @@
 # Frontend and backend development lanes
 
+## Current branch workflow — 2026-10-08
+
+The user requests one integration PR into `main`, deletion of the old remote frontend/backend branches after the merge, and a new `features` branch created from the merged main commit. Subsequent work uses `features` in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`; the directory name does not prescribe a branch prefix. Push `features` with an upstream to `origin/features`. Do not recreate the retired remote branches.
+
+Backend commits through `9e6157b` already belong to main via PR #2. The remaining backend checkout change is generated lockfile resolution: the release reconciles it with the newer frontend import dependencies, retaining Mammoth/PDF.js and the backend's typescript-eslint 8.71.0 resolutions. The backend checkout and its local edits stay intact; no switch/reset/removal is needed. Private configuration, PostgreSQL, ignored dependencies and user-supplied `check_resumes` inputs are excluded from the release.
+
+Existing ownership, policy and review boundaries remain. Scheduled frontend work verifies `features` and uses this worktree's task lock. Keep main for reviewed integration. New backend work needs a separately assigned branch and allowed paths; the old Gemini starting prompt below is historical and must not recreate a retired remote branch.
+
+## Historical two-lane setup — 2026-10-04
+
+
+**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04).
+
 The user selected a committed baseline, two branches and separate checkouts on 2026-10-04. Branches alone do not isolate simultaneous edits when agents share one working folder.
 
 ## Checkouts
@@ -62,3 +75,7 @@ review, integration and canonical tracker updates.
 Run `git branch --show-current`, `git status --short` and `git worktree list` in the original checkout. They verified `codex/frontend` here and `codex/backend` in the backend folder, with clean checkouts after sharing the workflow commit. The frontend's `pnpm task:status` and backend's dependency-free `node scripts/development-task.mjs status` both reported idle.
 
 In the fresh backend worktree, `pnpm task:status` attempted dependency setup and failed to create a virtual-store slot under the current sandbox (`ERR_PNPM_PACKAGE_MANAGER_CREATE_SLOT_DIR`). No tracked files changed. Install the locked dependencies with `pnpm install --frozen-lockfile` in the backend agent's authorized environment before package checks. The direct Node task helper does not require dependencies and verified state without installing them. Real backend behavior and combined integration are not yet tested by branch setup.
+
+## Personal runtime repair and worktree startup — 2026-10-04
+
+The latest user request authorizes sign-in repair. Existing primary-checkout runtime passwords/grants were reapplied; auth/profile now pass startup and the browser session restores. All active personal service code now runs from the named frontend worktree with `pnpm dev:personal`. Only the original checkout's ignored `.env`/`.local` files and existing PostgreSQL cluster remain authoritative. The launcher resolves that primary checkout or an explicit `RESUME_FORGE_LOCAL_ROOT`, without copying credentials. Do not run an independent role initializer against a competing worktree credential file: it overwrites cluster-global passwords. Future shared-role repair requires coordination and service restart; normal startup never repairs roles automatically. Resume/workspace business startup remains gated by the readiness report. The external backend checkout was not changed. [README](../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) has current commands and manual checks; older startup/password-block notes above are historical.

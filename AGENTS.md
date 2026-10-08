@@ -8,13 +8,13 @@ The user confirmed the context on 2026-09-29 ("I confirm everything"). **The con
 
 This project uses **Vite + React** microfrontends and **Hono** services. Follow the package boundaries, routing conventions, authentication model, and storage choices documented for resume-forge.
 
-## Frontend worktree — 2026-10-04
+## Active worktree and branch — 2026-10-08
 
-The user requests all new frontend work in the managed worktree named `frontend`: `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`, on `codex/frontend`. Use this absolute working directory for subsequent repository commands, edits, task claims and verification, including scheduled runs whose launcher still starts in the original folder. The original `/Users/nishankbansal/Downloads/ResumeBuilderv2` is detached at `0dc79ec` and retained for its existing local services; do not implement new work there. The backend checkout remains separate and untouched. This changes work location only, not feature scope or authorization gates.
+The user requests integration of all completed work into `main`, retirement of the old `origin/codex/frontend` and `origin/codex/backend` branches, then a new branch named `features` without an agent prefix. Use `features` for subsequent work in the existing managed worktree `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. This supersedes the previous active branch names; the worktree path remains unchanged. Use this absolute directory for commands, edits, task claims and checks, including scheduled runs launched from the original folder.
 
-## Frontend/backend branch ownership — 2026-10-04
+The original `/Users/nishankbansal/Downloads/ResumeBuilderv2` remains detached at `0dc79ec` and holds authoritative private configuration/database files. Do not implement there. Preserve the separate backend checkout and its local branch/changes; remote branch deletion does not authorize switching or deleting its checkout.
 
-The user selected separate frontend/backend branches after committing the current baseline. Follow [parallel development](docs/parallel-development.md) before work in either checkout. `codex/frontend` is the Codex frontend/integration lane; `codex/backend` is the external backend agent lane. Each checkout uses its own existing task marker/lock. A scheduled run on the frontend branch must not fall back to backend foundation work; leave idle when no approved frontend slice is unblocked. Never implement in `main`, switch another agent's checkout, or infer that worktrees remove API/database conflicts. Shared contracts, dependencies, migrations, the canonical tracker and integration remain single-owner Codex work. Backend agents record results in their own handoff document for integration into the tracker.
+Follow [branch workflow](docs/parallel-development.md) before work. A scheduled run must verify `features`, select only an approved frontend slice, and leave idle when its dependencies remain blocked. Never implement in `main`, recreate retired remote branches, switch another agent's checkout, or infer that worktrees isolate shared API/database changes. Task locks remain local to each checkout. Shared contracts, dependencies, migrations, tracker and integration remain single-owner work; any future backend assignment requires explicit branch/path ownership and a handoff.
 
 ## Read before working
 

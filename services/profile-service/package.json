@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "test": "node --test test/route.test.mjs",
-    "test:db": "node --test test/profile.test.mjs test/experience.test.mjs test/education.test.mjs test/skill.test.mjs test/project.test.mjs test/certification.test.mjs test/contact-and-deletions.test.mjs"
+    "test:db": "node --experimental-strip-types --test test/profile.test.mjs test/experience.test.mjs test/education.test.mjs test/skill.test.mjs test/project.test.mjs test/certification.test.mjs test/contact-and-deletions.test.mjs"
   },
   "dependencies": {
     "@resume-forge/access-policy": "workspace:*",

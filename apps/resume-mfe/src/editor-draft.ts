@@ -68,7 +68,7 @@ export interface DraftSection {
 }
 export interface ResumeDraft {
   appearance?: EditorAppearance;
-  synthetic: true;
+  synthetic: boolean;
   title: string;
   header: {
     firstName: string;
@@ -77,6 +77,7 @@ export interface ResumeDraft {
     city: string;
     state: string;
     country: string;
+    links?: DraftLink[];
   };
   sampleContact: { phone: string; email: string };
   sections: DraftSection[];

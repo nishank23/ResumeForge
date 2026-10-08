@@ -1,21 +1,20 @@
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { localProfileServiceKeySchema } from "@resume-forge/access-policy/server";
 
 export function loadProfileConfig() {
   try {
     if (process.env.NODE_ENV === "production") throw new Error();
+    const localRoot = process.env.RESUME_FORGE_LOCAL_ROOT
+      ? pathToFileURL(`${resolve(process.env.RESUME_FORGE_LOCAL_ROOT)}/`)
+      : new URL("../../../", import.meta.url);
     const database = parseEnv(
-      readFileSync(
-        new URL("../../../.local/runtime-database.env", import.meta.url),
-        "utf8",
-      ),
+      readFileSync(new URL(".local/runtime-database.env", localRoot), "utf8"),
     );
     const auth = parseEnv(
-      readFileSync(
-        new URL("../../../.local/auth-transport.env", import.meta.url),
-        "utf8",
-      ),
+      readFileSync(new URL(".local/auth-transport.env", localRoot), "utf8"),
     );
     const url = new URL(database.PROFILE_DATABASE_URL ?? "");
     if (

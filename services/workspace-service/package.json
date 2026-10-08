@@ -17,7 +17,8 @@
     "pg": "8.16.3",
     "hono": "^4.7.0",
     "@hono/node-server": "^1.13.7",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "@resume-forge/access-policy": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

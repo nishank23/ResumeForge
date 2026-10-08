@@ -11,6 +11,7 @@ const mockActor = {
 
 function createMockService() {
   const resumes = {
+    authorizeUpload: async () => {},
     importResume: async (_context, input) => ({
       id: randomUUID(),
       profileId: randomUUID(),
@@ -129,7 +130,18 @@ function createMockService() {
         versionNumber: 1,
         content: {
           title: "Version 1",
-          header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+          header: {
+            fullName: "User",
+            firstName: "",
+            lastName: "",
+            headline: "",
+            city: "",
+            state: "",
+            country: "",
+            email: "",
+            phone: "",
+            links: [],
+          },
           sampleContact: { email: "", phone: "" },
           sections: [],
         },
@@ -148,7 +160,18 @@ function createMockService() {
       atsScore: null,
       content: {
         title: title || "Cloned Resume",
-        header: { fullName: "User", firstName: "", lastName: "", headline: "", city: "", state: "", country: "", email: "", phone: "", links: [] },
+        header: {
+          fullName: "User",
+          firstName: "",
+          lastName: "",
+          headline: "",
+          city: "",
+          state: "",
+          country: "",
+          email: "",
+          phone: "",
+          links: [],
+        },
         sampleContact: { email: "", phone: "" },
         sections: [],
       },
@@ -160,7 +183,14 @@ function createMockService() {
       company: input.company || "Parsed Company",
       experienceLevel: "senior",
       roleType: "full-time",
-      keywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript required" }],
+      keywords: [
+        {
+          name: "TypeScript",
+          category: "technical",
+          required: true,
+          evidence: "TypeScript required",
+        },
+      ],
       requirements: ["5+ years experience"],
       responsibilities: ["Build systems"],
     }),
@@ -171,7 +201,14 @@ function createMockService() {
       jobTitle: input.jobTitle || "Saved Position",
       company: input.company || "Saved Company",
       rawJD: input.rawJD,
-      parsedKeywords: [{ name: "TypeScript", category: "technical", required: true, evidence: "TypeScript" }],
+      parsedKeywords: [
+        {
+          name: "TypeScript",
+          category: "technical",
+          required: true,
+          evidence: "TypeScript",
+        },
+      ],
       parsedRequirements: ["5+ years experience"],
       parsedResponsibilities: ["Build systems"],
       experienceLevel: "senior",
@@ -281,7 +318,18 @@ function createMockService() {
       atsScore: null,
       content: {
         title: input?.title || "Generated Resume",
-        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        header: {
+          fullName: "Jane Doe",
+          firstName: "Jane",
+          lastName: "Doe",
+          headline: "Lead Engineer",
+          city: "SF",
+          state: "CA",
+          country: "",
+          email: "jane@example.com",
+          phone: "",
+          links: [],
+        },
         sampleContact: { email: "jane@example.com", phone: "" },
         sections: [],
       },
@@ -312,7 +360,18 @@ function createMockService() {
       atsScore: null,
       content: {
         title: "Updated Resume",
-        header: { fullName: "Jane Doe", firstName: "Jane", lastName: "Doe", headline: "Lead Engineer", city: "SF", state: "CA", country: "", email: "jane@example.com", phone: "", links: [] },
+        header: {
+          fullName: "Jane Doe",
+          firstName: "Jane",
+          lastName: "Doe",
+          headline: "Lead Engineer",
+          city: "SF",
+          state: "CA",
+          country: "",
+          email: "jane@example.com",
+          phone: "",
+          links: [],
+        },
         sampleContact: { email: "jane@example.com", phone: "" },
         sections: [],
       },
@@ -365,7 +424,10 @@ test("unsupported content-type returns 415", async () => {
   const { app } = createMockService();
   const res = await app.request("/api/v1/resume/parse", {
     method: "POST",
-    headers: { "Content-Type": "text/html" },
+    headers: {
+      "Content-Type": "text/html",
+      Authorization: "Bearer valid-token",
+    },
     body: "<h1>Resume</h1>",
   });
 
@@ -378,15 +440,21 @@ test("POST /api/v1/resume/parse succeeds with valid JSON", async () => {
   const { app } = createMockService();
   const res = await app.request("/api/v1/resume/parse", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: "resume.txt", rawText: "John Doe\nDeveloper" }),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
+    body: JSON.stringify({
+      fileName: "resume.txt",
+      rawText: "John Doe\nDeveloper",
+    }),
   });
 
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("Cache-Control"), "no-store");
   const body = await res.json();
   assert.ok(body.data);
-  assert.equal(body.data.title, "resume.txt");
+  assert.ok(body.data.rawText.includes("John Doe"));
   assert.ok(body.requestId);
 });
 
@@ -502,16 +570,21 @@ test("DELETE /api/v1/resume/:id deletes resume and returns 200", async () => {
 test("GET /api/v1/resume/:id/download returns formatted file with attachment header", async () => {
   const { app } = createMockService();
   const targetId = randomUUID();
-  const res = await app.request(`/api/v1/resume/${targetId}/download?format=markdown`, {
-    method: "GET",
-    headers: {
-      Authorization: "Bearer valid-token",
+  const res = await app.request(
+    `/api/v1/resume/${targetId}/download?format=markdown`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer valid-token",
+      },
     },
-  });
+  );
 
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("Content-Type"), "text/markdown");
-  assert.ok(res.headers.get("Content-Disposition").includes("attachment; filename="));
+  assert.ok(
+    res.headers.get("Content-Disposition").includes("attachment; filename="),
+  );
   const text = await res.text();
   assert.ok(text.includes(`# Resume ${targetId}`));
 });
@@ -559,7 +632,8 @@ test("POST /api/v1/jd/parse parses JD text without authentication", async () => 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      rawJD: "We are seeking a Senior TypeScript Developer to build microservices.",
+      rawJD:
+        "We are seeking a Senior TypeScript Developer to build microservices.",
       jobTitle: "Senior TypeScript Developer",
     }),
   });
@@ -787,7 +861,8 @@ test("POST /api/v1/resume/:id/gap-analysis performs gap analysis and returns 200
       Authorization: "Bearer valid-token",
     },
     body: JSON.stringify({
-      rawJD: "Seeking TypeScript and PostgreSQL developers with 5+ years experience.",
+      rawJD:
+        "Seeking TypeScript and PostgreSQL developers with 5+ years experience.",
     }),
   });
 
@@ -829,5 +904,3 @@ test("POST /api/v1/resume/:id/gap-analysis returns 401 when unauthenticated", as
 
   assert.equal(res.status, 401);
 });
-
-

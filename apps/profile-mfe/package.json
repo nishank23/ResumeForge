@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "preview": "vite preview --port 3002 --strictPort",
-    "clean": "rm -rf dist *.tsbuildinfo"
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "node --experimental-strip-types --test test/*.test.mjs"
   },
   "dependencies": {
     "@resume-forge/shared": "workspace:*",

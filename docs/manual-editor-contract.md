@@ -1,5 +1,13 @@
 # Local manual editor completion contract — 2026-10-03
 
+## A4 paper and scrolling correction — 2026-10-08
+
+Current presentation uses a fixed 794px-wide A4 sheet with a 1123px minimum height. Compact defaults apply only where saved appearance is absent; preset/explicit formatting still validates and uses existing Save/Cancel/history. Fit page is an overview zoom, Fit width follows the canvas width, and 100% uses actual CSS dimensions. Zoom does not mutate content or versions. Date/skill columns stay in document layout at every app breakpoint. Optional empty location/description/technology fields omit from the paper but stay editable through dialogs.
+
+Desktop selected-content actions now occupy the editor header, preserving target actions and focus return without 52px section gutters. Mobile keeps its action dock. Back, tool tabs and Collapse stick/scroll as one rail; sticky tool panels clear the measured header height. Overflow retains all text on an extended sheet with a notice/estimated page count. Full pagination, automated formatting-fit and PDF parity remain pending. [Actual checks and manual steps](../README.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier gutter and responsive paper-margin descriptions below are superseded.
+
+**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04).
+
 ## Temporary AI dialog preview — 2026-10-04
 
 The user's frontend-only dialog request authorizes a local presentation exception to the previous unavailable AI action. Improve with AI opens request setup; explicit Preview suggested changes shows temporary Thinking and conservative local wording examples or No changes needed. Every stage identifies AI as disconnected. This is not grounded generation, a content assessment or E07 completion. Accept commits one target-only, undoable local edit, preserving rich marks, stable IDs, facts and separate contacts; changed drafts reject. Cancel/Close/Escape and pending cancellation do not mutate history. Skills/header controls remain unchanged. No provider/API/persistence work or new public contract. [Verification and manual steps](ai-preview-verification.md).
@@ -13,7 +21,6 @@ Optional `appearance` is a browser-only part of the synthetic draft, never a bac
 Desktop Editor reserves stable action gutters, independent of hover/selection; Preview removes controls and uses chosen document spacing. One original template preview is available, with no copied reference assets. ATS is Not evaluated; Pending/Completed/Deleted filters contain unavailable explanations, no invented counts/scores or issue mutations. JD input is bounded local text, clears when tools switch/unmount, and never submits; analysis/export remain disabled. Real persistence, AI, scoring, private export and full F20 acceptance stay pending.
 
 [Verification and manual checks](editor-panels-verification.md).
-
 
 ## Skills grouping correction — 2026-10-04
 

@@ -1,0 +1,303 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { loadResumeApi } from "./resume-api-loader.mjs";
+import { editorDocumentSchema } from "@resume-forge/shared-types";
+import {
+  createHistory,
+  editorHistory,
+  isDirty,
+} from "../src/editor-history.ts";
+import { emptyEntry } from "../src/editor-draft.ts";
+const { blankResume, toResumeContent, fromResumeContent, createResumeApi } =
+  await loadResumeApi();
+const workspaceId = "22222222-2222-4222-8222-222222222222",
+  id = "11111111-1111-4111-8111-111111111111";
+const envelope = (data) => new Response(JSON.stringify({ data }));
+test("blank creation uses only account name; includes no fictional professional/contact facts", () => {
+  const d = blankResume("Synthetic Person");
+  assert.equal(d.synthetic, false);
+  assert.equal(d.header.firstName, "Synthetic");
+  assert.equal(d.header.lastName, "Person");
+  assert.equal(d.sampleContact.email, "");
+  assert.ok(
+    d.sections.every(
+      (s) => !s.entries.length && s.groups.every((g) => !g.items.length),
+    ),
+  );
+  assert.deepEqual(fromResumeContent(toResumeContent(d)), d);
+});
+test("lossless rich text, dates, language identity, visibility and formatting round trip", () => {
+  const d = blankResume();
+  const e = emptyEntry("entry-1");
+  e.dates = {
+    startMonth: "3",
+    startYear: "2020",
+    endMonth: "11",
+    endYear: "2024",
+    yearOnly: false,
+    current: false,
+  };
+  e.hidden = true;
+  e.description = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Supported detail", marks: [{ type: "bold" }] },
+        ],
+      },
+      {
+        type: "bulletList",
+        content: [
+          {
+            type: "listItem",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Nested detail",
+                    marks: [{ type: "italic" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  d.sections[1].entries = [e];
+  d.sections[4].languages = [
+    {
+      id: "lang-1",
+      text: "Language from user",
+      hidden: false,
+      proficiency: "Native",
+    },
+  ];
+  d.appearance = {
+    sectionGap: 18,
+    itemGap: 12,
+    top: 44,
+    right: 48,
+    bottom: 54,
+    left: 48,
+    typography: Object.fromEntries(
+      ["section", "heading", "subheading", "body"].map((k) => [
+        k,
+        { font: "Georgia", size: 14, lineHeight: 1.5, color: "#222222" },
+      ]),
+    ),
+  };
+  assert.deepEqual(
+    fromResumeContent(JSON.parse(JSON.stringify(toResumeContent(d)))),
+    d,
+  );
+});
+test("strict schema rejects executable markup, unsafe links, duplicate IDs and excessive nesting", () => {
+  const d = blankResume();
+  d.sections[0].summary = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "safe",
+            marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }],
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(editorDocumentSchema.safeParse(d).success, false);
+  const safe = blankResume();
+  safe.sections[1].id = safe.sections[0].id;
+  assert.equal(editorDocumentSchema.safeParse(safe).success, false);
+});
+test("checkpoint acknowledgement does not mark edits made during a save as saved", () => {
+  const original = blankResume(),
+    sent = { ...original, title: "Sent" },
+    newer = { ...original, title: "Still typing" };
+  let h = createHistory(original);
+  h = editorHistory(h, { type: "edit", value: sent });
+  h = editorHistory(h, { type: "edit", value: newer });
+  h = editorHistory(h, { type: "checkpoint", value: sent });
+  assert.equal(h.current.title, "Still typing");
+  assert.equal(h.saved.title, "Sent");
+  assert.equal(isDirty(h), true);
+});
+test("API uses scoped expected versions; conflict keeps input and never retries a write", async () => {
+  let calls = 0;
+  const d = blankResume(),
+    before = structuredClone(d);
+  const api = createResumeApi(async (path, options) => {
+    calls++;
+    assert.equal(path, `/api/v1/resume/${id}`);
+    assert.equal(options.headers["X-Workspace-Id"], workspaceId);
+    assert.equal(JSON.parse(options.body).expectedVersion, 4);
+    return new Response(
+      JSON.stringify({ error: { code: "revision_conflict" } }),
+      { status: 409 },
+    );
+  }, workspaceId);
+  await assert.rejects(
+    api.save(id, 4, d),
+    (e) => e.code === "revision_conflict",
+  );
+  assert.equal(calls, 1);
+  assert.deepEqual(d, before);
+});
+test("API rejects foreign workspace responses and fake sample identifiers", async () => {
+  const api = createResumeApi(
+    async () =>
+      envelope([
+        {
+          id,
+          workspaceId: id,
+          title: "Private",
+          currentVersion: 1,
+          status: "draft",
+          updatedAt: new Date().toISOString(),
+        },
+      ]),
+    workspaceId,
+  );
+  await assert.rejects(api.list(), (e) => e.code === "invalid_response");
+  await assert.rejects(api.load("res-draft-01"), (e) => e.code === "not_found");
+});
+test("upload rejects unsupported and oversized files before a request", async () => {
+  let calls = 0;
+  const api = createResumeApi(async () => {
+    calls++;
+    return envelope({});
+  }, workspaceId);
+  await assert.rejects(
+    api.parse(new File(["x"], "resume.doc")),
+    (e) => e.code === "unsupported_media_type",
+  );
+  await assert.rejects(
+    api.parse({ name: "resume.pdf", size: 10 * 1024 * 1024 + 1 }),
+    (e) => e.code === "file_too_large",
+  );
+  assert.equal(calls, 0);
+});
+
+test("imported profile links, project details and language values survive the editor adapter and save envelope", () => {
+  const content = {
+    title: "Synthetic import",
+    header: {
+      firstName: "Alex",
+      lastName: "Stone",
+      links: [
+        {
+          id: "header-link",
+          label: "LinkedIn",
+          url: "https://www.linkedin.com/in/alex-profile",
+        },
+        {
+          id: "unsafe-header-link",
+          label: "Unsafe",
+          url: "javascript:alert(1)",
+        },
+      ],
+    },
+    sections: [
+      {
+        id: "projects",
+        kind: "projects",
+        label: "Projects",
+        entries: [
+          {
+            id: "project",
+            title: "Atlas",
+            subtitle: "Individual Project",
+            startDate: "2026-02",
+            endDate: "2026-04",
+            technologies: "Python, PostgreSQL",
+            links: [
+              {
+                id: "project-link",
+                label: "Website",
+                url: "https://example.com/atlas",
+              },
+            ],
+            bullets: [
+              {
+                id: "project-bullet",
+                text: "Developed supported functionality.",
+                hidden: false,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "skills",
+        kind: "skills",
+        label: "Skills",
+        groups: [
+          {
+            id: "programming",
+            label: "Programming Languages",
+            items: [{ id: "python", text: "Python", hidden: false }],
+          },
+          {
+            id: "spoken",
+            label: "Languages",
+            items: [{ id: "portuguese", text: "Portuguese", hidden: false }],
+          },
+        ],
+      },
+      {
+        id: "languages",
+        kind: "languages",
+        label: "Languages",
+        entries: [
+          {
+            id: "language-container",
+            title: "Languages",
+            bullets: [{ id: "english", text: "English", hidden: false }],
+          },
+        ],
+      },
+    ],
+  };
+  const draft = fromResumeContent(content);
+  assert.deepEqual(
+    draft.header.links.map((l) => l.id),
+    ["header-link"],
+  );
+  assert.deepEqual(
+    draft.sections[1].groups.map((g) => g.label),
+    ["Programming Languages"],
+  );
+  assert.deepEqual(
+    draft.sections[1].languages.map((l) => l.text),
+    ["Portuguese"],
+  );
+  assert.deepEqual(
+    draft.sections[2].languages.map((l) => l.text),
+    ["English"],
+  );
+  assert.deepEqual(draft.sections[2].entries, []);
+  const project = draft.sections[0].entries[0];
+  assert.equal(project.subtitle, "Individual Project");
+  assert.equal(project.dates.startMonth, "2");
+  assert.equal(project.dates.startYear, "2026");
+  assert.equal(project.dates.endMonth, "4");
+  assert.equal(project.links[0].url, "https://example.com/atlas");
+  const saved = toResumeContent(draft);
+  assert.deepEqual(saved.header.links, draft.header.links);
+  assert.deepEqual(fromResumeContent(JSON.parse(JSON.stringify(saved))), draft);
+  const unsafe = structuredClone(draft);
+  unsafe.header.links[0].url = "javascript:alert(1)";
+  assert.equal(editorDocumentSchema.safeParse(unsafe).success, false);
+  const duplicate = structuredClone(draft);
+  duplicate.header.links[0].id = "project-link";
+  assert.equal(editorDocumentSchema.safeParse(duplicate).success, false);
+});

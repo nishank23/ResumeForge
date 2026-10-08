@@ -1,6 +1,16 @@
 # F19 — Existing Resume File Import
 
-**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Not started
+## Bounded personal intake — 2026-10-04
+
+The latest user request authorizes a local personal slice before full Phase 6. Accept text PDF, DOCX, TXT/MD up to 10 MB, 30 PDF pages, 2,000 DOCX entries/20 MB declared expansion and 500,000 extracted characters. PDF.js/Mammoth run in a bounded local worker (8 seconds, two concurrent workers); no external provider, macro, HTML render or network resource execution. Authenticate and recheck access after parsing. Reject scanned/encrypted/corrupt/unsafe/unsupported files with recovery.
+
+Extracted fields and source text form an editable unpersisted review. Explicit Confirm and save creates a private owned resume/immutable version/audit atomically; parse/cancel creates none. Original bytes are discarded. Confirmed text and structured content remain private local database version data. No master professional or UserContact update occurs; an empty FK anchor can be created when absent. Contact-bearing data is restricted to its authenticated personal owner; no shared/AI/export path is activated. This narrow boundary does not complete shared contact separation or D12 variants.
+
+D14 is resolved only for these bounded local choices. Field-level provenance/confidence, private R2 staging, full retention/deletion controls, master merge, OCR and legacy DOC remain pending. Existing proposed routes/permissions below describe that wider future design. [Actual checks and manual steps](../../README.md#resume-library-upload-and-database-saves--2026-10-04).
+
+**Mapping correction — 2026-10-08:** Bounded PDF extraction reconstructs visual rows/columns and adjacent glyphs; passive HTTP/HTTPS annotation destinations are included without network access. Plural headings, wrapped achievement text and entry/date/type/location/degree/project/technology metadata are preserved by the deterministic parser. Header links and actual imported language values survive the strict editor adapter/versioned saves. Fresh uploads use the fix; existing edited drafts are never silently reparsed. Real-sample upload/save/reload and synthetic regression results are recorded in [README](../../README.md#uploaded-resume-field-correction--2026-10-08). Review remains mandatory; this does not establish arbitrary-layout coverage or complete F19.
+
+**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partial — bounded personal slice above implemented; full acceptance pending
 
 ## Goal and dependencies
 
@@ -28,4 +38,4 @@ Resume MFE import/review flow; resume-service import use cases and typed DTOs; i
 - [ ] User corrections and provenance survive editing/export; no master-profile/contact write occurs.
 - [ ] Expired/deleted uploads and orphaned artifacts are cleaned up; raw sources are never publicly accessible.
 
-No upload feature exists yet. This is additional planned work, not part of Phase 1 scaffolding.
+The bounded personal intake above is available. The broader proposed acceptance list remains incomplete; it is not part of the original Phase 1 scaffolding.

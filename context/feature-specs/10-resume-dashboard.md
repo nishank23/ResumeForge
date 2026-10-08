@@ -1,6 +1,10 @@
 # F10 — Resume Dashboard
 
-**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Not started
+## Personal library slice — 2026-10-04
+
+Implemented actual owned list/create/open, title editing through editor Save changes, bounded 50-row pages, Load more, search/sort of loaded rows and honest saved-version/update metadata. Empty/loading/error/retry/no-match states replace sample rows. Dark/light desktop and 390px layout were checked. No readiness score, PDF action, clone/delete, version restoration or active/default selection is implied. Concurrent list mutation does not have snapshot pagination guarantees. Full F10 acceptance remains partial. [User checks](../../README.md#resume-library-upload-and-database-saves--2026-10-04).
+
+**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Partial — bounded personal slice above implemented; full acceptance pending
 
 ## Goal and dependencies
 

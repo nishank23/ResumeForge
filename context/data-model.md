@@ -1,5 +1,9 @@
 # Data Model
 
+## Personal editor persistence — 2026-10-04
+
+Current Prisma Resume/ResumeVersion records support the bounded personal editor. `content.editorDraft` contains validated rich text, stable IDs, dates, visibility, languages and appearance; the flat projection is retained for legacy adapters. Reviewed import source text is private version content. Saves use expected currentVersion, immutable history and an atomic audit outbox. Resume.profileId requires an empty internal UserProfile anchor if none exists; this does not import facts or contacts. No schema migration was added. Original upload bytes are not retained. Shared/export contact snapshots, provenance and full F19 storage remain proposed.
+
 ## Status and ownership
 
 This is the logical schema specification. The initial identity/workspace/profile/contact/grant subset is implemented in `packages/prisma-client/prisma/schema.prisma`; remaining entities are planned. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.

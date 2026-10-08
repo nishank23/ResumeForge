@@ -1,6 +1,6 @@
 import type { ResumeDraft, MutationResult } from "./editor-draft";
 
-// Browser-only formatting for the synthetic draft; no saved-version/PDF contract.
+// Bounded private editor appearance; PDF rendering remains disconnected.
 export const PAPER_FONTS = {
   Georgia: 'Georgia, "Times New Roman", serif',
   Times: '"Times New Roman", Times, serif',
@@ -30,22 +30,22 @@ export interface EditorAppearance {
   typography: Record<TypeRole, PaperType>;
 }
 export const DEFAULT_APPEARANCE: EditorAppearance = {
-  sectionGap: 18,
-  itemGap: 12,
-  top: 44,
-  right: 48,
-  bottom: 54,
-  left: 48,
+  sectionGap: 12,
+  itemGap: 6,
+  top: 28,
+  right: 28,
+  bottom: 28,
+  left: 28,
   typography: {
-    section: { font: "Georgia", size: 16, lineHeight: 1.35, color: "#222222" },
-    heading: { font: "Georgia", size: 14, lineHeight: 1.5, color: "#222222" },
+    section: { font: "Georgia", size: 14, lineHeight: 1.2, color: "#222222" },
+    heading: { font: "Georgia", size: 13, lineHeight: 1.2, color: "#222222" },
     subheading: {
       font: "Georgia",
-      size: 14,
-      lineHeight: 1.5,
+      size: 13,
+      lineHeight: 1.2,
       color: "#222222",
     },
-    body: { font: "Georgia", size: 14, lineHeight: 1.5, color: "#222222" },
+    body: { font: "Georgia", size: 13, lineHeight: 1.2, color: "#222222" },
   },
 };
 export const APPEARANCE_BOUNDS = {
@@ -66,6 +66,11 @@ export function appearancePreset(
   name: "compact" | "balanced" | "spacious",
 ): EditorAppearance {
   const next = structuredClone(DEFAULT_APPEARANCE);
+  if (name === "balanced") {
+    next.sectionGap = 18;
+    next.itemGap = 12;
+    next.typography.body.lineHeight = 1.4;
+  }
   if (name === "compact") {
     next.sectionGap = 12;
     next.itemGap = 6;

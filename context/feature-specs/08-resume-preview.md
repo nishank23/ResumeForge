@@ -1,5 +1,13 @@
 # F08 — Resume Builder, Preview and Initial Template
 
+## Current A4 page correction — 2026-10-08
+
+The user's bounded frontend request now provides fixed A4 geometry, compact defaults, view-only Fit page/Fit width/100%, and scroll-safe rail/panels. Selected desktop actions sit in the editor header; empty optional fields and editing gutters no longer lengthen the paper. The supplied one-page import measures 794×1123 with all 69 checked populated fields preserved across desktop/tablet/phone. Long content remains intact with an overflow notice and estimated page count. This does not complete multi-page rendering, automated formatting-fit or PDF parity. [Changes and manual checks](../../README.md#a4-resume-page-and-scroll-controls--2026-10-08) supersede prior canvas/gutter presentation notes; F08 remains partial.
+
+## Owned manual resume integration — 2026-10-04
+
+Blank creation, uploaded-file review, owned load and explicit expected-version Save changes are connected to the restricted personal service/database. Strict editor JSON preserves rich text, stable IDs, dates, visibility, languages and appearance through immutable versions. Sample resume/autofill is removed from the normal account flow. Temporary AI Accept still edits the working draft and needs Save changes; no real AI, ATS or PDF export is enabled. Earlier local-only appearance/checkpoint descriptions below are history. [Current checks and limits](../../README.md#resume-library-upload-and-database-saves--2026-10-04). Full F08/E06 privacy, renderer and service acceptance remains partial.
+
 ## Temporary frontend AI dialogs — 2026-10-04
 
 The explicit frontend-only request adds selected-target setup, temporary Thinking, inline Suggested changes and No changes needed dialogs. Local conservative wording examples clearly say AI is disconnected; Accept/Cancel and Undo reuse current draft transactions. No provider, public contract or durable version is implemented; grounded E07 and F08 service acceptance remain pending. [Actual checks and manual steps](../../docs/ai-preview-verification.md).
@@ -7,7 +15,6 @@ The explicit frontend-only request adds selected-target setup, temporary Thinkin
 ## Local editor tools extension — 2026-10-04
 
 Implemented the user's explicit rail/panel request: Back to all resumes with local-loss confirmation, Edit Content section shortcuts, Customize Template local settings/one original preview, honest ATS filters and local JD preparation. The existing canvas, target dialogs, Summary, grouped Skills and history remain intact. Optional local `appearance` joins whole-draft checkpoints/history; it is not a persisted resume/render contract. Desktop editing gutters prevent action overlap; Preview uses actual spacing. [Results/manual checks](../../docs/editor-panels-verification.md). E06–E09 and full F20 remain pending.
-
 
 **Latest local UI correction — 2026-10-04:** Languages render/edit inside Skills while remaining distinct from Programming Languages; clicking or keyboard-activating Skills opens the category/tag dialog with no floating AI/action bar. Custom categories and tag management share local Save/Cancel/history; extra new-line margins are removed. [Contract](../../docs/manual-editor-contract.md#skills-grouping-correction--2026-10-04) and [actual verification](../../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) supersede earlier separate-Languages/per-skill toolbar wording. This is frontend-only; mobile checks and all durable/service acceptance remain pending.
 

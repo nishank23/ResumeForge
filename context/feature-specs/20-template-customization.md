@@ -1,5 +1,9 @@
 # F20 — Template Library and Formatting Customization
 
+## Current bounded page presentation — 2026-10-08
+
+Existing appearance now accompanies fixed A4 paper and view-only Fit page/Fit width/100%. Compact bounded defaults apply when saved appearance is absent; explicit settings remain authoritative. Overflow keeps all facts in an extended sheet and explains that it exceeds one A4 page. This is a presentation correction, not the proposed automated formatting-fit transaction, complete template gallery, full multi-page renderer or PDF parity. [Actual checks and manual steps](../../README.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier browser-only persistence wording is superseded by the owned version-save integration; full F20 remains partial.
+
 ## Explicit local preview slice — 2026-10-04
 
 The user's new tool-panel request brings forward only browser-only preview controls: one original Forge Classic template preview, three density presets, bounded margins/spacing and four system-font typography roles, reset and whole-draft local history. This is partial presentation work under F08, not full Phase 6 implementation, a durable template inventory or preview/PDF parity. Readable local bounds and exact limitations are in the [local contract](../../docs/manual-editor-contract.md#editor-rail-and-local-formatting--2026-10-04); [verification](../../docs/editor-panels-verification.md) records actual evidence. Remaining acceptance criteria below are still unchecked.

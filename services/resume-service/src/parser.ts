@@ -22,7 +22,10 @@ interface RawSection {
 /**
  * Heuristically parses extracted text into structured resume sections and header info.
  */
-export function parseResumeText(rawText: string, fileName?: string): ParsedResumeContentDto {
+export function parseResumeText(
+  rawText: string,
+  fileName?: string,
+): ParsedResumeContentDto {
   const lines = rawText
     .split("\n")
     .map((l) => l.trim())
@@ -31,11 +34,12 @@ export function parseResumeText(rawText: string, fileName?: string): ParsedResum
   // 1. Extract contact details from anywhere in the text
   const email = extractEmail(rawText);
   const phone = extractPhone(rawText);
-  const links = extractLinks(rawText);
-  const location = extractLocation(lines.slice(0, 15));
 
   // 2. Classify text into header lines and section blocks
   const { headerLines, rawSections } = segmentSections(lines);
+
+  const location = extractLocation(headerLines);
+  const links = extractLinks(headerLines.join("\n"));
 
   // 3. Extract name and headline from header lines
   const { fullName, firstName, lastName, headline } = extractNameAndHeadline(
@@ -171,44 +175,51 @@ export function parseResumeText(rawText: string, fileName?: string): ParsedResum
 }
 
 /** Regex patterns for section headers */
-const SECTION_PATTERNS: { kind: ResumeSectionDto["kind"]; regex: RegExp; defaultLabel: string }[] =
-  [
-    {
-      kind: "summary",
-      regex: /^(?:(?:professional\s+)?summary|profile|about\s+me|objective|executive\s+summary)$/i,
-      defaultLabel: "Professional summary",
-    },
-    {
-      kind: "experience",
-      regex: /^(?:(?:work\s+|professional\s+)?experience|employment(?:\s+history)?|work\s+history)$/i,
-      defaultLabel: "Work experience",
-    },
-    {
-      kind: "education",
-      regex: /^(?:education|academic\s+(?:background|history)|degrees|qualifications)$/i,
-      defaultLabel: "Education",
-    },
-    {
-      kind: "skills",
-      regex: /^(?:(?:technical\s+|core\s+)?skills|technologies|competencies|areas\s+of\s+expertise|tools)$/i,
-      defaultLabel: "Skills",
-    },
-    {
-      kind: "projects",
-      regex: /^(?:(?:personal\s+|key\s+|selected\s+)?projects)$/i,
-      defaultLabel: "Projects",
-    },
-    {
-      kind: "certifications",
-      regex: /^(?:certifications|certificates|licenses|courses)$/i,
-      defaultLabel: "Certifications",
-    },
-    {
-      kind: "languages",
-      regex: /^(?:languages)$/i,
-      defaultLabel: "Languages",
-    },
-  ];
+const SECTION_PATTERNS: {
+  kind: ResumeSectionDto["kind"];
+  regex: RegExp;
+  defaultLabel: string;
+}[] = [
+  {
+    kind: "summary",
+    regex:
+      /^(?:(?:professional\s+)?summary|profile|about\s+me|objective|executive\s+summary)$/i,
+    defaultLabel: "Professional summary",
+  },
+  {
+    kind: "experience",
+    regex:
+      /^(?:(?:work\s+|professional\s+)?experiences?|employment(?:\s+history)?|work\s+history)$/i,
+    defaultLabel: "Work experience",
+  },
+  {
+    kind: "education",
+    regex:
+      /^(?:educations?|academic\s+(?:background|history)|degrees|qualifications)$/i,
+    defaultLabel: "Education",
+  },
+  {
+    kind: "skills",
+    regex:
+      /^(?:(?:technical\s+|core\s+)?skills|technologies|competencies|areas\s+of\s+expertise|tools)$/i,
+    defaultLabel: "Skills",
+  },
+  {
+    kind: "projects",
+    regex: /^(?:(?:personal\s+|key\s+|selected\s+)?projects)$/i,
+    defaultLabel: "Projects",
+  },
+  {
+    kind: "certifications",
+    regex: /^(?:certifications|certificates|licenses|courses)$/i,
+    defaultLabel: "Certifications",
+  },
+  {
+    kind: "languages",
+    regex: /^(?:languages)$/i,
+    defaultLabel: "Languages",
+  },
+];
 
 function segmentSections(lines: string[]): {
   headerLines: string[];
@@ -224,7 +235,8 @@ function segmentSections(lines: string[]): {
       ? SECTION_PATTERNS.find(
           (p) =>
             p.regex.test(line) ||
-            (line.length <= 40 && p.regex.test(line.replace(/[:\-_]/g, "").trim())),
+            (line.length <= 40 &&
+              p.regex.test(line.replace(/[:\-_]/g, "").trim())),
         )
       : undefined;
 
@@ -267,7 +279,12 @@ function extractNameAndHeadline(
     ) {
       continue;
     }
-    if (!fullName && line.length >= 2 && line.length <= 50 && !/^\d+$/.test(line)) {
+    if (
+      !fullName &&
+      line.length >= 2 &&
+      line.length <= 50 &&
+      !/^\d+$/.test(line)
+    ) {
       fullName = line;
       continue;
     }
@@ -290,56 +307,51 @@ function extractEmail(text: string): string {
 }
 
 function extractPhone(text: string): string {
-  const match = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.exec(text);
+  const match =
+    /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.exec(text);
   return match ? match[0].trim() : "";
 }
 
 function extractLinks(text: string): ResumeLink[] {
-  const links: ResumeLink[] = [];
-  const linkedinMatch = /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i.exec(text);
-  if (linkedinMatch && linkedinMatch[1]) {
-    links.push({
-      id: randomUUID(),
-      label: "LinkedIn",
-      url: `https://www.linkedin.com/in/${linkedinMatch[1]}`,
-    });
+  const urls = new Set<string>();
+  for (const match of text.matchAll(/https?:\/\/[^\s<>]+/gi))
+    urls.add(match[0].replace(/[),.;]+$/, ""));
+  for (const match of text.matchAll(
+    /(?:www\.)?(linkedin\.com\/in\/[a-zA-Z0-9_-]+|github\.com\/[a-zA-Z0-9_/-]+)/gi,
+  )) {
+    if (![...urls].some((url) => url.includes(match[0])))
+      urls.add(
+        "https://" +
+          (match[0].startsWith("linkedin.com") ? "www." : "") +
+          match[0],
+      );
   }
-
-  const githubMatch = /github\.com\/([a-zA-Z0-9_-]+)/i.exec(text);
-  if (githubMatch && githubMatch[1]) {
-    links.push({
-      id: randomUUID(),
-      label: "GitHub",
-      url: `https://github.com/${githubMatch[1]}`,
-    });
-  }
-
-  const generalUrlRegex = /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
-  let urlMatch: RegExpExecArray | null;
-  while ((urlMatch = generalUrlRegex.exec(text)) !== null) {
-    const url = urlMatch[0];
-    if (!links.some((l) => l.url.includes(url) || url.includes(l.url))) {
-      links.push({
-        id: randomUUID(),
-        label: "Website",
-        url,
-      });
-    }
-  }
-
-  return links;
+  return [...urls].map((url) => ({
+    id: randomUUID(),
+    label: /linkedin\.com/i.test(url)
+      ? "LinkedIn"
+      : /github\.com/i.test(url)
+        ? "GitHub"
+        : "Website",
+    url,
+  }));
 }
 
-function extractLocation(lines: string[]): { city: string; state: string; country: string } {
-  const locRegex = /([a-zA-Z\s]+),\s*([A-Z]{2}|[a-zA-Z\s]+)/;
+function extractLocation(lines: string[]): {
+  city: string;
+  state: string;
+  country: string;
+} {
+  // Only header cells can be a contact location; never scan summary or jobs.
   for (const line of lines) {
-    const match = locRegex.exec(line);
-    if (match && match[1] && match[2] && !line.includes("@") && !line.includes("http")) {
-      return {
-        city: match[1].trim(),
-        state: match[2].trim(),
-        country: "",
-      };
+    const cells = line
+      .split(/\t|[|•]/)
+      .map((s) => s.trim())
+      .reverse();
+    for (const cell of cells) {
+      const match = /^([\p{L} .'-]+),\s*([\p{L} .'-]+)$/u.exec(cell);
+      if (match?.[1] && match[2])
+        return { city: match[1].trim(), state: match[2].trim(), country: "" };
     }
   }
   return { city: "", state: "", country: "" };
@@ -355,152 +367,189 @@ function isContactOrUrlLine(line: string): boolean {
   );
 }
 
-const DATE_RANGE_REGEX =
-  /\b(?:\d{4}(?:-\d{2})?|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|\d{1,2}[/.-])\s*\d{4})\s*(?:-|–|—|to)\s*(?:Present|Current|\d{4}(?:-\d{2})?|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|\d{1,2}[/.-])\s*\d{4})\b/i;
-
-function parseExperienceSection(lines: string[]): ResumeExperienceEntryDto[] {
-  const entries: ResumeExperienceEntryDto[] = [];
-  let currentEntry: ResumeExperienceEntryDto | null = null;
-
-  for (const line of lines) {
-    const isBulletLine = isBullet(line);
-
-    if (!isBulletLine) {
-      const dateMatch = DATE_RANGE_REGEX.exec(line);
-      const isStandaloneDate = dateMatch && line.replace(dateMatch[0], "").trim().length < 5;
-
-      if (isStandaloneDate && currentEntry && !currentEntry.startDate) {
-        const { startDate, endDate, isCurrent } = parseDateRange(dateMatch[0]);
-        currentEntry.startDate = startDate;
-        currentEntry.endDate = endDate;
-        currentEntry.isCurrent = isCurrent;
+const DATE_TOKEN = String.raw`(?:[12]\d{3}(?:-\d{2})?|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|\d{1,2}[/.-])\s*[12]\d{3})`;
+const DATE_RANGE_REGEX = new RegExp(
+  `\\b(${DATE_TOKEN})\\s*(?:[-–—]|to)\\s*(${DATE_TOKEN}|Present|Current)\\b`,
+  "i",
+);
+const EMPLOYMENT =
+  /\b(?:full[- ]time|part[- ]time|contract|internship|freelance|temporary)\b/i;
+const LOCATION_TYPE = /\b(?:on[- ]site|remote|hybrid)\b/i;
+const TECHNOLOGIES =
+  /^(?:technologies|technology|tech stack|tools)(?:\s*\/\s*(?:skills|tools))?(?:\s+used)?\s*:\s*(.*)$/i;
+interface ParsedEntry {
+  id: string;
+  title: string;
+  subtitle: string;
+  location: string;
+  employmentType: string;
+  locationType: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  fieldOfStudy: string;
+  grade: string;
+  description: string;
+  technologies: string;
+  bullets: ResumeBulletDto[];
+  links: ResumeLink[];
+  hidden: boolean;
+}
+function parseStructuredEntries(
+  lines: string[],
+  kind: "experience" | "education" | "projects",
+): ParsedEntry[] {
+  const entries: ParsedEntry[] = [];
+  let entry: ParsedEntry | undefined,
+    metadata = false;
+  for (let i = 0; i < lines.length; i++) {
+    const original = lines[i] ?? "",
+      explicitBullet = isBullet(original);
+    let line = cleanBullet(original)
+      .replace(/^[|•\s]+|[|\s]+$/g, "")
+      .trim();
+    if (!line) continue;
+    const tech = TECHNOLOGIES.exec(line);
+    if (tech && entry) {
+      entry.technologies = tech[1]?.trim() ?? "";
+      metadata = false;
+      continue;
+    }
+    const date = DATE_RANGE_REGEX.exec(line);
+    const dateOnly = date && !line.replace(date[0], "").replace(/[|\s]/g, "");
+    if (entry && dateOnly && !entry.startDate) {
+      Object.assign(entry, parseDateRange(date[0]));
+      continue;
+    }
+    const upcoming = lines
+      .slice(i + 1, i + 3)
+      .some((l) => DATE_RANGE_REGEX.test(l));
+    const titleWithDates =
+      !!date && !dateOnly && line.length < 250 && !/[.!?]$/.test(line);
+    const startsEntry =
+      !explicitBullet &&
+      (!entry ||
+        titleWithDates ||
+        (upcoming &&
+          !metadata &&
+          !/[.!?]$/.test(line) &&
+          !TECHNOLOGIES.test(line)));
+    if (startsEntry) {
+      const links = extractLinks(line);
+      line = line
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(DATE_RANGE_REGEX, "")
+        .replace(/[|\t\s]+$/g, "")
+        .trim();
+      const employmentType =
+        kind === "experience" ? (EMPLOYMENT.exec(line)?.[0] ?? "") : "";
+      if (employmentType)
+        line = line
+          .replace(EMPLOYMENT, "")
+          .replace(/[|\s]+$/g, "")
+          .trim();
+      const parts = line
+        .split(/\s+[|–—-]\s+|\t+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      entry = {
+        id: randomUUID(),
+        title: parts[0] ?? "",
+        subtitle: parts[1] ?? "",
+        location: kind === "experience" ? parts.slice(2).join(", ") : "",
+        employmentType,
+        locationType: "",
+        ...parseDateRange(date?.[0] ?? ""),
+        fieldOfStudy: kind === "education" ? parts.slice(2).join(" - ") : "",
+        grade: "",
+        description: "",
+        technologies: kind === "projects" ? parts.slice(1).join(", ") : "",
+        bullets: [],
+        links,
+        hidden: false,
+      };
+      // Legacy project title | stack is technologies, not a project role.
+      if (kind === "projects") entry.subtitle = "";
+      entries.push(entry);
+      metadata = true;
+      continue;
+    }
+    if (!entry) continue;
+    if (dateOnly) {
+      Object.assign(entry, parseDateRange(date[0]));
+      continue;
+    }
+    const locationType = LOCATION_TYPE.exec(line)?.[0];
+    if (kind === "experience" && locationType && metadata) {
+      const cells = line
+        .split(/\t+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (cells.length > 1 && !entry.subtitle) entry.subtitle = cells[0] ?? "";
+      entry.locationType = locationType;
+      entry.location = (cells.at(-1) ?? line)
+        .replace(LOCATION_TYPE, "")
+        .replace(/^[|•\s]+/g, "")
+        .trim();
+      metadata = false;
+      continue;
+    }
+    if (kind === "education") {
+      const grade = /GPA[:\s]+([0-4]\.\d{1,2}(?:\s*\/\s*4\.0)?)/i.exec(line);
+      if (grade?.[1]) {
+        entry.grade = grade[1];
         continue;
       }
-
-      if (dateMatch || currentEntry === null || currentEntry.bullets.length > 0) {
-        // Start a new experience entry
-        let datesStr = "";
-        let lineWithoutDates = line;
-
-        if (dateMatch) {
-          datesStr = dateMatch[0];
-          lineWithoutDates = line.replace(dateMatch[0], "").trim();
-        }
-
-        const { startDate, endDate, isCurrent } = parseDateRange(datesStr);
-        const { title, company, location } = parseTitleAndCompany(lineWithoutDates);
-
-        currentEntry = {
-          id: randomUUID(),
-          title: title || "Role",
-          subtitle: company || "",
-          location,
-          startDate,
-          endDate,
-          isCurrent,
-          bullets: [],
-          hidden: false,
-        };
-        entries.push(currentEntry);
-        continue;
-      }
-
-      // Secondary non-bullet line right below title: might be company/location
-      if (!currentEntry.subtitle && line.length <= 100) {
-        currentEntry.subtitle = line;
+      if (
+        metadata &&
+        /bachelor|master|doctor|b\.?\s?tech|m\.?\s?tech|b\.s\.|m\.s\.|b\.a\.|m\.a\.|ph\.d\.|associate|diploma|degree/i.test(
+          line,
+        )
+      ) {
+        const parts = line.split(/\s+[|–—-]\s+/);
+        entry.subtitle = parts[0] ?? line;
+        entry.fieldOfStudy = parts.slice(1).join(" - ");
+        metadata = false;
         continue;
       }
     }
-
-    if (currentEntry) {
-      currentEntry.bullets.push({
+    if (
+      metadata &&
+      !explicitBullet &&
+      !entry.subtitle &&
+      line.length <= 150 &&
+      !/[.!?]$/.test(line) &&
+      !/^(?:developed|built|created|managed|implemented|executed|delivered|led|designed|maintained)\b/i.test(
+        line,
+      )
+    ) {
+      entry.subtitle = line;
+      metadata = false;
+      continue;
+    }
+    metadata = false;
+    const last = entry.bullets.at(-1);
+    // A wrapped paragraph is not a new role/project. Retain all narrative text.
+    if (
+      !explicitBullet &&
+      last &&
+      (!/[.!?]$/.test(last.text) || /^[a-z]/.test(line))
+    )
+      last.text += " " + line.replace(/\s+/g, " ");
+    else
+      entry.bullets.push({
         id: randomUUID(),
-        text: cleanBullet(line),
+        text: line.replace(/\s+/g, " "),
         hidden: false,
       });
-    }
   }
-
   return entries;
 }
-
+function parseExperienceSection(lines: string[]): ResumeExperienceEntryDto[] {
+  return parseStructuredEntries(lines, "experience");
+}
 function parseEducationSection(lines: string[]): ResumeEducationEntryDto[] {
-  const entries: ResumeEducationEntryDto[] = [];
-  let currentEntry: ResumeEducationEntryDto | null = null;
-
-  for (const line of lines) {
-    const isBulletLine = isBullet(line);
-
-    if (!isBulletLine) {
-      const dateMatch = DATE_RANGE_REGEX.exec(line);
-      const isStandaloneDate = dateMatch && line.replace(dateMatch[0], "").trim().length < 5;
-
-      if (isStandaloneDate && currentEntry && !currentEntry.startDate) {
-        const { startDate, endDate } = parseDateRange(dateMatch[0]);
-        currentEntry.startDate = startDate;
-        currentEntry.endDate = endDate;
-        continue;
-      }
-
-      const isDegreeLine = /bachelor|master|doctor|b\.s\.|m\.s\.|b\.a\.|m\.a\.|ph\.d\.|associate|diploma|degree/i.test(line);
-      const isInstitutionLine = /university|college|institute|school|academy/i.test(line);
-
-      if (dateMatch || isDegreeLine || isInstitutionLine || currentEntry === null) {
-        let datesStr = "";
-        let lineClean = line;
-
-        if (dateMatch) {
-          datesStr = dateMatch[0];
-          lineClean = line.replace(dateMatch[0], "").trim();
-        }
-
-        const { startDate, endDate } = parseDateRange(datesStr);
-        const gpaMatch = /GPA[:\s]+([0-4]\.\d{1,2}(?:\s*\/\s*4\.0)?)/i.exec(line);
-        const grade = gpaMatch && gpaMatch[1] ? gpaMatch[1] : "";
-
-        if (gpaMatch) {
-          lineClean = lineClean.replace(gpaMatch[0], "").trim();
-        }
-
-        let title = lineClean;
-        let subtitle = "";
-        let fieldOfStudy = "";
-
-        if (lineClean.includes(" - ") || lineClean.includes(" | ")) {
-          const parts = lineClean.split(/\s*[-|]\s*/);
-          title = parts[0] ?? lineClean;
-          subtitle = parts[1] ?? "";
-          fieldOfStudy = parts[2] ?? "";
-        }
-
-        currentEntry = {
-          id: randomUUID(),
-          title: title || "Institution",
-          subtitle: subtitle || "Degree",
-          fieldOfStudy,
-          startDate,
-          endDate,
-          grade,
-          hidden: false,
-        };
-        entries.push(currentEntry);
-        continue;
-      }
-    }
-
-    if (currentEntry && line.length <= 150) {
-      const gpaMatch = /GPA[:\s]+([0-4]\.\d{1,2}(?:\s*\/\s*4\.0)?)/i.exec(line);
-      if (gpaMatch && gpaMatch[1]) {
-        currentEntry.grade = gpaMatch[1];
-        continue;
-      }
-      if (!currentEntry.fieldOfStudy && /computer science|engineering|business|arts|science/i.test(line)) {
-        currentEntry.fieldOfStudy = line;
-      }
-    }
-  }
-
-  return entries;
+  return parseStructuredEntries(lines, "education");
 }
 
 function parseSkillsSection(lines: string[]): ResumeSkillGroupDto[] {
@@ -550,48 +599,7 @@ function parseSkillsSection(lines: string[]): ResumeSkillGroupDto[] {
 }
 
 function parseProjectsSection(lines: string[]): ResumeProjectEntryDto[] {
-  const entries: ResumeProjectEntryDto[] = [];
-  let currentEntry: ResumeProjectEntryDto | null = null;
-
-  for (const line of lines) {
-    const isBulletLine = isBullet(line);
-
-    if (!isBulletLine) {
-      if (currentEntry === null || currentEntry.bullets.length > 0) {
-        let title = line;
-        let technologies = "";
-
-        if (line.includes(" | ") || line.includes(" - ")) {
-          const parts = line.split(/\s*[|-]\s*/);
-          title = parts[0] ?? line;
-          technologies = parts[1] ?? "";
-        }
-
-        currentEntry = {
-          id: randomUUID(),
-          title: title.trim(),
-          subtitle: "",
-          description: "",
-          technologies: technologies.trim(),
-          bullets: [],
-          links: [],
-          hidden: false,
-        };
-        entries.push(currentEntry);
-        continue;
-      }
-    }
-
-    if (currentEntry) {
-      currentEntry.bullets.push({
-        id: randomUUID(),
-        text: cleanBullet(line),
-        hidden: false,
-      });
-    }
-  }
-
-  return entries;
+  return parseStructuredEntries(lines, "projects");
 }
 
 function isBullet(line: string): boolean {
@@ -618,9 +626,9 @@ function parseDateRange(dateStr: string): {
     return { startDate: "", endDate: "", isCurrent: false };
   }
 
-  const parts = dateStr.split(/\s+[-–—]\s+|\s+to\s+/i).map((s) => s.trim());
-  const startDate = normalizeDate(parts[0] ?? "");
-  const endRaw = parts[1] ?? "";
+  const match = DATE_RANGE_REGEX.exec(dateStr);
+  const startDate = normalizeDate(match?.[1] ?? dateStr);
+  const endRaw = match?.[2] ?? "";
   const isCurrent = /present|current/i.test(endRaw);
   const endDate = isCurrent ? "Present" : normalizeDate(endRaw);
 
@@ -646,30 +654,25 @@ function normalizeDate(str: string): string {
 
   if (monthMatch && monthMatch[1]) {
     const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
     const mStr = monthMatch[1].toLowerCase();
     const monthNum = String(
-      monthNames.findIndex((m) =>
-        mStr.startsWith(m.toLowerCase()),
-      ) + 1,
+      monthNames.findIndex((m) => mStr.startsWith(m.toLowerCase())) + 1,
     ).padStart(2, "0");
     return `${yearMatch[1]}-${monthNum}`;
   }
 
   return yearMatch[1];
-}
-
-function parseTitleAndCompany(str: string): {
-  title: string;
-  company: string;
-  location: string;
-} {
-  const parts = str.split(/\s*[-–|,@]\s*/).map((s) => s.trim());
-  return {
-    title: parts[0] ?? "Role",
-    company: parts[1] ?? "",
-    location: parts[2] ?? "",
-  };
 }

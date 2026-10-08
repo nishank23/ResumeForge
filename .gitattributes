@@ -1,0 +1,3 @@
+# PDF/DOCX fixtures are binary documents; preserve their exact bytes.
+*.pdf binary
+*.docx binary

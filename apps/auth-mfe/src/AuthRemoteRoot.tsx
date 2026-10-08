@@ -55,7 +55,7 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
         window.location.assign(url.href);
       } catch {
         setError(
-          "Google sign-in is unavailable. Check that the auth service is running and restart pnpm dev after changing .env.",
+          "Google sign-in is unavailable. Please try again in a moment.",
         );
         setLoading(false);
       }
@@ -129,8 +129,7 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
           ) : null}
           {signedIn ? (
             <p>
-              Profile onboarding is still being connected. The workspace preview
-              uses sample data.
+              Open your resumes to upload a file or start a new document.
             </p>
           ) : null}
           <div className="rf-auth-actions">
@@ -152,15 +151,11 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
               <Button
                 onClick={() => {
                   context.onNavigate?.(
-                    session.identity.isOnboarded
-                      ? `/w/${session.identity.workspaceId}/resumes`
-                      : "/onboarding",
+                    `/w/${session.identity.workspaceId}/resumes`,
                   );
                 }}
               >
-                {session.identity.isOnboarded
-                  ? "Open my workspace"
-                  : "Continue to profile setup"}
+                Open my resumes
               </Button>
             ) : null}
           </div>

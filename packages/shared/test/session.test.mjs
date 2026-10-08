@@ -142,3 +142,123 @@ test("unsupported cross-tab locking refuses session restoration", async () => {
   assert.equal(calls, 0);
   assert.equal(client.getSnapshot().status, "error");
 });
+
+test("API request keeps bearer inside controller and restricts the destination", async () => {
+  const calls = [];
+  const queue = [token(), me(), response({ data: { ok: true } })];
+  const client = make(async (url, options) => {
+    calls.push({ url, options });
+    return queue.shift();
+  });
+  await client.restore();
+  await client.requestApi("/api/v1/profile", {
+    headers: { Authorization: "forged" },
+  });
+  assert.equal(calls[2].url, "http://localhost:4000/api/v1/profile");
+  assert.equal(
+    calls[2].options.headers.get("Authorization"),
+    `Bearer ${"a".repeat(64)}`,
+  );
+  assert.equal(calls[2].options.credentials, "omit");
+  for (const path of [
+    "https://evil.invalid",
+    "//evil.invalid",
+    "/api/v1/../private",
+    "/api/v1/profile?token=private",
+  ])
+    await assert.rejects(client.requestApi(path), /Invalid API path/);
+});
+test("API 401 refreshes once and retries with the rotated access token", async () => {
+  const calls = [];
+  const queue = [
+    token(),
+    me(),
+    response({}, 401),
+    response({}, 401),
+    response({ data: { accessToken: "b".repeat(64), expiresIn: 300 } }),
+    me(),
+    response({ data: { ok: true } }),
+  ];
+  const client = make(async (url, options) => {
+    calls.push({ url, options });
+    return queue.shift();
+  });
+  await client.restore();
+  assert.equal(
+    (await client.requestApi("/api/v1/profile", { method: "PUT", body: "{}" }))
+      .status,
+    200,
+  );
+  assert.equal(calls.filter((c) => c.url.endsWith("/profile")).length, 2);
+  assert.equal(
+    calls.at(-1).options.headers.get("Authorization"),
+    `Bearer ${"b".repeat(64)}`,
+  );
+});
+test("API outage is never replayed and late responses after logout are rejected", async () => {
+  let finish;
+  const queue = [token(), me(), response({}, 503)];
+  const client = make(async () =>
+    queue.length
+      ? queue.shift()
+      : new Promise((resolve) => {
+          finish = resolve;
+        }),
+  );
+  await client.restore();
+  assert.equal(
+    (await client.requestApi("/api/v1/profile", { method: "POST" })).status,
+    503,
+  );
+  assert.equal(queue.length, 0);
+  const pending = client.requestApi("/api/v1/profile");
+  client.receiveLogout();
+  finish(response({ data: { private: true } }));
+  await assert.rejects(pending, /Session changed/);
+  await assert.rejects(
+    client.requestApi("/api/v1/profile"),
+    /Session unavailable/,
+  );
+});
+test("API expiry cannot retain a stale authenticated identity", async () => {
+  const queue = [
+    token(),
+    me(),
+    response({}, 401),
+    response({}, 401),
+    response({}, 401),
+  ];
+  const client = make(async () => queue.shift());
+  await client.restore();
+  await assert.rejects(
+    client.requestApi("/api/v1/profile"),
+    /Session unavailable/,
+  );
+  assert.equal(client.getSnapshot().status, "anonymous");
+});
+
+test("resume pagination allows only a UUID cursor on the fixed owned-list route", async () => {
+  const calls = [];
+  const client = make(async (url) => {
+    calls.push(url);
+    return url.endsWith("/refresh")
+      ? token()
+      : url.endsWith("/me")
+        ? me()
+        : response({ data: [] });
+  });
+  await client.restore();
+  const cursor = "11111111-1111-4111-8111-111111111111";
+  await client.requestApi(`/api/v1/resume?cursor=${cursor}`);
+  assert.equal(
+    calls.at(-1),
+    `http://localhost:4000/api/v1/resume?cursor=${cursor}`,
+  );
+  for (const path of [
+    `/api/v1/resume?cursor=${cursor}&token=private`,
+    `/api/v1/resume?cursor=${cursor}#fragment`,
+    "/api/v1/resume?cursor=https://evil.invalid",
+    `//evil.invalid/api/v1/resume?cursor=${cursor}`,
+  ])
+    await assert.rejects(client.requestApi(path), /Invalid API path/);
+});

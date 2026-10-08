@@ -1,10 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { localProfileServiceKeySchema } from "@resume-forge/access-policy/server";
 
-for (const file of ["../../../.env"]) {
-  const url = new URL(file, import.meta.url);
+const localRoot = process.env.RESUME_FORGE_LOCAL_ROOT
+  ? pathToFileURL(`${resolve(process.env.RESUME_FORGE_LOCAL_ROOT)}/`)
+  : new URL("../../../", import.meta.url);
+for (const file of [".env"]) {
+  const url = new URL(file, localRoot);
   if (existsSync(url)) process.loadEnvFile(url);
 }
 const schema = z.object({
@@ -17,10 +22,7 @@ export function loadConfig() {
   let databaseUrl: string;
   try {
     const local = parseEnv(
-      readFileSync(
-        new URL("../../../.local/runtime-database.env", import.meta.url),
-        "utf8",
-      ),
+      readFileSync(new URL(".local/runtime-database.env", localRoot), "utf8"),
     );
     const url = new URL(local.AUTH_DATABASE_URL ?? "");
     if (
@@ -50,7 +52,7 @@ export function loadConfig() {
     );
   if (process.env.NODE_ENV === "production")
     throw new Error("Local auth is not approved for production deployment.");
-  const file = new URL("../../../.local/auth-transport.env", import.meta.url);
+  const file = new URL(".local/auth-transport.env", localRoot);
   let profileServiceKey: string | undefined;
   if (existsSync(file)) {
     try {

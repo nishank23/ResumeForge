@@ -349,8 +349,8 @@ export function DesignPanel({
   return (
     <div className="rf-design-tools">
       <p className="rf-tool-hint">
-        Local preview settings. Save locally checkpoints them with your text;
-        reload clears both.
+        Save changes stores formatting with this resume. Zoom changes only the
+        view.
       </p>
       <Button
         variant="outline"
@@ -489,7 +489,7 @@ export function DesignPanel({
         ))}
       </details>
       <p className="rf-tool-hint">
-        Template packs, fit-to-page and matching PDF rendering are pending.
+        More templates and PDF export are not available yet.
       </p>
       <Dialog
         open={gallery}

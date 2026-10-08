@@ -11,7 +11,6 @@ import {
 import {
   ArrowRight,
   Briefcase,
-  FilePlus2,
   FileText,
   FolderOpen,
   Menu,
@@ -24,7 +23,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  AuroraBackdrop,
   Badge,
   Button,
   RemoteErrorBoundary,
@@ -272,8 +270,10 @@ function WorkspaceShell() {
         <div className="rf-sidebar-bottom">
           <div className="rf-preview-note">
             <span className="rf-status-dot" />
-            Design preview
-            <p>Explore with sample content. Changes stay in this session.</p>
+            Personal workspace
+            <p>
+              Upload your resume, edit your experience, and save your work.
+            </p>
           </div>
           <Link
             className="rf-account"
@@ -294,7 +294,7 @@ function WorkspaceShell() {
                     : "Signed out"}
               <small>
                 {session.status === "authenticated"
-                  ? "Signed in · Sample workspace"
+                  ? "Signed in · Personal workspace"
                   : "Sign in to open your workspace"}
               </small>
             </span>
@@ -343,7 +343,14 @@ function WorkspaceShell() {
             >
               <Route
                 path="/onboarding"
-                element={<OnboardingEntry session={session} />}
+                element={
+                  <OnboardingEntry session={session}>
+                    {remote(
+                      "profile",
+                      <LazyProfileRemoteRoot context={context} />,
+                    )}
+                  </OnboardingEntry>
+                }
               />
             </Route>
             <Route
@@ -365,12 +372,14 @@ function WorkspaceShell() {
               />
               <Route
                 path="resumes"
-                element={
-                  <ResumeLibrary
-                    prefix={prefix}
-                    reducedMotion={reducedMotion}
-                  />
-                }
+                element={remote(
+                  "resume",
+                  <LazyResumeRemoteRoot
+                    key="library"
+                    context={context}
+                    view="library"
+                  />,
+                )}
               />
               <Route
                 path="resumes/new"
@@ -384,6 +393,17 @@ function WorkspaceShell() {
                 )}
               />
               <Route
+                path="resumes/upload"
+                element={remote(
+                  "resume",
+                  <LazyResumeRemoteRoot
+                    key="upload"
+                    context={context}
+                    view="upload"
+                  />,
+                )}
+              />
+              <Route
                 path="resumes/:resumeId"
                 element={remote(
                   "resume",
@@ -391,6 +411,7 @@ function WorkspaceShell() {
                     key={location.pathname}
                     context={context}
                     view="editor"
+                    resumeId={location.pathname.split("/").at(-1)}
                   />,
                 )}
               />
@@ -508,116 +529,8 @@ function WorkspaceShell() {
         </main>
         <footer className="rf-footer rf-app-chrome">
           <span>Built around your experience.</span>
-          <span>Sample workspace · Nothing is saved to a server</span>
+          <span>Your resumes save to your account</span>
         </footer>
-      </div>
-    </div>
-  );
-}
-
-function ResumeLibrary({
-  prefix,
-  reducedMotion,
-}: {
-  readonly prefix: string;
-  readonly reducedMotion: boolean;
-}) {
-  return (
-    <div className="rf-page">
-      <div className="rf-page-heading rf-heading-row">
-        <div>
-          <h1>My resumes</h1>
-          <p>Your experience, ready for its next chapter.</p>
-        </div>
-        <Link className="rf-primary-link" to={`${prefix}/resumes/new`}>
-          <FilePlus2 size={17} aria-hidden="true" />
-          New resume
-        </Link>
-      </div>
-      <section className="rf-welcome">
-        <AuroraBackdrop staticMode reducedMotion={reducedMotion} />
-        <div className="rf-welcome-copy">
-          <h2>
-            A strong resume starts
-            <br />
-            with your story.
-          </h2>
-          <p>
-            Keep your experience in one place. Shape it into a focused resume
-            for every opportunity.
-          </p>
-          <Link className="rf-text-link" to={`${prefix}/profile`}>
-            Review your profile <ArrowRight size={17} />
-          </Link>
-        </div>
-        <div className="rf-paper-stack" aria-hidden="true">
-          <div className="rf-mini-paper">
-            <div className="rf-mini-name">Your name</div>
-            <div className="rf-mini-role">Your next chapter</div>
-            <hr />
-            <strong>Experience</strong>
-            <i />
-            <i />
-            <i />
-            <strong>Education</strong>
-            <i />
-            <i />
-            <strong>Skills</strong>
-            <i />
-          </div>
-        </div>
-      </section>
-      <div className="rf-section-heading">
-        <h2>Your workspace</h2>
-        <span>1 sample resume</span>
-      </div>
-      <div className="rf-library-grid">
-        <Link className="rf-resume-card" to={`${prefix}/resumes/res-draft-01`}>
-          <div className="rf-card-preview" aria-hidden="true">
-            <div className="rf-mini-paper">
-              <div className="rf-mini-name">Alex Rivera</div>
-              <div className="rf-mini-role">Backend engineer</div>
-              <hr />
-              <strong>Professional summary</strong>
-              <i />
-              <i />
-              <strong>Experience</strong>
-              <i />
-              <i />
-              <i />
-              <strong>Skills</strong>
-              <i />
-            </div>
-            <span className="rf-preview-tag">Sample</span>
-          </div>
-          <div className="rf-resume-card-info">
-            <div>
-              <h3>Backend engineer</h3>
-              <p>Single-column layout · Sample content</p>
-            </div>
-            <ArrowRight size={18} aria-hidden="true" />
-          </div>
-        </Link>
-        <Link className="rf-new-card" to={`${prefix}/resumes/new`}>
-          <span className="rf-add-icon">
-            <FilePlus2 size={24} aria-hidden="true" />
-          </span>
-          <h3>Start a new resume</h3>
-          <p>
-            Explore a draft from your profile,
-            <br />a blank page, or a job description.
-          </p>
-          <span className="rf-text-link">
-            Choose a starting point <ArrowRight size={16} />
-          </span>
-        </Link>
-      </div>
-      <div className="rf-library-footnote">
-        <FileText size={16} aria-hidden="true" />
-        <p>
-          Open the sample to edit its summary and try Editor/Preview. Changes
-          stay local and reset when you leave or reload.
-        </p>
       </div>
     </div>
   );

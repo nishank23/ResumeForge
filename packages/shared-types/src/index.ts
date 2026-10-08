@@ -55,7 +55,8 @@ export interface ProfessionalProfileDto {
 export type ResumeStatus = "generating" | "completed" | "failed";
 
 /** Honest task execution stages driven by server events (never fabricated percentages). */
-export type TaskLifecycleState = "idle" | "queued" | "running" | "ready" | "failed" | "stale";
+export type TaskLifecycleState =
+  "idle" | "queued" | "running" | "ready" | "failed" | "stale";
 
 // ── Contextual section-editing contracts (Phase 1 foundation for F06/F08) ──
 
@@ -83,23 +84,15 @@ export interface ResumeTargetSelection {
 
 /** Supported contextual actions in the section composer. */
 export type ResumeSuggestionAction =
-  | "improve_wording"
-  | "make_concise"
-  | "emphasize_impact"
-  | "tailor_to_jd";
+  "improve_wording" | "make_concise" | "emphasize_impact" | "tailor_to_jd";
 
 /** Suggestion lifecycle states from resume-editing-contract.md. */
 export type ResumeSuggestionStatus =
-  | "queued"
-  | "running"
-  | "ready"
-  | "applied"
-  | "discarded"
-  | "failed"
-  | "stale";
+  "queued" | "running" | "ready" | "applied" | "discarded" | "failed" | "stale";
 
 /** Provenance origin for grounded resume facts (U06 contract). */
-export type FactOrigin = "profile_revision" | "manual_confirmation" | "confirmed_import";
+export type FactOrigin =
+  "profile_revision" | "manual_confirmation" | "confirmed_import";
 
 /** Supporting fact reference displayed during suggestion review. */
 export interface ResumeFactReference {
@@ -163,3 +156,10 @@ export interface ShellFederationContext {
   readonly onToggleTheme?: () => void;
   readonly onNavigate?: (path: string) => void;
 }
+
+export {
+  editorDocumentSchema,
+  richDocumentSchema,
+  type EditorDocument,
+  type RichDocument,
+} from "./editor-document.js";

@@ -1,8 +1,16 @@
 # Frontend API integration readiness — 2026-10-04
 
-## Recommendation
+## Current recommendation
 
-Start connecting the existing personal profile APIs after repairing the merged runtime baseline. Do not expand the business API surface first. The next useful outcome is an authenticated user saving professional details, reloading them, and handling revision conflicts in the browser. Keep the current resume editor and its temporary AI preview until their persistence and suggestion contracts pass integration checks.
+The requested personal resume integration is now connected: no profile setup gate, owned library, blank creation, authenticated file review and immutable version saves. Use the [README manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04) before adding another slice. Reproducible installation, fixed gateway routing, a strict lossless editor mapping and an approved restricted resume runtime role resolve the corresponding historical blockers below for this personal flow. Workspace business service remains stopped; its separate startup conflicts are not resolved globally.
+
+Next useful work is reviewed extraction/master-profile derivation or remaining resume management. Real AI must wait for grounding, persisted suggestion binding and provider checks. ATS/PDF/shared activation still needs its own policy and integration acceptance. Existing endpoints alone do not justify more API surface.
+
+Search/sort cover loaded 50-row pages, not global server search. File review is local PDF/DOCX/TXT/MD with limits; full F19 private staging/provenance/OCR remains pending. Private owner-only resume header snapshots are stored without writing UserContact or master professional fields; D12 shared/export variants remain unresolved. LinkedIn needs credentials.
+
+## Historical baseline assessment
+
+The following repository findings describe the pre-integration baseline. Current scope/evidence is above and in the canonical tracker; resolved findings are retained to explain why activation was bounded.
 
 ## Repository state and evidence
 
@@ -12,13 +20,13 @@ This assessment used the merged route handlers, request schemas, startup configu
 
 ## What can be integrated in order
 
-| Area | Merged server surface | Frontend status and next action |
-| --- | --- | --- |
-| Personal professional profile | GET/POST/PUT `/api/v1/profile`, PUT `/profile/draft`; CRUD for Experience, Education, Skills, Projects and Certifications; POST `/profile/complete` | Profile remote is synthetic; onboarding remains a pending entry. First connect professional create/load/save/draft and verify reload, expiry and 409 conflict handling. Then add section forms and completion. |
-| Contacts | GET/PUT `/api/v1/profile/contact` | Keep separate from professional writes. Review dedicated contact permissions before connecting real contact fields. |
-| Resume persistence | GET/list/import/generate, PUT, versions, clone/delete and JSON/text/Markdown/HTML download | Current editor uses a local rich-text draft. Agree and prove a lossless mapping before replacing Save locally. Keep rich text, dates, section/item IDs, language proficiency, visibility and appearance across save/reload. Binary PDF export is not supplied by these download formats. |
-| JD, ATS and gap analysis | JD parse/history/delete, resume tailoring and gap-analysis endpoints | Implement after profile and durable resume flows pass. Treat current algorithms as deterministic heuristics; provider-backed AI and approved scoring requirements remain separate. |
-| AI review and shared workspaces | Suggest/apply/task retrieval and organization/vendor/member/grant/audit routes | Hold frontend activation until the findings below and applicable policy/phase gates are resolved. Endpoint presence does not establish complete integration or privacy acceptance. |
+| Area                            | Merged server surface                                                                                                                               | Frontend status and next action                                                                                                                                                                                                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Personal professional profile   | GET/POST/PUT `/api/v1/profile`, PUT `/profile/draft`; CRUD for Experience, Education, Skills, Projects and Certifications; POST `/profile/complete` | Profile remote is synthetic; onboarding remains a pending entry. First connect professional create/load/save/draft and verify reload, expiry and 409 conflict handling. Then add section forms and completion.                                                                           |
+| Contacts                        | GET/PUT `/api/v1/profile/contact`                                                                                                                   | Keep separate from professional writes. Review dedicated contact permissions before connecting real contact fields.                                                                                                                                                                      |
+| Resume persistence              | GET/list/import/generate, PUT, versions, clone/delete and JSON/text/Markdown/HTML download                                                          | Current editor uses a local rich-text draft. Agree and prove a lossless mapping before replacing Save locally. Keep rich text, dates, section/item IDs, language proficiency, visibility and appearance across save/reload. Binary PDF export is not supplied by these download formats. |
+| JD, ATS and gap analysis        | JD parse/history/delete, resume tailoring and gap-analysis endpoints                                                                                | Implement after profile and durable resume flows pass. Treat current algorithms as deterministic heuristics; provider-backed AI and approved scoring requirements remain separate.                                                                                                       |
+| AI review and shared workspaces | Suggest/apply/task retrieval and organization/vendor/member/grant/audit routes                                                                      | Hold frontend activation until the findings below and applicable policy/phase gates are resolved. Endpoint presence does not establish complete integration or privacy acceptance.                                                                                                       |
 
 ## Blocking findings
 
@@ -35,3 +43,7 @@ This assessment used the merged route handlers, request schemas, startup configu
 First repair reproducible installation, runtime ports/credentials and browser routing. Then connect personal professional profile create/read/update/draft through a typed client using the existing session and workspace selector. Verify loading, empty profile, validation, failed save, expired session, revision conflict and persistence after reload. Follow with section CRUD/completion, then resume list/load/save/version history after the lossless contract is ready. Keep AI, ATS/PDF claims and shared-workspace activation within their separately verified scope.
 
 No new product code, dependencies, credentials, permissions, schema or data were changed by this assessment.
+
+## Integration update — 2026-10-04
+
+Professional profile integration and auth credential repair remain in place. The latest request removes required Create profile onboarding and adds the personal resume flow described above. `dev:personal` now builds/runs auth, profile, resume and gateway with four frontends. The backend checkout was unchanged. See the [tracker](../context/progress-tracker.md#resume-first-library-upload-and-persistence--2026-10-04) for actual final checks and limits. No claims of complete AI, F10, F19, PDF or shared privacy acceptance follow from this update.

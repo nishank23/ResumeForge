@@ -1,5 +1,17 @@
 # Contextual Resume Editing Contract
 
+## Current A4 presentation correction — 2026-10-08
+
+The user explicitly requests a compact one-page builder and non-overlapping scroll controls. The fixed A4 paper (794×1123 CSS pixels minimum) uses bounded compact defaults where appearance is absent, preserving saved settings and all populated facts. Fit page/Fit width/100% changes only view scale; responsive app chrome must not reflow paper date/skill columns. Desktop contextual actions belong to the sticky header instead of paper gutters; the whole tool rail sticks/scrolls together. Long content remains in an extended sheet with an overflow notice and estimated page count. This is not automatic formatting-fit, shortening, full pagination or PDF parity. [Actual evidence and manual checks](../README.md#a4-resume-page-and-scroll-controls--2026-10-08) supersede the earlier continuous-canvas/52px-gutter presentation notes. Existing reviewed edit, privacy and expected-version-save contracts remain authoritative.
+
+## Implemented personal persistence extension — 2026-10-04
+
+Owned blank/reviewed-import documents now use a strict shared `EditorDocument` in private Resume/ResumeVersion content alongside a backward-compatible flattened projection. Stable section/entry/achievement/group/tag/language IDs, dates, visibility, rich text and appearance survive save/reload. Acknowledgment checkpoints the captured save snapshot; typing after submission remains dirty. Creation replays return the original without new audit/version writes. Save validates expectedVersion and serializes mutation/version/audit atomically; conflict retains edits and requires reload.
+
+Dialog Save remains a local draft transaction. The workspace action is now Save changes and creates a durable version; Cancel restores the last acknowledged document. Local history clears on navigation, but saved versions persist. Real documents start with OAuth display name only and no fictional autofill. Upload staging is untrusted until explicit review/confirmation; no master professional or UserContact mutation occurs. Private owner-only contact values may exist in resume-local snapshots/source text. No shared read, export or AI route exposes them; D12 separation/variants and contact-domain integration remain gated. These rules supersede local-only/sample statements below. Grounded AI proposal persistence remains proposed.
+
+**Import field extension — 2026-10-08:** Optional `header.links` stores up to 30 private resume-local label/HTTP-or-HTTPS URL pairs with globally unique stable IDs. The header form/paper and flattened projection preserve these through reviewed creation and subsequent immutable versions. Existing documents without links remain valid. Imported language group/bullet values map to the existing language model, retaining item IDs and visibility rather than using the section title as a language. This changes no master profile/contact data or AI/shared/export access. Previously saved imports keep their confirmed editor documents; parser fixes apply only to fresh upload review.
+
 **Frontend clarification — 2026-10-04:** Spoken Languages are grouped under Skills in the local document and dialog, with distinct language identity/proficiency retained. Skills is a dialog-only editing region, without a floating AI/item toolbar. Category/tag Save projects only that Skills section (including languages), leaves contacts and other sections intact, and commits one history step; Cancel restores the opening draft. This replaces the older Skills inline-action presentation only; proposed backend/AI contracts remain gated. [Local contract and bounds](../docs/manual-editor-contract.md#skills-grouping-correction--2026-10-04), [verification](../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04).
 
 **Updated:** 2026-10-03. **Proposed backend/AI contract; local E01–E05 manual editing is implemented; backend/AI behavior remains proposed.** The user requests section-specific prompt assistance and resume-building/tailoring functionality. This document defines how to add those capabilities to F06/F08 while retaining the master-profile and privacy boundaries.
@@ -61,13 +73,13 @@ If the current version, target, JD context or authorization is stale, return a c
 
 All routes use `/api/v1`, the existing workspace selector and normal scoped error envelopes. These routes are proposals for F06/F08, not implemented APIs.
 
-| Method and relative route | Input / result | Permissions and scope |
-|---|---|---|
-| `POST /resumes` | Mode blank/profile-copy, profile association, template ID/version, optional JD → initial draft/version | `resume.create`, `profile.read`, `template.view`; authorized profile/workspace |
-| `POST /resume/:id/suggestions` | Base version, expected revision, target, action, instruction, optional JD, idempotency → owned suggestion/run; 202 | `resume.read`, `resume.generate`, `resume.update` and input read access |
-| `GET /resume/:id/suggestions/:suggestionId` | Private proposal/reasons/provenance/status | `resume.read` plus current target/input access; no raw provider payload |
-| `POST /resume/:id/suggestions/:suggestionId/apply` | Expected revision + idempotency → one new version | `resume.read`, `resume.update` and current input/resource access |
-| `POST /resume/:id/suggestions/:suggestionId/discard` | Expected suggestion state → terminal discard | `resume.update` and parent scope; cannot undo an already applied version |
+| Method and relative route                            | Input / result                                                                                                     | Permissions and scope                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `POST /resumes`                                      | Mode blank/profile-copy, profile association, template ID/version, optional JD → initial draft/version             | `resume.create`, `profile.read`, `template.view`; authorized profile/workspace |
+| `POST /resume/:id/suggestions`                       | Base version, expected revision, target, action, instruction, optional JD, idempotency → owned suggestion/run; 202 | `resume.read`, `resume.generate`, `resume.update` and input read access        |
+| `GET /resume/:id/suggestions/:suggestionId`          | Private proposal/reasons/provenance/status                                                                         | `resume.read` plus current target/input access; no raw provider payload        |
+| `POST /resume/:id/suggestions/:suggestionId/apply`   | Expected revision + idempotency → one new version                                                                  | `resume.read`, `resume.update` and current input/resource access               |
+| `POST /resume/:id/suggestions/:suggestionId/discard` | Expected suggestion state → terminal discard                                                                       | `resume.update` and parent scope; cannot undo an already applied version       |
 
 Manual saves continue using `PUT /resume/:id`. Restoring a previous version uses an explicit validated save of permitted content with current revision checks, not mutation of history. Dismissing a panel need not cancel a task; define discard of a running result so it cannot later be offered for Apply.
 

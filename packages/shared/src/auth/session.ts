@@ -129,7 +129,55 @@ export function createSessionController(transport: SessionTransport) {
       throw new Error("Sign-out failed. Retry to revoke the server session.");
     }
   }
+  async function requestApi(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<Response> {
+    if (
+      !/^\/api\/v1\/[a-z][a-z0-9/-]*$/.test(path) &&
+      !/^\/api\/v1\/resume\?cursor=[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+        path,
+      )
+    )
+      throw new Error("Invalid API path");
+    const version = generation;
+    if (state.status !== "authenticated" || !token)
+      throw new Error("Session unavailable");
+    const actor = state.identity.id;
+    const workspace = state.identity.workspaceId;
+    const active = () =>
+      version === generation &&
+      state.status === "authenticated" &&
+      state.identity.id === actor &&
+      state.identity.workspaceId === workspace &&
+      Boolean(token);
+    const send = () => {
+      const headers = new Headers(options.headers);
+      headers.set("Authorization", `Bearer ${token ?? ""}`);
+      return transport.request(`http://localhost:4000${path}`, {
+        ...options,
+        headers,
+        credentials: "omit",
+        cache: "no-store",
+        signal: options.signal
+          ? AbortSignal.any([options.signal, AbortSignal.timeout(10_000)])
+          : AbortSignal.timeout(10_000),
+      });
+    };
+    let response = await send();
+    if (!active()) throw new Error("Session changed");
+    // A rejected actor cannot have performed a write. Refresh once; never retry outages.
+    if (response.status === 401) {
+      await restore();
+      if (!active()) throw new Error("Session unavailable");
+      response = await send();
+      if (!active()) throw new Error("Session changed");
+      if (response.status === 401) clear();
+    }
+    return response;
+  }
   return {
+    requestApi,
     getSnapshot: () => state,
     subscribe: (listener: () => void) => {
       listeners.add(listener);

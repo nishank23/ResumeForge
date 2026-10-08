@@ -45,5 +45,10 @@ export function useSession() {
     session.getSnapshot,
   );
   useEffect(start, []);
-  return { state, restore: session.restore, logout: session.logout };
+  return {
+    state,
+    restore: session.restore,
+    logout: session.logout,
+    requestApi: session.requestApi,
+  };
 }
