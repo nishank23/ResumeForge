@@ -1,3 +1,5 @@
+import type { ReadinessCheck } from "@resume-forge/resume-core";
+import { readinessField } from "./readiness-feedback";
 import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import {
   Controller,
@@ -88,6 +90,10 @@ export interface EditResumeDialogProps {
   sample: ResumeDraft;
   base: ResumeDraft;
   target: DraftTarget;
+  guidance?: ReadinessCheck;
+  guidanceResult?: ReadinessCheck;
+  onImprove?: () => void;
+  improveDisabledReason?: string;
   onPreview: (draft: ResumeDraft) => void;
   onSave: (draft: ResumeDraft) => void;
   onCancel: () => void;
@@ -96,10 +102,15 @@ export function EditResumeDialog({
   sample,
   base,
   target,
+  guidance,
+  guidanceResult,
+  onImprove,
+  improveDisabledReason,
   onPreview,
   onSave,
   onCancel,
 }: EditResumeDialogProps) {
+  const fieldsRef = useRef<HTMLFormElement>(null);
   const [defaults] = useState(() => formValues(base, target));
   const form = useForm<EditorFormValues>({ defaultValues: defaults });
   const history = useRef(createHistory(defaults));
@@ -214,6 +225,62 @@ export function EditResumeDialog({
         )
       }
     >
+      {guidance ? (
+        <section
+          className="rf-readiness-guidance"
+          aria-label="Readiness guidance"
+        >
+          <strong>{guidance.title}</strong>
+          <p>{guidance.reason}</p>
+          <p role="status">
+            {guidanceResult?.passed
+              ? "This check passes in the draft preview. Save changes in the editor to store the result."
+              : "Edit the supported facts below. The preview updates as you edit; nothing is saved automatically."}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const fields = fieldsRef.current;
+              const field =
+                fields?.querySelector<HTMLElement>(readinessField(guidance)) ??
+                fields?.querySelector<HTMLElement>(
+                  'input:not([disabled]), textarea, select, [contenteditable="true"]',
+                );
+              field?.focus();
+              field?.scrollIntoView({ block: "nearest", behavior: "auto" });
+            }}
+          >
+            Go to field
+          </Button>
+        </section>
+      ) : null}
+      {onImprove ? (
+        <section
+          className="rf-description-assist"
+          aria-label="Description assistance"
+        >
+          <strong>Improve this description</strong>
+          <p>
+            AI rewords your saved description and achievements. Add missing
+            facts manually first.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={dirty || !!improveDisabledReason}
+            onClick={onImprove}
+          >
+            Improve with AI
+          </Button>
+          {dirty || improveDisabledReason ? (
+            <p role="status">
+              {improveDisabledReason ||
+                "Save this dialog, then save the resume before requesting AI."}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       {dialogError ? (
         <StatusBanner
           tone="error"
@@ -231,6 +298,7 @@ export function EditResumeDialog({
       <FormProvider {...form}>
         <form
           id={formId}
+          ref={fieldsRef}
           noValidate
           onSubmit={(event) => {
             void submit(event);

@@ -1,5 +1,9 @@
 # F03 — Database Schema and Prisma
 
+## Current bounded resume vector slice — 2026-10-09
+
+D07 is resolved for resume-entry retrieval: gemini-embedding-001, 768 dimensions, professional-v1. The additive cache migration, scoped RLS, exact prefiltered cosine retrieval, HNSW infrastructure and runtime function allowlist are implemented locally. Disposable editor tests verify cache replay, wrong-owner/version denial, save/delete invalidation, late-response conflict and source-preserving rollback/rebuild. Hosted provisioning, larger-corpus indexing/benchmarking and proposed profile/JD/Skill spaces remain pending. F03 is not fully complete. [Contract and local setup](../../docs/resume-vector-search.md).
+
 **Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — initial local identity migration verified
 
 ## Goal and dependencies
@@ -28,7 +32,7 @@ Protect resume-version allocation and current-version updates against concurrenc
 - [ ] Fresh database migration and client generation succeed with the pinned toolchain.
 - [ ] Constraints reject duplicate provider identities/memberships/version numbers and invalid parent references.
 - [ ] Scoped fixture queries cannot cross workspace/profile boundaries.
-- [ ] Parameterized vector operations reject wrong dimensions/model spaces and return scoped data.
+- [x] Current personal resume-entry vector operations reject wrong dimensions/model spaces and return scoped data; other planned spaces remain pending.
 - [ ] Profile/contact separation and approved grant/copy semantics are reflected in both models and DTOs.
 - [ ] Migration review and development restore/recovery evidence are recorded.
 

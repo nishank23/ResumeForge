@@ -1,6 +1,18 @@
 # F06 — Resume Generator, Suggestions and Durable Pipeline
 
-**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Not started
+## Scoped rewrite repair — 2026-10-10
+
+The requested AI checkbox removal is implemented through explicit action buttons with scope copy. Server processing intent and contact exclusion remain. Live harmless-word validation failure is fixed by shared grammar/action vocabulary and narrow shorthand equivalents; arbitrary factual vocabulary/numbers/technical terms remain guarded. Review uses bounded word-level red deletions/green replacements plus full-text disclosure. Apply remains scoped, reviewed, versioned and idempotent. Generation allows 20 seconds and rewrite output 8,192 tokens without automatic provider retries. [Current workflow and verification](../../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
+
+## Current Gemini wording — 2026-10-09
+
+The user replaces MiMo with paid Gemini gemini-3.5-flash-lite. Selected saved descriptions/achievements retain consent, grounded proposal review, conservative source/numeric validation and atomic versioned Apply. No OpenCode SDK or native process remains. Stored MiMo proposals remain readable for compatibility. Full generation and durable/shared workflows remain partial. [Current contract](../../docs/ats-workflow.md).
+
+## Historical scoped wording slice — 2026-10-09
+
+Selected saved Summary/experience/project descriptions and achievements have a separate consented MiMo proposal/review/apply flow. Server-stored base version/hash/target and atomic immutable-version apply preserve contacts, other entries and master profile. Source-vocabulary/numeric checks are conservative guards, not proof of factual equivalence; user review is required. The official SDK/CLI 1.18.35 pair now supplies isolated, tool-denied generation with no fallback. Live MiMo generation was retested after `/connect` and still returns 403 FreeTierError; mocked-provider database apply passes. Full generation, durable tasks and shared roles remain incomplete. [Current contract](../../docs/ats-workflow.md).
+
+**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partial: personal scoped wording/review/apply; full generation and durable tasks pending
 
 ## Goal and dependencies
 

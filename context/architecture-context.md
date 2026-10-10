@@ -1,5 +1,23 @@
 # Architecture Context
 
+## Gemini validation and action boundary — 2026-10-10
+
+Prompt/validator share bounded grammar and exact shorthand aliases so harmless wording is not misclassified as a new fact. Provider receives field IDs/text only for scoped rewriting. UI checkboxes are removed; labeled actions supply the existing processing-intent flag. Contact exclusion, paid configuration, auditing, authorization and version/hash rechecks remain. Generation deadlines are 20 seconds; embeddings remain eight. No provider, schema, grants or scoring changes. [Contract](../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
+
+## No-JD guidance boundary — 2026-10-09
+
+The shared private-document adapter derives one contact-completeness boolean. General readiness receives that boolean separately from its contact-free professional projection; resume-core never receives raw header/contact fields. Local professional guidance also uses entry technologies, visible bullet count and editor rich-text bold counts. Added advice is score-neutral. JD/provider/vector projections receive no contact hints; their scoring behavior stays unchanged. Legacy readiness histories remain readable, with current-rubric replay and preference checks. [Contract](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
+
+
+## Current Gemini and compact assessment update — 2026-10-09
+
+The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](../docs/ats-workflow.md).
+
+
+## Current personal vector retrieval — 2026-10-09
+
+Resume-service orchestrates consented Gemini document/query embeddings and a private pgvector cache; resume-core remains pure and provider/database-free. Exact owner/workspace/resume/version filtering precedes cosine ranking. This bounded synchronous slice supplements JD evidence without changing local score weights. Durable background indexing and authorized HR-scale retrieval remain pending. [Contract](../docs/resume-vector-search.md).
+
 This is the target architecture, not deployed infrastructure. Stack choices come from the supplied plan plus the user’s 2026-09-29 Performative UI addition; implementation refinements remain subject to [decisions.md](decisions.md).
 
 ## Stack

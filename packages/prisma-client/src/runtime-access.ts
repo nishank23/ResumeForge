@@ -94,6 +94,10 @@ export const RUNTIME_GRANTS: Readonly<
         "pdfR2Key",
       ],
     },
+    ...(["SELECT", "INSERT", "DELETE"] as const).map((privilege) => ({
+      table: "ResumeSearchChunk",
+      privilege,
+    })),
     { table: "AuditOutbox", privilege: "INSERT" },
   ],
   auditRelay: [
@@ -124,6 +128,21 @@ export const RUNTIME_GRANTS: Readonly<
   ],
 };
 
+export const RUNTIME_FUNCTIONS: Readonly<
+  Record<RuntimeService, readonly string[]>
+> = {
+  auth: [],
+  profile: [],
+  auditRelay: [],
+  auditIngest: [],
+  resume: [
+    "vector_in(cstring,oid,integer)",
+    "vector_out(vector)",
+    "vector_typmod_in(cstring[])",
+    "cosine_distance(vector,vector)",
+    "vector(vector,integer,boolean)",
+  ],
+};
 /** Verify actual DB identity and grants; a URL username alone is not authority. */
 export async function assertRuntimeDatabaseRole(
   db: PrismaClient,
@@ -190,13 +209,20 @@ export async function assertRuntimeDatabaseRole(
       throw new Error("Unsafe runtime database access");
   }
 
+  const functions = await db.$queryRaw<
+    { signature: string; allowed: boolean }[]
+  >`
+    SELECT p.oid::regprocedure::text AS signature, has_function_privilege(current_user,p.oid,'EXECUTE') AS allowed
+    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'
+  `;
+  for (const fn of functions)
+    if (fn.allowed !== RUNTIME_FUNCTIONS[service].includes(fn.signature))
+      throw new Error("Unsafe runtime database access");
   const [extra] = await db.$queryRaw<{ forbidden: boolean }[]>`
     SELECT (
       EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f') AND
           (has_table_privilege(current_user, c.oid, 'TRUNCATE,TRIGGER,MAINTAIN'))) OR
-      EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'public' AND has_function_privilege(current_user, p.oid, 'EXECUTE')) OR
       EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public' AND c.relkind = 'S' AND
           has_sequence_privilege(current_user, c.oid, 'SELECT,UPDATE,USAGE')) OR

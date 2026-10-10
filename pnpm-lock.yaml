@@ -294,6 +294,9 @@ importers:
 
   apps/resume-mfe:
     dependencies:
+      '@resume-forge/resume-core':
+        specifier: workspace:*
+        version: link:../../packages/resume-core
       '@resume-forge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -485,6 +488,21 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+
+  packages/resume-core:
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.0
+        version: 10.0.1(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))
+      eslint:
+        specifier: ^9.20.0
+        version: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.30.0
+        version: 8.71.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
 
   packages/shared:
     dependencies:
@@ -727,6 +745,9 @@ importers:
       '@resume-forge/prisma-client':
         specifier: workspace:*
         version: link:../../packages/prisma-client
+      '@resume-forge/resume-core':
+        specifier: workspace:*
+        version: link:../../packages/resume-core
       '@resume-forge/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

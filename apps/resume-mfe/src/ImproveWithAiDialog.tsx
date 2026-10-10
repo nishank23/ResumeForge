@@ -6,57 +6,10 @@ import {
   type DraftTarget,
   type ResumeDraft,
 } from "./editor-draft";
-import {
-  createLocalAiPreview,
-  type LocalAiPreview,
-  type PreviewChange,
-} from "./editor-ai-preview";
+import { createLocalAiPreview, type LocalAiPreview } from "./editor-ai-preview";
 import "./improve-with-ai.css";
 
-function TextChange({ change }: { change: PreviewChange }) {
-  const before = change.original.split(/(\s+)/);
-  const after = change.proposed.split(/(\s+)/);
-  let start = 0;
-  while (start < before.length && before[start] === after[start]) start++;
-  let end = 0;
-  while (
-    end < before.length - start &&
-    end < after.length - start &&
-    before[before.length - end - 1] === after[after.length - end - 1]
-  )
-    end++;
-  const removed = before.slice(start, before.length - end).join("");
-  const added = after.slice(start, after.length - end).join("");
-  return (
-    <section className="rf-ai-change">
-      <h3>{change.label}</h3>
-      <p>
-        {before.slice(0, start).join("")}
-        {removed ? (
-          <del>
-            <span className="sr-only">Removed: </span>
-            {removed}
-          </del>
-        ) : null}
-        {removed && added ? " " : null}
-        {added ? (
-          <ins>
-            <span className="sr-only">Added: </span>
-            {added}
-          </ins>
-        ) : null}
-        {end ? before.slice(before.length - end).join("") : ""}
-      </p>
-      <details>
-        <summary>Read original and suggested text</summary>
-        <h4>Original</h4>
-        <p>{change.original}</p>
-        <h4>Suggested</h4>
-        <p>{change.proposed}</p>
-      </details>
-    </section>
-  );
-}
+import { RewriteTextChange } from "./RewriteTextChange";
 
 export function ImproveWithAiDialog({
   base,
@@ -178,7 +131,7 @@ export function ImproveWithAiDialog({
           </div>
           <div className="rf-ai-comparison">
             {preview.changes.map((change, index) => (
-              <TextChange key={index} change={change} />
+              <RewriteTextChange key={index} change={change} />
             ))}
           </div>
           <p className="rf-ai-accept-note">

@@ -72,6 +72,30 @@ export function pdfPageText(
       height: Number(top) - Number(bottom),
     });
   }
+  // A persistent empty gutter plus narrative on both sides indicates independent
+  // columns. Date/location cells alone never establish a second reading column.
+  const intervals = pieces.filter((p) => p.width > 0).map((p) => [p.x, p.x + p.width] as const)
+    .sort((a, b) => a[0] - b[0]);
+  const gutters: number[] = [];
+  let edge = intervals[0]?.[1] ?? 0;
+  for (const [left, right] of intervals.slice(1)) {
+    if (left - edge >= 12) gutters.push((edge + left) / 2);
+    edge = Math.max(edge, right);
+  }
+  const columnSplit = gutters.find((x) => {
+    const left = pieces.filter((p) => p.x < x), right = pieces.filter((p) => p.x >= x);
+    const narrativeRows = (column: Piece[]) => new Set(column
+      .filter((p) => p.width >= 100 && p.text.length >= 25)
+      .map((p) => Math.round(p.y / 5))).size;
+    return narrativeRows(left) >= 6 && narrativeRows(right) >= 6;
+  });
+  if (columnSplit !== undefined) return [
+    pieces.filter((p) => p.x < columnSplit),
+    pieces.filter((p) => p.x >= columnSplit),
+  ].map(rowsText).join("\n");
+  return rowsText(pieces);
+}
+function rowsText(pieces: Piece[]): string {
   const rows: { y: number; height: number; pieces: Piece[] }[] = [];
   for (const piece of pieces.sort((a, b) => b.y - a.y || a.x - b.x)) {
     const row = rows.find(
@@ -93,7 +117,7 @@ export function pdfPageText(
           text +=
             gap > height * 1.2
               ? "\t"
-              : gap > height * 0.12 || /^https?:\/\//i.test(piece.text)
+              : gap > height * 0.12 || /^[•◦‣]$/.test(previous.text) || /^https?:\/\//i.test(piece.text)
                 ? " "
                 : "";
         }

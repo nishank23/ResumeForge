@@ -1,3 +1,12 @@
+import {
+  jdStateSchema,
+  rewriteProposalSchema,
+  type RewriteTarget,
+} from "@resume-forge/shared-types";
+import {
+  readinessStateSchema,
+  type ReadinessState,
+} from "@resume-forge/shared-types";
 import { editorDocumentSchema } from "@resume-forge/shared-types";
 import { summaryFromText } from "@resume-forge/shared";
 import { emptySection, emptyEntry, type ResumeDraft } from "./editor-draft";
@@ -239,7 +248,8 @@ export function fromResumeContent(value: unknown): ResumeDraft {
           ? e.bullets.map((b) => ({
               ...b,
               hidden: b.hidden || e.hidden,
-              proficiency: "",
+              text: b.text.split(/\s+—\s+/, 2)[0] ?? b.text,
+              proficiency: b.text.split(/\s+—\s+/, 2)[1] ?? "",
             }))
           : e.title && e.title !== section.label
             ? [{ id: e.id, text: e.title, hidden: e.hidden, proficiency: "" }]
@@ -280,19 +290,22 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
       const code = str(record(envelope.error).code);
       throw new ResumeApiError(
         code,
-        code === "revision_conflict"
-          ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
-          : code === "invalid_input" || code === "unsupported_media_type"
-            ? path.endsWith("/parse")
-              ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
-              : "Could not save this document. Check field lengths, links and dates; your edits are kept."
-            : code === "file_too_large"
+        /\/(jd-match|ai-rewrite)(?:\/|$)/.test(path) &&
+          str(record(envelope.error).message).length <= 700
+          ? str(record(envelope.error).message) || "ATS request failed. Retry."
+          : code === "revision_conflict"
+            ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
+            : code === "invalid_input" || code === "unsupported_media_type"
               ? path.endsWith("/parse")
-                ? "File exceeds the upload limit."
-                : "Document exceeds the save limit. Shorten its content; your edits are kept."
-              : code === "not_found"
-                ? "This resume is no longer available."
-                : "Could not load or save your resume. Retry when the service is available.",
+                ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
+                : "Could not save this document. Check field lengths, links and dates; your edits are kept."
+              : code === "file_too_large"
+                ? path.endsWith("/parse")
+                  ? "File exceeds the upload limit."
+                  : "Document exceeds the save limit. Shorten its content; your edits are kept."
+                : code === "not_found"
+                  ? "This resume is no longer available."
+                  : "Could not load or save your resume. Retry when the service is available.",
       );
     }
     return envelope.data;
@@ -365,6 +378,193 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
           },
         }),
       ),
+    readiness: async (
+      id: string,
+      signal?: AbortSignal,
+    ): Promise<ReadinessState> => {
+      if (!uuid.test(id))
+        throw new ResumeApiError("invalid_input", "Open a saved resume first.");
+      const result = readinessStateSchema.safeParse(
+        await call(`/api/v1/resume/${id}/readiness`, "GET", undefined, signal),
+      );
+      if (
+        !result.success ||
+        [result.data.evaluation, result.data.previous].some(
+          (e) => e && e.resumeId !== id,
+        )
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Readiness result could not be read.",
+        );
+      return result.data;
+    },
+    runReadiness: async (
+      id: string,
+      expectedVersion: number,
+    ): Promise<ReadinessState> => {
+      savedTarget(id, expectedVersion);
+      const result = readinessStateSchema.safeParse(
+        await call(`/api/v1/resume/${id}/readiness`, "POST", {
+          expectedVersion,
+        }),
+      );
+      if (
+        !result.success ||
+        result.data.evaluation?.resumeId !== id ||
+        result.data.evaluation.resumeVersion !== expectedVersion ||
+        result.data.currentVersion !== expectedVersion
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Readiness result did not match this saved version.",
+        );
+      return result.data;
+    },
+    setReadinessDismissed: async (
+      id: string,
+      expectedVersion: number,
+      evaluationId: string,
+      issueId: string,
+      dismissed: boolean,
+    ): Promise<ReadinessState> => {
+      savedTarget(id, expectedVersion);
+      const result = readinessStateSchema.safeParse(
+        await call(`/api/v1/resume/${id}/readiness/preferences`, "PUT", {
+          expectedVersion,
+          evaluationId,
+          issueId,
+          dismissed,
+        }),
+      );
+      if (
+        !result.success ||
+        result.data.evaluation?.resumeId !== id ||
+        result.data.evaluation.id !== evaluationId ||
+        result.data.currentVersion !== expectedVersion
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Feedback did not match this saved assessment.",
+        );
+      return result.data;
+    },
+    jdMatch: async (id: string, signal?: AbortSignal) => {
+      if (!uuid.test(id))
+        throw new ResumeApiError("invalid_input", "Open a saved resume.");
+      const data = jdStateSchema.parse(
+        await call(`/api/v1/resume/${id}/jd-match`, "GET", undefined, signal),
+      );
+      if (data.evaluation && data.evaluation.resumeId !== id)
+        throw new ResumeApiError(
+          "invalid_response",
+          "Wrong assessment identity.",
+        );
+      return data;
+    },
+    runJdMatch: async (
+      id: string,
+      expectedVersion: number,
+      jdText: string,
+      semantic: boolean,
+      consent: boolean,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const data = jdStateSchema.parse(
+        await call(`/api/v1/resume/${id}/jd-match`, "POST", {
+          expectedVersion,
+          jdText,
+          semantic,
+          consent,
+        }),
+      );
+      if (
+        data.currentVersion !== expectedVersion ||
+        data.evaluation?.resumeVersion !== expectedVersion ||
+        data.evaluation.resumeId !== id ||
+        data.evaluation.jdText !== jdText.trim()
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Assessment does not match this saved resume and JD.",
+        );
+      return data;
+    },
+    dismissJd: async (
+      id: string,
+      expectedVersion: number,
+      evaluationId: string,
+      issueId: string,
+      dismissed: boolean,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const data = jdStateSchema.parse(
+        await call(`/api/v1/resume/${id}/jd-match/preferences`, "PUT", {
+          expectedVersion,
+          evaluationId,
+          issueId,
+          dismissed,
+        }),
+      );
+      if (
+        data.currentVersion !== expectedVersion ||
+        data.evaluation?.id !== evaluationId ||
+        data.evaluation.resumeId !== id
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Feedback does not match this assessment.",
+        );
+      return data;
+    },
+    requestRewrite: async (
+      id: string,
+      expectedVersion: number,
+      target: RewriteTarget,
+      consent = true,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const data = rewriteProposalSchema.parse(
+        await call(`/api/v1/resume/${id}/ai-rewrite`, "POST", {
+          expectedVersion,
+          target,
+          consent,
+        }),
+      );
+      if (
+        data.resumeId !== id ||
+        data.resumeVersion !== expectedVersion ||
+        JSON.stringify(data.target) !== JSON.stringify(target)
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Suggestion does not match this saved entry.",
+        );
+      return data;
+    },
+    applyRewrite: async (
+      id: string,
+      expectedVersion: number,
+      proposalId: string,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const value = record(
+        await call(`/api/v1/resume/${id}/ai-rewrite/apply`, "POST", {
+          expectedVersion,
+          proposalId,
+        }),
+      );
+      if (value.currentVersion !== expectedVersion + 1)
+        throw new ResumeApiError(
+          "invalid_response",
+          "Suggestion apply returned a different version.",
+        );
+      return {
+        currentVersion: value.currentVersion,
+        content: record(value.content),
+        draft: fromResumeContent(value.content),
+      };
+    },
     remove: async (id: string, version: number) => {
       savedTarget(id, version);
       const result = record(

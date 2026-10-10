@@ -1,5 +1,29 @@
 # Data Model
 
+## Readiness-v2 JSON compatibility — 2026-10-09
+
+Private `Resume.atsBreakdown.readiness` history now accepts `readiness-v1` and `readiness-v2`. Checks may carry `scored: false` for additional advice and a header target for owner-only contact-presence guidance. Numeric components retain the approved weights/rules; advice never changes their totals. No table migration or role/grant change is required. Assessment identity binds immutable version, professional projection, derived contact-presence boolean and rubric. Raw contact values are absent from assessment JSON/core/AI; old snapshots remain untouched. [Workflow](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
+
+
+## Current Gemini and compact assessment update — 2026-10-09
+
+The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](../docs/ats-workflow.md).
+
+
+## Current private vector cache — 2026-10-09
+
+ResumeSearchChunk now stores 768-dimensional gemini-embedding-001 entry embeddings with owner/workspace/resume/immutable version, stable target, projection/model/hash and generation metadata. RLS and exact scoped SQL restrict retrieval; save/delete invalidates derived cache without changing source history. Proposed profile/JD 1536 and Skill 384 spaces remain separate, unimplemented decisions. [Current contract](../docs/resume-vector-search.md).
+
+## ## Local JD and rewrite metadata — 2026-10-09
+
+Existing private Resume.atsBreakdown now has jdMatching evaluations/dismissed and rewrites proposal arrays alongside readiness. Each assessment/proposal binds an immutable ResumeVersion and input hash. Stored proposals include exact target, original/proposed fields, model, expiry basis and applied version; apply creates one immutable content version and audit atomically. Bound each array at 100 and combined serialized metadata at 2,000,000 characters; fail rather than silently erase history. No schema/grant/profile/contact change. [Exact contract and persistence limits](../docs/ats-workflow.md).
+
+## Local general readiness metadata — 2026-10-09
+
+The personal readiness slice uses the existing nullable `Resume.atsBreakdown` JSON under a `readiness` namespace: `{ evaluations: [...], dismissed: [...] }`. Evaluations are append-only application metadata with resume ID, immutable ResumeVersion ID/number, contact-free projection hash, time, mode/rubric, component weights/counts/score, generic checks and stable targets. Preferences are separate from immutable evaluations. Older assessments remain retained; the API exposes the latest and preceding record. Bounds are 100 evaluations and 2,000,000 serialized metadata characters; no eviction/purge is implemented.
+
+Assessment writes do not alter immutable ResumeVersion content or advance Resume.currentVersion, and do not replace legacy JD atsScore. Resume.updatedAt can advance for assessment/preference metadata. A saved content version change makes prior evidence stale. There is no database migration, additional grant, shared-workspace read or master-profile/contact update. This is a bounded local extension; the full durable assessment/artifact model remains pending.
+
 ## Personal editor persistence — 2026-10-04
 
 Current Prisma Resume/ResumeVersion records support the bounded personal editor. `content.editorDraft` contains validated rich text, stable IDs, dates, visibility, languages and appearance; the flat projection is retained for legacy adapters. Reviewed import source text is private version content. Saves use expected currentVersion, immutable history and an atomic audit outbox. Resume.profileId requires an empty internal UserProfile anchor if none exists; this does not import facts or contacts. No schema migration was added. Original upload bytes are not retained. Shared/export contact snapshots, provenance and full F19 storage remain proposed.

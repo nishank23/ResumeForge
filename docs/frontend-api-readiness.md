@@ -1,10 +1,27 @@
 # Frontend API integration readiness — 2026-10-04
 
+## Current Gemini and compact assessment update — 2026-10-09
+
+The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](ats-workflow.md).
+
+
+## JD and scoped AI connected — 2026-10-09
+
+The personal editor now connects version-bound JD run/read/preferences and scoped rewrite request/apply endpoints. JD input/result persistence, staleness, exact-entry Fix, description review, provider consent and immutable scoped apply are implemented. Local and paid Gemini analysis passed browser verification; genuine version-matched OpenCode SDK generation was retested after `/connect` and remains blocked by 403 FreeTierError. Apply persistence passed synthetic mocked-provider database testing. Earlier statements that JD/AI are wholly disconnected are historical. Shared activation, broad scoring validation and durable jobs remain pending. [Current API and manual checks](ats-workflow.md).
+
+## Private vector evidence connected — 2026-10-09
+
+Gemini consent discloses professional-text embedding storage. Saved JD results show indexed/reused entry and candidate counts; similarity is not proof of a matching qualification. Real sample import, supplied JD analysis (36/100, 5 entries, 12 candidates), reload and saved PDF download passed. [Scope/setup/manual checks](resume-vector-search.md).
+
+## General readiness connected — 2026-10-09
+
+The personal editor now connects GET/POST `/api/v1/resume/:id/readiness` and PUT `/:id/readiness/preferences` through the authenticated gateway. Results score the latest saved immutable version using the approved no-JD `readiness-v1` rubric. Opening the saved editor selects ATS Score and automatically evaluates missing/outdated evidence. Saving invalidates freshness and triggers a check; failure retains stale evidence and offers Retry. Local edit previews use the same pure scorer/projection without an API write, and manual Fix dialogs include issue guidance and field focus. Completed lists every passing check. Persisted dismissal/restore and reload are supported. No new runtime grant/schema/provider is required. This supersedes earlier statements that all ATS-related presentation is disconnected; JD matching, AI, shared roles and durable scoring jobs remain pending. [Manual checks and precise limits](../README.md#general-resume-readiness--2026-10-09).
+
 ## Current recommendation
 
 The requested personal resume integration is now connected: no profile setup gate, owned library, blank creation, authenticated file review and immutable version saves. Use the [README manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04) before adding another slice. Reproducible installation, fixed gateway routing, a strict lossless editor mapping and an approved restricted resume runtime role resolve the corresponding historical blockers below for this personal flow. Workspace business service remains stopped; its separate startup conflicts are not resolved globally.
 
-Next useful work is reviewed extraction/master-profile derivation or remaining resume management. Real AI must wait for grounding, persisted suggestion binding and provider checks. Personal owner PDF downloads and confirmed recoverable deletion are connected as of 2026-10-08. ATS, shared activation and the full durable PDF pipeline still need their own policy and integration acceptance. Existing endpoints alone do not justify more API surface.
+Next useful work is resolving selected MiMo provider access and evaluating scoring quality, then durable retrieval/indexing or remaining resume management. Grounding and persisted suggestion binding are implemented; successful live rewriting remains blocked. Personal owner PDF downloads and confirmed recoverable deletion are connected as of 2026-10-08. JD-specific scoring, shared activation and the full durable PDF pipeline still need their own policy and integration acceptance. Existing endpoints alone do not justify more API surface.
 
 Search/sort cover loaded 50-row pages, not global server search. File review is local PDF/DOCX/TXT/MD with limits; full F19 private staging/provenance/OCR remains pending. Private owner-only resume header snapshots are stored without writing UserContact or master professional fields; D12 permits current-version personal owner PDF streams; shared/contact-free variants remain unresolved. LinkedIn needs credentials.
 
@@ -51,3 +68,11 @@ No new product code, dependencies, credentials, permissions, schema or data were
 ## Integration update — 2026-10-04
 
 Professional profile integration and auth credential repair remain in place. The latest request removes required Create profile onboarding and adds the personal resume flow described above. `dev:personal` now builds/runs auth, profile, resume and gateway with four frontends. The backend checkout was unchanged. See the [tracker](../context/progress-tracker.md#resume-first-library-upload-and-persistence--2026-10-04) for actual final checks and limits. No claims of complete AI, F10, F19, PDF or shared privacy acceptance follow from this update.
+
+## JD provider foundation — 2026-10-09
+
+A stable `jd-match-v1` result and Textkernel Match V2 adapter are implemented and tested with mocked transport. They are server-internal and disabled by default; no authenticated JD endpoint or UI feature is ready to activate. The user has not created the selected trial account. Complete synthetic live entitlement verification, professional-data projection/remote preparation and durable cleanup, saved-version/permission/audit orchestration and result persistence before frontend wiring. Keep general readiness and legacy disabled tailoring distinct. See [ATS provider guide](ats-providers.md).
+
+## Textkernel plan withdrawn — 2026-10-09
+
+The user cancelled Textkernel signup/live integration after its corporate-email barrier. Do not wire the frontend to that provider. Existing adapter/result-contract work remains disabled and is not an HTTP-ready JD feature. Gemini/local matching is recommended for evaluation, subject to the JD rubric and permitted data mode; no replacement adapter or new UI/API was implemented. Odoo's free hosted plan cannot be used as our external scoring API. [Updated provider guide](ats-providers.md).

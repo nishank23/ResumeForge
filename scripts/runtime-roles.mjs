@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import {
   RUNTIME_GRANTS,
+  RUNTIME_FUNCTIONS,
   runtimeRoleNames,
 } from "../packages/prisma-client/dist/index.js";
 const pg = createRequire(
@@ -107,6 +108,11 @@ export async function provisionRuntimeRoles(
         await admin.query(
           `GRANT ${grant.privilege}${columns} ON public.${identifier(grant.table)} TO ${identifier(names[service])}`,
         );
+      }
+    for (const [service, signatures] of Object.entries(RUNTIME_FUNCTIONS))
+      for (const signature of signatures) {
+        if (!/^[a-z_]+\([a-z_,\[\]]*\)$/.test(signature)) throw new Error("Invalid runtime function signature");
+        await admin.query(`GRANT EXECUTE ON FUNCTION public.${signature} TO ${identifier(names[service])}`);
       }
     await admin.query("COMMIT");
     return names;

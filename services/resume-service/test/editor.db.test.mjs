@@ -82,7 +82,13 @@ test("owned editor persistence through client, gateway, service and restricted P
         include: { personalWorkspace: true },
       });
     const actors = { alice, bob };
-    const resumes = createResumeUseCases(runtime);
+    let rewriteCalls=0, embeddingCalls=0, beforeEmbeddingReturn=async()=>{}, beforeRewriteReturn=async()=>{};
+    const providers={geminiAvailable:true,rewriteAvailable:true,
+      embed:async(inputs)=>{embeddingCalls++;await beforeEmbeddingReturn();return inputs.map((_,i)=>Array.from({length:768},(_,j)=>j===i%2?1:0));},
+      analyze:async(requirements,entries)=>requirements.length&&entries.length?[{requirement:requirements[0],evidence:entries[0].details[0],sectionId:entries[0].sectionId,itemId:entries[0].itemId}]:[],
+      rewrite:async(fields)=>{rewriteCalls++;await beforeRewriteReturn();return fields.filter((f)=>f.original.includes("in order to")).map((f)=>({field:f.field,proposed:f.original.replace("in order to","to")}));},
+    };
+    const resumes = createResumeUseCases(runtime,Date.now,undefined,providers);
     const app = createResumeApp({
       personalEditorOnly: true,
       resumes,
@@ -508,6 +514,152 @@ test("owned editor persistence through client, gateway, service and restricted P
         );
       },
     );
+    await t.test("readiness is saved-version scoped, replay-safe, private and persistently dismissible", async () => {
+      const record = await a.create(randomUUID(), blankResume("Synthetic Readiness"));
+      assert.equal((await a.readiness(record.id)).evaluation, null);
+      const before = await owner.resumeVersion.count({ where: { resumeId: record.id } });
+      const evaluated = await a.runReadiness(record.id, 1);
+      assert.equal(evaluated.evaluation.score, 0);
+      assert.equal(evaluated.evaluation.resumeVersion, 1);
+      assert.ok(!JSON.stringify(evaluated).includes("Synthetic Readiness"));
+      assert.deepEqual(await a.runReadiness(record.id, 1), evaluated);
+      const readyPath=`/api/v1/resume/${record.id}/readiness`;
+      assert.equal((await gateway.request(readyPath)).status,401);
+      assert.equal((await gateway.request(readyPath,{headers:{Authorization:"Bearer alice","X-Workspace-Id":actors.bob.personalWorkspace.id}})).status,403);
+      assert.equal((await gateway.request(readyPath,{method:"POST",headers:{Authorization:"Bearer alice","X-Workspace-Id":actors.alice.personalWorkspace.id,"Content-Type":"application/json"},body:JSON.stringify({expectedVersion:1,score:100})})).status,422);
+      assert.equal((await gateway.request(readyPath,{method:"POST",headers:{Authorization:"Bearer alice","X-Workspace-Id":actors.alice.personalWorkspace.id,"Content-Type":"application/json"},body:"{"})).status,422);
+
+      assert.equal(await owner.resumeVersion.count({ where: { resumeId: record.id } }), before);
+      await assert.rejects(b.readiness(record.id));
+      await assert.rejects(b.runReadiness(record.id, 1));
+      const issueId = evaluated.evaluation.checks[0].id;
+      const dismissed = await a.setReadinessDismissed(record.id, 1, evaluated.evaluation.id, issueId, true);
+      assert.equal(dismissed.evaluation.score, evaluated.evaluation.score);
+      assert.ok((await a.readiness(record.id)).dismissed.includes(issueId));
+      assert.deepEqual((await a.setReadinessDismissed(record.id,1,evaluated.evaluation.id,issueId,false)).dismissed,[]);
+      const next = await a.save(record.id,1,blankResume("Synthetic Readiness"));
+      const stale = await a.readiness(record.id);
+      assert.equal(stale.currentVersion,2);assert.equal(stale.evaluation.resumeVersion,1);
+      await assert.rejects(a.runReadiness(record.id,1),e=>e.code==="revision_conflict");
+      await assert.rejects(a.setReadinessDismissed(record.id,2,evaluated.evaluation.id,issueId,true),e=>e.code==="revision_conflict");
+      const rechecked=await a.runReadiness(record.id,next.currentVersion);
+      assert.equal(rechecked.previous.id,evaluated.evaluation.id);
+      assert.equal(rechecked.evaluation.resumeVersion,2);
+      const persisted=await owner.resume.findUnique({where:{id:record.id}});
+      assert.equal(persisted.atsScore,null);
+      assert.equal(persisted.atsBreakdown.readiness.evaluations.length,2);
+      const rollbackRecord=await a.create(randomUUID(),blankResume("Synthetic audit rollback"));
+      await admin.query('ALTER TABLE "AuditOutbox" ADD CONSTRAINT readiness_audit_reject CHECK (false) NOT VALID');
+      try {
+        await assert.rejects(a.runReadiness(rollbackRecord.id,1));
+        assert.equal((await a.readiness(rollbackRecord.id)).evaluation,null);
+      } finally { await admin.query('ALTER TABLE "AuditOutbox" DROP CONSTRAINT readiness_audit_reject'); }
+
+      await a.remove(record.id,2);
+      await assert.rejects(a.readiness(record.id));await assert.rejects(a.runReadiness(record.id,2));
+    });
+    await t.test("legacy readiness is readable but refreshes the rubric on the same saved version",async()=>{
+      const record=await a.create(randomUUID(),blankResume("Synthetic Rubric Refresh"));
+      const current=await a.runReadiness(record.id,1);
+      const legacy={...current.evaluation,rubricVersion:"readiness-v1",checks:current.evaluation.checks.filter(c=>c.scored!==false)};
+      // Keep the same hash deliberately: rubric identity must independently gate replay.
+      await owner.resume.update({where:{id:record.id},data:{atsBreakdown:{readiness:{evaluations:[legacy],dismissed:[]}}}});
+      assert.equal((await a.readiness(record.id)).evaluation.rubricVersion,"readiness-v1");
+      await assert.rejects(a.setReadinessDismissed(record.id,1,legacy.id,legacy.checks[0].id,true),e=>e.code==="revision_conflict");
+      const updated=await a.runReadiness(record.id,1);
+      assert.equal(updated.evaluation.rubricVersion,"readiness-v2");assert.notEqual(updated.evaluation.id,legacy.id);
+      assert.equal(updated.previous.id,legacy.id);assert.equal(updated.evaluation.score,legacy.score);
+      assert.equal(await owner.resumeVersion.count({where:{resumeId:record.id}}),1);
+      assert.ok(updated.evaluation.checks.some(c=>c.id==="contact-presence"&&c.scored===false));
+      assert.ok(!JSON.stringify(updated).includes("Synthetic Rubric Refresh"));
+    });
+    await t.test("JD assessments and Gemini apply cross client/gateway/restricted DB with isolation and freshness",async()=>{
+      const d=blankResume("Synthetic ATS Flow");
+      d.sections[1].entries=fromResumeContent({sections:[{id:"work",kind:"experience",label:"Experience",entries:[{id:"first",title:"Backend Engineer",description:"Built Python APIs in order to support operations.",technologies:"Python, PostgreSQL"},{id:"second",title:"Frontend Engineer",description:"Designed React interfaces for customers."}]}]}).sections[0].entries;
+      d.sections[4].groups=[{id:"languages",label:"Languages",items:[{id:"python",text:"Python",hidden:false},{id:"postgres",text:"PostgreSQL",hidden:false}]}];
+      const record=await a.create(randomUUID(),d),jd="Python Backend Engineer\nRequirements:\n- Python and PostgreSQL are required.\nResponsibilities:\n- Build Python APIs for operations.\n- Design PostgreSQL data storage.";
+      assert.equal((await a.jdMatch(record.id)).evaluation,null);
+      const general=await a.runReadiness(record.id,1),local=await a.runJdMatch(record.id,1,jd,false,false);
+      assert.equal(local.evaluation.analysis,"local");assert.equal(local.evaluation.resumeVersion,1);assert.ok(local.evaluation.components.some((c)=>c.weight===30));
+      assert.deepEqual(await a.runJdMatch(record.id,1,jd,false,false),local);assert.equal((await a.readiness(record.id)).evaluation.id,general.evaluation.id);
+      await assert.rejects(b.jdMatch(record.id));await assert.rejects(b.runJdMatch(record.id,1,jd,false,false));
+      await assert.rejects(a.runJdMatch(record.id,1,jd,true,false));
+      const semantic=await a.runJdMatch(record.id,1,jd,true,true);assert.equal(semantic.evaluation.model,"gemini-3.5-flash-lite");
+      // A provider model switch must not reuse a result made with the prior model.
+      const persisted=await owner.resume.findUnique({where:{id:record.id}});
+      const oldMeta=structuredClone(persisted.atsBreakdown);
+      oldMeta.jdMatching.evaluations.at(-1).model="gemini-3.8-flash";
+      await owner.resume.update({where:{id:record.id},data:{atsBreakdown:oldMeta}});
+      const refreshed=await a.runJdMatch(record.id,1,jd,true,true);
+      assert.notEqual(refreshed.evaluation.id,semantic.evaluation.id);
+      assert.equal(refreshed.evaluation.model,"gemini-3.5-flash-lite");
+      assert.equal(refreshed.evaluation.retrieval.reusedChunks,2);
+      const target={type:"entry",sectionId:d.sections[1].id,itemId:"first"};
+      const count=rewriteCalls;await assert.rejects(a.requestRewrite(record.id,1,target,false));await assert.rejects(b.requestRewrite(record.id,1,target,true));assert.equal(rewriteCalls,count);
+      const proposal=await a.requestRewrite(record.id,1,target);assert.equal(proposal.changes.length,1);assert.equal(proposal.model,"gemini-3.5-flash-lite");
+      assert.equal((await a.load(record.id)).currentVersion,1);
+      await assert.rejects(b.applyRewrite(record.id,1,proposal.id));
+      const applied=await a.applyRewrite(record.id,1,proposal.id);assert.equal(applied.currentVersion,2);assert.deepEqual(applied.draft.header,d.header);assert.deepEqual(applied.draft.sections[1].entries[1],d.sections[1].entries[1]);
+      assert.deepEqual((await a.load(record.id)).content,applied.content);
+      assert.equal((await a.jdMatch(record.id)).evaluation.resumeVersion,1);
+      const replay=await a.applyRewrite(record.id,1,proposal.id);assert.equal(replay.currentVersion,2);assert.equal(await owner.resumeVersion.count({where:{resumeId:record.id}}),2);
+      await assert.rejects(a.runJdMatch(record.id,1,jd,false,false),e=>e.code==="revision_conflict");
+      assert.equal((await a.runJdMatch(record.id,2,jd,false,false)).evaluation.resumeVersion,2);
+      const stale=await a.requestRewrite(record.id,2,{...target,itemId:"second"},true);
+      await a.save(record.id,2,{...applied.draft,title:"Synthetic updated"});await assert.rejects(a.applyRewrite(record.id,2,stale.id),e=>e.code==="revision_conflict");
+      beforeRewriteReturn=async()=>{const latest=await a.load(record.id);await a.save(record.id,latest.currentVersion,fromResumeContent(latest.content));};
+      await assert.rejects(a.requestRewrite(record.id,3,target,true),e=>e.code==="revision_conflict");beforeRewriteReturn=async()=>{};
+      const beforeCalls=rewriteCalls;
+      await admin.query('ALTER TABLE "AuditOutbox" ADD CONSTRAINT ats_egress_audit_reject CHECK (false) NOT VALID');
+      try{await assert.rejects(a.requestRewrite(record.id,4,target,true));assert.equal(rewriteCalls,beforeCalls);}finally{await admin.query('ALTER TABLE "AuditOutbox" DROP CONSTRAINT ats_egress_audit_reject');}
+      assert.equal(await owner.userContact.count(),0);
+    });
+    await t.test("vector cache uses current owned version, deduplicates documents, denies cross-owner RLS, purges on delete",async()=>{
+      const d=blankResume("Synthetic Vector Lifecycle");
+      d.sections[1].entries=fromResumeContent({sections:[{id:"work",kind:"experience",label:"Experience",entries:[{id:"entry",title:"Engineer",description:"Built Python APIs for operations."}]}]}).sections[0].entries;
+      const record=await a.create(randomUUID(),d);
+      const jd="Data Engineer\nRequirements:\n- Python and SQL are required.\nResponsibilities:\n- Build Python pipelines for operations.";
+      const first=await a.runJdMatch(record.id,1,jd,true,true);
+      assert.equal(first.evaluation.retrieval.indexedChunks,1);
+      assert.equal(first.evaluation.retrieval.reusedChunks,0);
+      assert.equal(first.evaluation.retrieval.hits.length,1);
+      const calls=embeddingCalls;await a.runJdMatch(record.id,1,jd,true,true);assert.equal(embeddingCalls,calls);
+      const second=await a.runJdMatch(record.id,1,jd+"\n- Maintain pipelines.",true,true);
+      assert.equal(second.evaluation.retrieval.reusedChunks,1);
+      assert.equal((await runtime.$queryRaw`SELECT count(*)::int AS count FROM "ResumeSearchChunk"`)[0].count,0,"unscoped runtime sees no vectors");
+      const visible=async(user,workspace)=>runtime.$transaction(async tx=>{
+       await tx.$executeRaw`SELECT set_config('resume_forge.actor',${user},true),set_config('resume_forge.workspace',${workspace},true)`;
+       return tx.$queryRaw`SELECT "versionId" FROM "ResumeSearchChunk" WHERE "resumeId"=${record.id}::uuid`;
+      });
+      assert.equal((await visible(bob.id,bob.personalWorkspace.id)).length,0);
+      assert.equal((await visible(alice.id,alice.personalWorkspace.id)).length,1);
+      await a.save(record.id,1,d);
+      assert.equal((await visible(alice.id,alice.personalWorkspace.id)).length,0,"old vectors invisible immediately after save");
+      await a.runJdMatch(record.id,2,jd,true,true);
+      assert.equal((await visible(alice.id,alice.personalWorkspace.id)).length,1);
+      assert.equal((await admin.query('SELECT count(*)::int AS count FROM "ResumeSearchChunk" WHERE "resumeId"=$1',[record.id])).rows[0].count,1,"old cache purged on new index");
+      beforeEmbeddingReturn=async()=>{await a.save(record.id,2,d);};
+      await assert.rejects(a.runJdMatch(record.id,2,jd+"\n- Design storage.",true,true),e=>e.code==="revision_conflict");beforeEmbeddingReturn=async()=>{};
+      await a.remove(record.id,3);
+      assert.equal((await admin.query('SELECT count(*)::int AS count FROM "ResumeSearchChunk" WHERE "resumeId"=$1',[record.id])).rows[0].count,0);
+      await a.restore(record.id,3);
+      assert.equal((await visible(alice.id,alice.personalWorkspace.id)).length,0,"restore requires new consented indexing");
+      const beforeCalls=embeddingCalls;
+      await admin.query('ALTER TABLE "AuditOutbox" ADD CONSTRAINT vector_audit_reject CHECK(false) NOT VALID');
+      try{await assert.rejects(a.runJdMatch(record.id,3,jd,true,true));assert.equal(embeddingCalls,beforeCalls);}finally{await admin.query('ALTER TABLE "AuditOutbox" DROP CONSTRAINT vector_audit_reject');}
+      assert.equal(await owner.userContact.count(),0);
+    });
+    await t.test("vector rollback and rebuild preserve immutable source, contacts and audit records",async()=>{
+      const source=async()=>Promise.all(["Resume","ResumeVersion","UserContact","AuditOutbox"].map(async table=>
+        (await admin.query(`SELECT to_jsonb(t) AS row FROM "${table}" t ORDER BY "id"`)).rows));
+      const before=await source();
+      await admin.query(readFileSync(new URL("../../../docs/resume-vector-rollback.sql",import.meta.url),"utf8"));
+      assert.deepEqual(await source(),before);
+      assert.equal((await admin.query(`SELECT to_regclass('public."ResumeSearchChunk"') AS cache`)).rows[0].cache,null);
+      await admin.query(readFileSync(new URL("../../../packages/prisma-client/prisma/migrations/20261009130000_resume_vectors/migration.sql",import.meta.url),"utf8"));
+      assert.deepEqual(await source(),before);
+      assert.equal((await admin.query('SELECT count(*)::int AS count FROM "ResumeSearchChunk"')).rows[0].count,0);
+    });
   } finally {
     await runtime?.$disconnect();
     await owner.$disconnect();

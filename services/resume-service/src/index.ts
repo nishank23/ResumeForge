@@ -1,3 +1,4 @@
+import { createAiProviders, loadAiSettings } from "./ats/ai.js";
 import { serve } from "@hono/node-server";
 import {
   assertRuntimeDatabaseRole,
@@ -19,7 +20,12 @@ const app = createResumeApp({
     endpoint: config.endpoint,
     key: config.authKey,
   }),
-  resumes: createResumeUseCases(db),
+  resumes: createResumeUseCases(
+    db,
+    Date.now,
+    undefined,
+    createAiProviders(loadAiSettings()),
+  ),
 });
 
 serve({ fetch: app.fetch, hostname: "127.0.0.1", port: config.port }, () => {

@@ -1,3 +1,4 @@
+export { ReadinessPanel as AtsPanel } from "./ReadinessPanel";
 import { useState } from "react";
 import {
   ArrowDown,
@@ -522,73 +523,6 @@ export function DesignPanel({
   );
 }
 
-export function AtsPanel() {
-  const [filter, setFilter] = useState<"Pending" | "Completed" | "Deleted">(
-    "Pending",
-  );
-  return (
-    <div className="rf-service-tools">
-      <section
-        className="rf-ats-readiness"
-        aria-labelledby="rf-ats-meter-heading"
-      >
-        <div className="rf-ats-meter-heading">
-          <h3 id="rf-ats-meter-heading">Resume readiness</h3>
-          <span className="rf-ats-status">Not evaluated</span>
-        </div>
-        <div className="rf-ats-score-value" aria-label="ATS score unavailable">
-          <span aria-hidden="true">—</span>
-          <span> / 100</span>
-        </div>
-        <div
-          className="rf-ats-scale"
-          role="img"
-          aria-label="ATS score not evaluated. Scale from 0 to 100."
-        >
-          <div className="rf-ats-track" />
-          <div className="rf-ats-ticks" aria-hidden="true">
-            {[0, 25, 50, 75, 100].map((tick) => (
-              <span key={tick}>{tick}</span>
-            ))}
-          </div>
-        </div>
-        <p id="rf-ats-unavailable">
-          Your resume has no score yet. ATS evaluation is not available yet.
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled
-          aria-describedby="rf-ats-unavailable"
-        >
-          Run ATS check
-        </Button>
-      </section>
-      <h3>Suggested actions</h3>
-      <div className="rf-issue-filters" aria-label="Suggested action status">
-        {(["Pending", "Completed", "Deleted"] as const).map((name) => (
-          <button
-            key={name}
-            type="button"
-            aria-pressed={filter === name}
-            onClick={() => {
-              setFilter(name);
-            }}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-      <div className="rf-panel-empty" role="status">
-        <strong>{filter} actions unavailable</strong>
-        <p>
-          Suggestions will appear after an ATS evaluation. Your saved resume
-          content stays unchanged.
-        </p>
-      </div>
-    </div>
-  );
-}
 export function JdPanel() {
   const [composing, setComposing] = useState(false);
   const [description, setDescription] = useState("");

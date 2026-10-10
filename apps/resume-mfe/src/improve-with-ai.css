@@ -256,3 +256,23 @@
     animation: none;
   }
 }
+
+.rf-ai-scope {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.rf-ai-original {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.rf-ai-original p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.rf-ai-original p + p { margin-top: 10px; }

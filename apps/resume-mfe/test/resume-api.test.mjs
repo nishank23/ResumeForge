@@ -369,3 +369,32 @@ test("PDF downloads validate the saved version, binary signature and response he
     (e) => e.code === "revision_conflict",
   );
 });
+
+test("readiness client rejects invalid identifiers and malformed assessment results", async()=>{
+ const result={currentVersion:1,evaluation:null,previous:null,dismissed:[]};
+ const api=createResumeApi(async()=>envelope(result),workspaceId);
+ assert.deepEqual(await api.readiness(id),result);
+ await assert.rejects(api.runReadiness(id,1),e=>e.code==="invalid_response");
+ await assert.rejects(api.readiness("sample"),e=>e.code==="invalid_input");
+ const invalid=createResumeApi(async()=>envelope({...result,currentVersion:0}),workspaceId);
+ await assert.rejects(invalid.readiness(id),e=>e.code==="invalid_response");
+});
+
+test("language/proficiency import pairs retain separate editable fields",async()=>{
+ const {fromResumeContent}=await loadResumeApi();
+ const draft=fromResumeContent({title:"Synthetic language import",sections:[{id:"langs",kind:"languages",label:"Languages",entries:[{id:"lang-entry",title:"Languages",bullets:[{id:"english",text:"English — Fluent"},{id:"japanese",text:"Japanese — JLPT N5 (Learning)"}]}]}]});
+ assert.deepEqual(draft.sections[0].languages.map(l=>[l.id,l.text,l.proficiency]),[["english","English","Fluent"],["japanese","Japanese","JLPT N5 (Learning)"]]);
+});
+
+
+test("explicit rewrite action sends only saved scope and processing intent, never draft/contact text", async()=>{
+  const target={type:"entry",sectionId:"work",itemId:"first"};
+  const proposal={id:"33333333-3333-4333-8333-333333333333",resumeId:id,resumeVersion:4,versionId:"44444444-4444-4444-8444-444444444444",target,inputHash:"a".repeat(64),createdAt:new Date().toISOString(),model:"gemini-3.5-flash-lite",changes:[],appliedVersion:null};
+  let sent;
+  const api=createResumeApi(async(path,options)=>{
+    assert.equal(path,`/api/v1/resume/${id}/ai-rewrite`);
+    sent=JSON.parse(options.body);return envelope(proposal);
+  },workspaceId);
+  assert.deepEqual(await api.requestRewrite(id,4,target),proposal);
+  assert.deepEqual(sent,{expectedVersion:4,target,consent:true});
+});

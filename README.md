@@ -1,5 +1,157 @@
 # resume-forge
 
+## Release verification — 2026-10-10
+
+This release consolidates saved resume PDF/library actions, local readiness and JD scoring, scoped paid Gemini analysis and reviewed rewrites, private version-bound vector retrieval, alternate-layout PDF import fixes, and inline replacement reviews. Previous local/uncommitted notes below are retained as dated implementation history.
+
+Before publication, the release passed **153 unit tests**, **19 restricted editor database tests**, and **12 runtime-role database checks**. Resume-service, gateway and workspace-service dependency builds and the resume-MFE build passed; resume-core, shared-types, prisma-client, resume-service, gateway and resume-MFE lint passed. `git diff --check` and the candidate-file/private-credential scans passed. Private environment files, real resume inputs, generated files and local database data are excluded from Git. Publishing source does not apply migrations or configure hosted services; deployment instructions remain in [vector search](docs/resume-vector-search.md).
+
+## Gemini rewrite repair and inline review — 2026-10-10
+
+Fixed locally on **features**. The final CV's selected Full Stack Developer request reached Gemini but failed our validation: harmless `auth` → `authentication` and action-word inflections were treated as new facts. Prompt and validator now share a bounded grammar/action vocabulary and two explicit shorthand equivalents (`auth`/`authentication`, `apps`/`applications`). Other factual vocabulary, numeric claims, negative wording, slash-separated technology terms, field IDs, contact exclusion and current-version authorization remain guarded. These checks reduce unsupported edits; they do not prove semantic equivalence, so review remains required.
+
+The AI request and JD panels have **no consent checkboxes**. Improve with AI is the explicit processing action; JD methods use **Local rules** and **Gemini + rules** buttons. The scope note remains visible. Browser requests send only saved version/target/processing intent, and the server retrieves the selected description/visible achievements. The rewrite provider receives field IDs and text only, not the whole document, contacts, titles, dates or other entries. Gemini-assisted JD analysis still uses the broader professional-only projection and private version-bound embeddings; it is not a selected-entry rewrite. Professional descriptions can themselves contain personal information; we do not claim that all resume wording is non-personal. No request runs merely from opening a dialog or selecting a method.
+
+**Suggested changes** displays word-level red strikethrough removals and green underlined replacements, with unchanged text between separate edits. Each field has an expandable Original/Suggested view, accessible change labels, Cancel and explicit **Apply and save version**. Very large diffs fall back to a bounded full replacement comparison. Cancel and failure preserve the saved document; Apply remains an authorized, idempotent immutable-version transaction.
+
+Paid **gemini-3.5-flash-lite** stays pinned ([official model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)). Generated requests now allow **20 seconds** and rewrite output up to **8,192 tokens**, matching the existing 12,000-character input bound more safely. Analysis keeps 1,800 output tokens, embeddings keep eight seconds, two active provider requests and response byte limits remain. No expensive-model fallback or automatic retry was added. Credentials, database schema and roles are unchanged.
+
+Verification: **153 unit tests** (core 15, gateway 6, service 84, resume-MFE 48) and **19 restricted disposable database tests** pass; affected service dependencies and MFE build, service/MFE lint, and `git diff --check` pass. New regressions cover safe shorthand/inflections, rejection of invented/dropped facts and altered technical terms, timed aborts, scope-only request payloads, multiple replacements, Unicode/line breaks and bounded long diffs. Live final-CV review returned suggestions; Cancel left it at version 1. On **JD Workflow QA (Synthetic)**, test preparation saved version 4, reviewed Apply saved exactly version 5, reload retained the chosen description and unchanged second job/project. At 390px, the AI dialog has equal client/scroll widths of 356px. JD methods have zero checkboxes; live Gemini JD recheck returned 67/100 on saved version 5. Changes remain uncommitted.
+
+### Manual check
+
+1. Reload `http://localhost:3000`, open a saved resume, select Summary or one Work experience/Projects entry, then **Improve with AI**. Saved content is required; save pending edits first.
+2. Click **Improve with AI** in the dialog without ticking anything. Verify replacements beside the struck-through original words. Open **Read original and suggested text** to compare complete values. Verify technologies, quantities and responsibilities before applying.
+3. Cancel first and check the saved version did not change. Request again, use **Apply and save version**, reload, and check only the selected entry changed and the version increased once. Unsupported/malformed responses remain errors, not accepted changes.
+4. Open **Optimize for JD**, select either **Local rules** or **Gemini + rules**, and click Analyze/Recheck. No consent checkbox is required. Local rules send no AI request; Gemini uses the documented professional projection. No score increase is promised by a wording edit.
+
+```sh
+cd /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2
+pnpm --filter @resume-forge/resume-service... -r build
+pnpm --filter @resume-forge/resume-mfe build
+pnpm --filter @resume-forge/resume-core --filter @resume-forge/resume-service --filter @resume-forge/gateway --filter @resume-forge/resume-mfe -r test
+RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 pnpm --filter @resume-forge/resume-service test:editor:db
+pnpm --filter @resume-forge/resume-service --filter @resume-forge/resume-mfe -r lint
+```
+
+## Alternate-layout import and no-JD rule cards — 2026-10-09
+
+Fixed on **features** in the frontend worktree. The supplied alternate-layout PDF has two independent text columns. Extraction previously joined rows across those columns, mixing work into projects/skills and losing section boundaries. A conservative persistent-gutter check now reads independent narrative columns separately; right-aligned dates alone do not become another column. Parsing also supports Personal Profile headings, company-before-role entries, date/location metadata, numeric month/year ranges, bullet glyphs without following spaces, standalone skill categories, commas inside skill qualifiers, inline CGPA and paired language/proficiency rows.
+
+The private supplied file now retains **six sections**, **three jobs** with **3/2/1 bullets**, **two projects** with **4/4 bullets**, **one education entry**, **four skill groups / 12 items**, **four language/proficiency pairs**, both profile links, contact location, date months and CGPA. All 14 work/project bullets survive the editor adapter and a strict save-envelope round-trip. The older single-column sample still retains its three jobs, two projects, education, summary and skills. Real files remain private local inputs; committed regression tests use invented facts. Previously saved imports are never rewritten by the parser fix: upload again and review a new copy.
+
+**ATS Score → Resume readiness** now uses compact rule cards, with **13 families** on a populated resume instead of dozens of repeated entry cards. Pending/Completed/Deleted count families in that tab; each check keeps its own exact target and dismissal preference. A family completes only when all its instances pass. A family can appear in Pending and Deleted when different entries have different statuses; dismissed entries remain restorable after reload. Fix opens the selected role/project/header/education/skills editor with its reason, Go to field and the existing reviewed Gemini description flow where supported. No AI call is made by opening a rule.
+
+New **Advice** checks cover 2–6 visible bullets, explicit technologies/tools, education completeness where applicable, at least five supported skills, selective bold in long editor descriptions, and essential contact presence. These are **score-neutral**. The approved 25/25/20/15/15 weights and original weighted rules are unchanged; no unsupported fact should be added to gain points. The extended assessment is **readiness-v2**; v1 history remains readable and automatically refreshes on the same saved version. Contact values remain outside resume-core, JD/provider inputs and returned assessments; the adapter supplies only one contact-completeness boolean. JD scoring/feedback keeps its existing rubric. The score details and breakdown share one collapsed disclosure.
+
+The editor uses **shadcn-based shared primitives and Tiptap**. Performative UI remains installed for existing app surfaces; these rule cards add no Performative decoration or UI dependency. The CareerZenith screenshots informed visible rule/action capabilities only. Its private score formula, weights and rating thresholds are unknown.
+
+### Verification and manual checks
+
+Core **15/15**, resume-service **81/81**, gateway **6/6**, resume-MFE **44/44**: **146 unit tests**. Disposable restricted editor database **19/19**, including same-version legacy rubric refresh, immutable history and stale-preference denial. Service dependencies and resume-MFE build; the four affected packages lint. Real PDF extraction/editor round-trip and the older PDF regression pass. Browser checks verify header Fix/focus, second-job Fix, persistent per-entry Dismiss/Restore, unchanged score and all-pass family completion. At a 390px viewport, the panel/document widths are 390px and the Fix dialog is 356px with no horizontal overflow. Browser upload of the real PDF was blocked by the Chrome extension's file-URL permission; no live real-file upload/save is claimed. No permission, credential, database role or schema change is needed.
+
+```sh
+cd /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2
+pnpm --filter @resume-forge/resume-service... -r build
+pnpm --filter @resume-forge/resume-mfe build
+pnpm --filter @resume-forge/resume-core --filter @resume-forge/resume-service --filter @resume-forge/gateway --filter @resume-forge/resume-mfe -r test
+RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 pnpm --filter @resume-forge/resume-service test:editor:db
+```
+
+1. In the running app at `http://localhost:3000`, choose **My resumes → Upload resume** and select the final CV from `check_resumes`. Automated Chrome upload additionally needs **Allow access to file URLs** on the ChatGPT browser extension; manual file selection does not need this automation permission. Review all six sections, 14 job/project bullets, 12 skills, four language levels, months, grade and links before confirming. Give the copy a distinct title, save, reload and reopen; verify the same values.
+2. Open **ATS Score → Resume readiness** with no JD. The final CV's locally converted document scores **97/100** under the unchanged weighted rules; this is not a CareerZenith score, PDF parsing guarantee or hiring prediction. Review pending project-context, bullet-volume and technology advice. Expand a rule, click **Fix** on the second job, and confirm that job's own fields. Use **Go to field**, Cancel, or save supported edits; then recheck the saved version.
+3. Dismiss one entry within a multi-entry rule, reload, open **Deleted**, and **Restore** it. Verify the score stays unchanged and the other entries remain pending. In **Completed**, no family with a failing entry should appear. Check a new empty resume still scores 0; contacts, skill count and education advice do not fabricate score points.
+
+Text extraction does not preserve the original PDF fonts, bold emphasis, decorative layout or language rating dots. Bold advice checks editor rich text only. Conservative column recognition is verified for the supplied layout, not every multi-column design; OCR/scanned PDFs and broader import provenance remain pending. Current changes remain local and uncommitted.
+
+
+## Private vector retrieval — 2026-10-09
+
+Implemented locally on **features**: optional Gemini JD analysis now retrieves professional evidence from PostgreSQL/pgvector. Each visible experience/project entry becomes a private, version-bound `gemini-embedding-001` vector with **768 dimensions**. Ownership, current version, model and projection are checked before retrieval; save/delete purges derived cache. Contacts, hidden fields and extraction source are excluded. Fixed backend rules still own numeric scores; cosine similarity never earns points alone. Local scoring needs no AI call.
+
+The supplied resume was imported into **Data Engineer JD QA — imported copy** and tested against the supplied Data Engineer JD. Live paid Gemini analysis returned **36/100**, with **5 indexed entries** and **12 evidence candidates**. Reload preserved the saved resume, JD and assessment; the version-1 PDF downloaded successfully. The original existing resume was preserved. General readiness returned 100/100 for basic rules, which does not mean a strong match for this JD.
+
+The local additive migration and restricted cache/function grants are applied. Source resume/version counts and existing passwords were preserved. Current search ranks exactly within at most 40 entries; an HNSW index exists for later larger authorized corpora, but production scaling and cross-resume/HR search are pending. No AI training dataset or model fine-tuning is built.
+
+[Architecture, privacy, migration/rollback and manual vector checks](docs/resume-vector-search.md). [Scoring and scoped Gemini rewrite review](docs/ats-workflow.md). Current work remains local and uncommitted; prior dated sections below preserve earlier verification history.
+
+## JD matching and scoped AI fixes — 2026-10-09
+
+Implemented locally on **features**. **ATS Score → Resume readiness** keeps the no-JD check. **ATS Score → JD match** and **Optimize for JD** now compare a saved resume with a pasted JD. The server owns the user-approved `jd-local-v1` weights: required keywords **30%**, experience relevance **25%**, skills **20%**, structure **15%**, readability **10%**. These are internal heuristics, not an employer ATS score or hiring prediction. Missing JD criteria produce a partial assessment with no overall score. Technology labels support keyword/skill matching without counting as achievement descriptions.
+
+Optional paid **Gemini `gemini-3.5-flash-lite`** checks semantic correspondence. Its quotes and target IDs must match the saved professional content; it never supplies the numeric score. Wording uses a separate scoped operation on the same model. Consent is required before each requested analysis. The saved version, JD, weights, method, hashes and evidence survive reload. Editing the resume, JD or analysis mode marks evidence outdated and disables its actions until rechecked. Dismiss/Restore changes feedback visibility only.
+
+**Fix** opens the matching experience/project entry, its description and guidance. **Improve with AI** uses paid **Gemini `gemini-3.5-flash-lite`** through the server provider boundary, with explicit per-request consent. The review shows Original/Suggested text; **Apply and save version** applies only the stored selection and creates one immutable database version. Contacts, unrelated entries and the master profile are excluded. Empty descriptions require real facts first. Cancel/provider failures preserve content; stale suggestions fail instead of overwriting later edits. The old timed local AI preview is removed from the real editor.
+
+**Current provider:** Gemini 3.5 Flash-Lite serves JD evidence and selected wording with minimal thinking. Standard pricing checked 2026-10-09: $0.30 input / $2.50 output per million tokens ([Google pricing](https://ai.google.dev/gemini-api/docs/pricing)). OpenCode SDK/process/HTTP code and dependency, plus the unused Textkernel runtime/tests, are removed. Stored legacy proposals/results remain readable. This supersedes previous OpenCode setup and blocked-rewrite notes.
+
+**Compact panels:** ATS feedback is grouped into five areas instead of approximately 45 individual cards. Tabs count areas; the exact check count and all original scoped actions remain available inside them. Weights and score math are unchanged. Optimize for JD collapses the saved JD editor, score breakdown and evidence, keeping the score and actions visible first.
+
+### Verified Gemini and compact-panel checks
+
+Core **14/14**, resume-service **76/76**, gateway **6/6**, resume-MFE **40/40**: **136 unit tests**. Restricted disposable editor database **18/18**. Six affected packages build/lint successfully; frozen offline installation and diff checks pass. The retired OpenCode/Textkernel adapter tests are removed; new tests cover project-targeted JD evidence, legacy proposal compatibility, model-cache refresh and compact groups retaining exact check targets.
+
+Live paid Flash-Lite returned a grounded synthetic rewrite and JD quote. The imported QA copy retains version 1 and a reloaded **36/100** JD result with five reused embeddings; its selected real experience returned no changes. **JD Workflow QA (Synthetic)** advanced version 2→3 through reviewed Gemini Apply; reload preserved the selected rewrite and unchanged second experience/project. Prior JD evidence becomes stale. The review dialog fits a 390px viewport; JD has no horizontal overflow. Original real resume content is preserved.
+
+Readiness remains a basic heuristic: shortening the synthetic description reduced its length-based readiness 43→36. A wording improvement is not guaranteed to increase that score. Review suggestions and recheck the JD; AI must not pad descriptions or invent facts to gain points. Broader scoring calibration/corpus quality, PDF parsing checks and production jobs remain pending. [Detailed workflow](docs/ats-workflow.md).
+
+### Setup and manual checks
+
+Keep `GEMINI_API_KEY` only in the original project's ignored `.env`. Set `GEMINI_DATA_MODE=paid` in ignored `.local/ai-provider.env`; paid mode is already configured. No OpenCode key, SDK or CLI is needed. Restart the existing personal runtime after changing environment values; avoid starting a second stack over occupied ports.
+
+```sh
+cd /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2
+RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 pnpm dev:personal
+```
+
+1. Open `http://localhost:3000`, sign in, create/reopen a resume, add supported descriptions and **Save changes**. Blank resumes retain readiness 0; AI cannot invent missing experience.
+2. Open **Optimize for JD**, paste at least 50 characters with responsibilities and required/preferred skills, then **Analyze this JD**. Expand **Score breakdown** and **Skills & responsibility evidence** to inspect the result. The JD editor collapses after analysis; expand **Edit job description & recheck** to change it. With unusable criteria, expect **Partial assessment**, not a fabricated total.
+3. Reload/reopen and verify the saved version, JD and assessment remain. Edit the JD or resume: expect **Needs recheck** or a save-first message. Recheck after saving.
+4. Enable **Add Gemini semantic analysis**, confirm sending professional text, then analyze. Expect **Gemini evidence + fixed rules**. Use the local mode without external calls whenever preferred.
+5. Expand **Experience & projects**, then click **Fix** on an experience/project issue. Verify the entry title and its own description, including the second entry in a multi-entry resume. Click **Improve with AI**: only that description/visible achievements appear; submission requires consent. Consent sends only saved selected professional text to Gemini. Provider failures show a safe error and keep the version unchanged.
+6. Review Original/Suggested text, Cancel without changing content, or **Apply and save version**. Reload and verify the new version and unrelated entries. A concurrent save must reject the old proposal. JD evidence then needs rechecking; general readiness automatically checks the new version.
+
+A **JD Workflow QA (Synthetic)** resume remains in the local library with two experiences and one project. That earlier verification used synthetic content; the later authorized real-resume vector check is recorded above. [Implementation, API, limits and verification](docs/ats-workflow.md). These changes remain local and uncommitted.
+
+## General resume readiness — 2026-10-09
+
+Implemented on **features** in the frontend worktree. The **ATS Score** panel now runs an authenticated, deterministic **general readiness** check without a JD or AI provider. This supersedes the earlier placeholder-meter statements below. It is an internal heuristic, not an employer ATS score, acceptance prediction, job match or PDF parsing test. A 100 score means these basic rules passed; it does not establish the resume's factual quality or suitability for a job.
+
+The user approved these `readiness-v1` weights on 2026-10-08:
+
+| Component | Weight | Checks |
+| --- | --- | --- |
+| Structure | 25% | Visible background and skills, distinct populated headings, at least two populated sections. Summary and paid employment are optional. |
+| Experience detail | 25% | Experience/project titles, context subtitles, and at least one description or achievement with eight words. Projects can supply experience evidence. |
+| Skills presentation | 20% | Visible skills, category labels, normalized duplicates and concise items. More keywords do not earn extra points. |
+| Achievement clarity | 15% | Every visible statement in an experience/project entry has 8–60 word tokens. Metrics are optional. No grammar, truth or impact judgment. |
+| Date consistency | 15% | Complete ranges, chronological order and consistent Present. Year-only ranges are allowed; undated projects are optional. No gap or future-date inference. |
+
+Each component is the rounded percentage of passed checks; the total is the rounded weighted sum. Empty professional content scores 0. The server scores visible professional fields from the current immutable saved version. Header/contact fields, original extraction text, hidden content and appearance are excluded from this projection. No third-party transfer occurs, and assessment feedback contains generic reasons and stable target IDs rather than raw resume text. The master profile and UserContact are unchanged.
+
+Results store resume/version IDs, a contact-free input hash, timestamp, rubric, components and check outcomes in private `Resume.atsBreakdown.readiness` metadata. Running a check does not create or rewrite a content version; legacy JD `atsScore` stays separate. Opening a saved editor selects ATS Score and automatically checks a missing or outdated assessment. Saving changes marks the previous assessment outdated until the automatic check succeeds; failure retains that label and offers Retry. Repeating a check on the same version/input returns the same assessment. Assessment and feedback writes update record metadata time, so the library's update time can reflect these actions too.
+
+**Fix** opens the target's manual editor with its issue title, reason, live check status and **Go to field** focus action; a global rule opens Edit Content with guidance. **View** selects the target. **Reason** is an accessible expandable explanation. **Deleted** means dismissed feedback and supports **Restore**; dismissal never changes the score. **Completed** shows every passing check in the displayed assessment, including initially passing checks. Removed rules/targets are absent, rather than counted as resolved.
+
+Manual dialog candidates and applied draft edits use the same pure scorer/projection in the browser and display **Unsaved preview**, including live component and action counts. Inline text contributes after its normal blur/Enter commit. Preview does not write an assessment, save content, change the master profile or send data to a provider. Cancel restores the previous preview. A clean saved editor shows only its persisted version-bound result. Persisted recomputation and dismissal/restore stay disabled while edits, dialogs, conflicts or saves are pending. Manual Fix/View remain available between unsaved edits, but close the active dialog first.
+
+The local implementation retains up to 100 immutable assessments per resume and at most 2,000,000 serialized metadata characters; reaching either limit fails visibly without deleting history. Feedback displays the first 100 checks with a truncation warning, while score math uses every check. The API returns the latest and preceding assessment; a historical assessment picker is not built. Shared workspaces, PDF parseability checks, semantic JD matching, durable scoring jobs and AI explanations remain pending. JD scoring and scoped provider adapters are now implemented as described above; no AI credentials are needed for general readiness.
+
+### Manual readiness check
+
+1. Start the personal runtime with the startup command below. Open **My resumes**, create or reopen a resume. **ATS Score** opens with automatic checks; no JD, AI credential or Run click is needed. A blank resume scores 0 under our rubric.
+2. Expand **Score breakdown** or **Assessment details** for weights, version and timestamp. **Completed** shows five areas containing all passing checks. Expand an area, then **Reason** to inspect a rule.
+3. Click **Fix** on a targeted rule. Verify its guidance appears in the manual dialog, then click **Go to field**. Change a supported field: **Unsaved preview** and the guidance update. Cancel/discard the dialog and verify the prior preview returns.
+4. Apply dialog changes to the local draft. The preview stays labeled unsaved; PDF and persisted scoring/preferences stay disabled. Click editor **Save changes** and wait for **Evaluated** on the new version. It should equal the preview for the same visible professional facts.
+5. Reload or recheck without editing. The same assessment/timestamp should remain. Click **Dismiss** on a pending rule: Pending decreases, Deleted increases, and score stays unchanged. Reload, open **Deleted**, then **Restore**; the feedback returns without a score increase.
+6. Use a disposable resume for two-tab saves or network failure testing. Stale requests must fail rather than overwrite evidence. A failed automatic check retains the old version label and allows **Retry readiness check**; content saves remain separate.
+
+A **Readiness QA (Synthetic)** record was created for live testing and remains in the local account at version 3. It contains synthetic identity, one explicitly synthetic skill, and no contacts. Its score is 33 with six passing checks. A newer **ATS Flow QA (Synthetic)** record also remains for this workflow verification. Use these records for manual feedback checks. Existing real resume content was not edited.
+
+The signed-in Chrome comparison observed CareerZenith scoring without a JD, initially passing Completed checks and contextual Fix dialogs. Our implementation matches those interactions with our approved rubric. Its private algorithm, score weights and thresholds cannot be recovered from the UI. Contact completeness, appearance/link validation, provider-backed rewrites and JD matching are outside this slice. [Reference observations](docs/careerzenith-ats-comparison.md).
+
+Verification commands, actual browser results and remaining test limits are in the [tracker](context/progress-tracker.md#general-readiness-scoring--2026-10-09). These changes remain local and uncommitted.
+
 ## Current development task
 
 <!-- BEGIN:CURRENT_TASK -->
@@ -9,8 +161,8 @@
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-08T19:53:07.631Z",
-  "lastResult": "Reviewed 41 authorized files for features commit; diff check and credential scan pass. Earlier recorded build/test/UI results retained."
+  "updatedAt": "2026-10-10T05:12:27.522Z",
+  "lastResult": "Release validated: 153 unit, 19 editor DB and 12 role checks; builds/lint pass. Changes prepared for commit and publication to origin/main."
 }
 ```
 <!-- END:CURRENT_TASK -->

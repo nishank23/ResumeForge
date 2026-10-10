@@ -1,6 +1,19 @@
+import { createAtsUseCases } from "./ats/use-cases.js";
+import type { AiProviders } from "./ats/ai.js";
+import { computeReadiness } from "@resume-forge/resume-core";
+import { readinessProjection } from "./readiness-projection.js";
+import { READINESS_RUBRIC } from "@resume-forge/resume-core";
+import { readinessHints } from "@resume-forge/shared-types";
+import {
+  readinessEvaluationSchema,
+  readinessRequestSchema,
+  readinessPreferenceSchema,
+  type ReadinessEvaluation,
+  type ReadinessState,
+} from "@resume-forge/shared-types";
 import { editorDocumentSchema } from "@resume-forge/shared-types";
 import { renderSavedResumePdf } from "./pdf.js";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { authorizePersonalScope } from "@resume-forge/access-policy";
 import {
@@ -91,6 +104,7 @@ export function createResumeUseCases(
   db: Database,
   now = Date.now,
   renderPdf = renderSavedResumePdf,
+  providers?: AiProviders,
 ) {
   function assertContext(context: ResumeServiceContext) {
     if (
@@ -136,7 +150,8 @@ export function createResumeUseCases(
       | "resume.download"
       | "skillgap.analyze"
       | "ats.run"
-      | "ats.view",
+      | "ats.view"
+      | "resume.generate",
   ) {
     assertContext(context);
     const workspace = await db.workspace.findFirst({
@@ -689,6 +704,8 @@ export function createResumeUseCases(
         if (!existing) throw new ResumeError("not_found");
         if (existing.currentVersion !== parsed.data.expectedVersion)
           throw new ResumeError("revision_conflict");
+        await tx.$executeRaw`SELECT set_config('resume_forge.actor',${context.actor.userId},true),set_config('resume_forge.workspace',${context.actor.personalWorkspaceId},true)`;
+        await tx.$executeRaw`DELETE FROM "ResumeSearchChunk" WHERE "resumeId"=${resumeId}::uuid AND "ownerUserId"=${context.actor.userId}::uuid AND "workspaceId"=${context.actor.personalWorkspaceId}::uuid`;
         await tx.resume.update({
           where: { id: resumeId },
           data: { status: "deleted", pdfR2Key: null },
@@ -2140,7 +2157,231 @@ export function createResumeUseCases(
     });
   }
 
+  const readinessHistorySchema = z
+    .object({
+      evaluations: z.array(readinessEvaluationSchema).max(100),
+      dismissed: z.array(z.string().max(400)).max(100),
+    })
+    .strict();
+  function readinessHistory(value: unknown) {
+    if (value === null || value === undefined)
+      return { evaluations: [], dismissed: [] };
+    const root = z.record(z.unknown()).safeParse(value);
+    if (!root.success)
+      throw new ResumeError(
+        "resume_unavailable",
+        "Assessment metadata could not be read.",
+      );
+    if (!root.data.readiness) return { evaluations: [], dismissed: [] };
+    const result = readinessHistorySchema.safeParse(root.data.readiness);
+    if (!result.success)
+      throw new ResumeError(
+        "resume_unavailable",
+        "Assessment metadata could not be read.",
+      );
+    return result.data;
+  }
+  const readinessWhere = (context: ResumeServiceContext, id: string) => ({
+    id,
+    ownerUserId: context.actor.userId,
+    workspaceId: context.actor.personalWorkspaceId,
+    status: { not: "deleted" },
+  });
+  function readinessState(
+    version: number,
+    history: { evaluations: ReadinessEvaluation[]; dismissed: string[] },
+  ): ReadinessState {
+    return {
+      currentVersion: version,
+      evaluation: history.evaluations.at(-1) ?? null,
+      previous: history.evaluations.at(-2) ?? null,
+      dismissed: history.dismissed,
+    };
+  }
+  async function getReadiness(
+    context: ResumeServiceContext,
+    id: string,
+  ): Promise<ReadinessState> {
+    if (!z.string().uuid().safeParse(id).success)
+      throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "ats.view");
+    const resume = await db.resume.findFirst({
+      where: readinessWhere(context, id),
+      select: { currentVersion: true, atsBreakdown: true },
+    });
+    if (!resume) throw new ResumeError("not_found");
+    return readinessState(
+      resume.currentVersion,
+      readinessHistory(resume.atsBreakdown),
+    );
+  }
+  async function runReadiness(
+    context: ResumeServiceContext,
+    id: string,
+    input: unknown,
+  ): Promise<ReadinessState> {
+    const request = readinessRequestSchema.safeParse(input);
+    if (!z.string().uuid().safeParse(id).success || !request.success)
+      throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "ats.run");
+    return withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      createAuditIntent(context, "resume.updated", id, { status: "succeeded" }),
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+        assertContext(context);
+        const resume = await tx.resume.findFirst({
+          where: readinessWhere(context, id),
+          select: { currentVersion: true, atsBreakdown: true },
+        });
+        if (!resume) throw new ResumeError("not_found");
+        if (resume.currentVersion !== request.data.expectedVersion)
+          throw new ResumeError(
+            "revision_conflict",
+            "Save or reopen the current resume before checking readiness.",
+          );
+        const snapshot = await tx.resumeVersion.findUnique({
+          where: {
+            resumeId_versionNumber: {
+              resumeId: id,
+              versionNumber: resume.currentVersion,
+            },
+          },
+          select: { id: true, content: true },
+        });
+        if (!snapshot) throw new ResumeError("not_found");
+        const content = z.record(z.unknown()).safeParse(snapshot.content);
+        const doc = editorDocumentSchema.safeParse(
+          content.success ? content.data.editorDraft : null,
+        );
+        if (!doc.success)
+          throw new ResumeError(
+            "invalid_input",
+            "Reopen and save this resume before checking readiness.",
+          );
+        const projection = readinessProjection(doc.data);
+        const hints = readinessHints(doc.data);
+        const inputHash = createHash("sha256")
+          .update(JSON.stringify({ projection, hints }))
+          .digest("hex");
+        const history = readinessHistory(resume.atsBreakdown);
+        const last = history.evaluations.at(-1);
+        if (
+          last?.resumeVersion === resume.currentVersion &&
+          last.rubricVersion === READINESS_RUBRIC &&
+          last.inputHash === inputHash
+        )
+          return readinessState(resume.currentVersion, history);
+        if (history.evaluations.length >= 100)
+          throw new ResumeError(
+            "invalid_input",
+            "This local resume has reached its retained assessment limit.",
+          );
+        const evaluation = readinessEvaluationSchema.parse({
+          ...computeReadiness(projection, hints),
+          id: randomUUID(),
+          resumeId: id,
+          resumeVersion: resume.currentVersion,
+          versionId: snapshot.id,
+          inputHash,
+          evaluatedAt: new Date(now()).toISOString(),
+        });
+        history.evaluations.push(evaluation);
+        const failed = new Set(
+          evaluation.checks.filter((c) => !c.passed).map((c) => c.id),
+        );
+        history.dismissed = history.dismissed.filter((id) => failed.has(id));
+        const root = z.record(z.unknown()).safeParse(resume.atsBreakdown);
+        const metadata = JSON.parse(
+          JSON.stringify({
+            ...(root.success ? root.data : {}),
+            readiness: history,
+          }),
+        ) as JsonObject;
+        if (JSON.stringify(metadata).length > 2_000_000)
+          throw new ResumeError(
+            "invalid_input",
+            "Retained assessment metadata is too large.",
+          );
+        assertContext(context);
+        await tx.resume.update({
+          where: { id },
+          data: { atsBreakdown: metadata },
+        });
+        return readinessState(resume.currentVersion, history);
+      },
+    );
+  }
+  async function updateReadinessPreference(
+    context: ResumeServiceContext,
+    id: string,
+    input: unknown,
+  ): Promise<ReadinessState> {
+    const request = readinessPreferenceSchema.safeParse(input);
+    if (!z.string().uuid().safeParse(id).success || !request.success)
+      throw new ResumeError("invalid_input");
+    await authorizeWorkspace(context, "ats.run");
+    return withPersonalAuditTransaction(
+      db,
+      context.actor.userId,
+      createAuditIntent(context, "resume.updated", id, { status: "succeeded" }),
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+        assertContext(context);
+        const resume = await tx.resume.findFirst({
+          where: readinessWhere(context, id),
+          select: { currentVersion: true, atsBreakdown: true },
+        });
+        if (!resume) throw new ResumeError("not_found");
+        const history = readinessHistory(resume.atsBreakdown),
+          last = history.evaluations.at(-1),
+          data = request.data;
+        if (
+          resume.currentVersion !== data.expectedVersion ||
+          last?.resumeVersion !== data.expectedVersion ||
+          last.rubricVersion !== READINESS_RUBRIC ||
+          last.id !== data.evaluationId
+        )
+          throw new ResumeError(
+            "revision_conflict",
+            "Recheck the current saved version before changing feedback.",
+          );
+        if (!last.checks.some((c) => c.id === data.issueId && !c.passed))
+          throw new ResumeError(
+            "invalid_input",
+            "Choose a pending check from the current assessment.",
+          );
+        history.dismissed = history.dismissed.filter(
+          (id) => id !== data.issueId,
+        );
+        if (data.dismissed) history.dismissed.push(data.issueId);
+        const root = z.record(z.unknown()).parse(resume.atsBreakdown);
+        await tx.resume.update({
+          where: { id },
+          data: {
+            atsBreakdown: JSON.parse(
+              JSON.stringify({ ...root, readiness: history }),
+            ) as JsonObject,
+          },
+        });
+        return readinessState(resume.currentVersion, history);
+      },
+    );
+  }
+
   return {
+    ...createAtsUseCases({
+      db,
+      now,
+      authorize: authorizeWorkspace,
+      assert: assertContext,
+      audit: createAuditIntent,
+      providers,
+    }),
+    getReadiness,
+    runReadiness,
+    updateReadinessPreference,
     importResume,
     authorizeUpload: (context: ResumeServiceContext) =>
       authorizeWorkspace(context, "resume.create"),

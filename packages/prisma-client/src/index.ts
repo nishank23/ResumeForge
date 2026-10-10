@@ -7,6 +7,7 @@ export {
 export {
   runtimeRoleNames,
   RUNTIME_GRANTS,
+  RUNTIME_FUNCTIONS,
   assertRuntimeDatabaseRole,
   type RuntimeService,
 } from "./runtime-access.js";

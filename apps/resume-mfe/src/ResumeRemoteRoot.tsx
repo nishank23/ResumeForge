@@ -1,3 +1,7 @@
+import type {
+  RewriteTarget,
+  RewriteProposal,
+} from "@resume-forge/shared-types";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Upload } from "lucide-react";
 import {
@@ -41,6 +45,91 @@ export function ResumeRemoteRoot({
       text: string;
     } | null>(null),
     [fileName, setFileName] = useState("");
+  const readinessId = saved?.id,
+    readinessVersion = saved?.currentVersion;
+  const readiness = useMemo(
+    () =>
+      readinessId && readinessVersion
+        ? {
+            load: (signal?: AbortSignal) => api.readiness(readinessId, signal),
+            run: () => api.runReadiness(readinessId, readinessVersion),
+            dismiss: (
+              evaluationId: string,
+              issueId: string,
+              dismissed: boolean,
+            ) =>
+              api.setReadinessDismissed(
+                readinessId,
+                readinessVersion,
+                evaluationId,
+                issueId,
+                dismissed,
+              ),
+          }
+        : undefined,
+    [api, readinessId, readinessVersion],
+  );
+  const jdMatch = useMemo(
+    () =>
+      readinessId && readinessVersion
+        ? {
+            load: (signal?: AbortSignal) => api.jdMatch(readinessId, signal),
+            run: (text: string, semantic: boolean, consent: boolean) =>
+              api.runJdMatch(
+                readinessId,
+                readinessVersion,
+                text,
+                semantic,
+                consent,
+              ),
+            dismiss: (
+              evaluationId: string,
+              issueId: string,
+              dismissed: boolean,
+            ) =>
+              api.dismissJd(
+                readinessId,
+                readinessVersion,
+                evaluationId,
+                issueId,
+                dismissed,
+              ),
+          }
+        : undefined,
+    [api, readinessId, readinessVersion],
+  );
+  const rewrite = useMemo(
+    () =>
+      readinessId && readinessVersion
+        ? {
+            request: (target: RewriteTarget) =>
+              api.requestRewrite(
+                readinessId,
+                readinessVersion,
+                target,
+                true,
+              ),
+            apply: async (proposal: RewriteProposal) => {
+              const next = await api.applyRewrite(
+                readinessId,
+                readinessVersion,
+                proposal.id,
+              );
+              setSaved((previous) =>
+                previous?.id === readinessId
+                  ? {
+                      ...previous,
+                      content: next.content,
+                      currentVersion: next.currentVersion,
+                    }
+                  : previous,
+              );
+              return next.draft;
+            },
+          }
+        : undefined,
+    [api, readinessId, readinessVersion],
+  );
   const createId = useRef(crypto.randomUUID()),
     busy = useRef(false);
   const back = () => context?.onNavigate?.(`/w/${workspaceId}/resumes`);
@@ -123,6 +212,9 @@ export function ResumeRemoteRoot({
           context={context}
           initialDraft={fromResumeContent(saved.content)}
           savedVersion={saved.currentVersion}
+          readiness={readiness}
+          jdMatch={jdMatch}
+          rewrite={rewrite}
           onDownload={() =>
             downloadResumePdf(api, saved.id, saved.currentVersion, saved.title)
           }

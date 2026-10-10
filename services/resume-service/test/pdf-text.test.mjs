@@ -49,3 +49,19 @@ test("annotation destinations survive username-only links without following unsa
   assert.equal(text.split("https://example.com/alex").length - 1, 1);
   assert.doesNotMatch(text, /javascript|mailto|\/bad/);
 });
+
+test("independent narrative columns retain reading order instead of interleaving", () => {
+ const left=[fragment("Synthetic Person",80,800,120),fragment("PERSONAL PROFILE",90,730,110),...Array.from({length:8},(_,i)=>fragment(`Supported left narrative line ${i}.`,45,710-i*20,235)),fragment("PROJECTS",100,510,60)];
+ const right=[fragment("WORK EXPERIENCE",375,800,100),...Array.from({length:8},(_,i)=>fragment(`Supported right narrative line ${i}.`,307,760-i*20,235)),fragment("SKILLS",400,540,50)];
+ const text=pdfPageText([...right,...left],[]);
+ assert.ok(text.indexOf("PROJECTS")<text.indexOf("WORK EXPERIENCE"));
+ assert.ok(text.indexOf("left narrative line 7")<text.indexOf("right narrative line 0"));
+ for(const side of ["left","right"])for(let i=0;i<8;i++)assert.equal(text.split(`${side} narrative line ${i}`).length-1,1);
+});
+test("repeated dates on the right stay paired with single-column role rows", () => {
+ const items=Array.from({length:8},(_,i)=>[fragment(`Supported role description number ${i}.`,45,800-i*20,200),fragment("2022 – 2024",420,800-i*20,70)]).flat();
+ assert.equal(pdfPageText(items,[]).split("\n")[0],"Supported role description number 0.\t2022 – 2024");
+});
+test("zero-width PDF bullet glyphs remain separate from narrative text",()=>{
+ assert.equal(pdfPageText([fragment("•",50,100,0,1),fragment("Supported achievement",50,100,110)],[]),"• Supported achievement");
+});

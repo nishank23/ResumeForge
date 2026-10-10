@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
+import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import {
   createDatabaseClient,
@@ -21,13 +22,12 @@ import {
 } from "../../../scripts/runtime-roles.mjs";
 import { createWorkspaceAuditApp } from "../dist/app.js";
 
+const localRoot = process.env.RESUME_FORGE_LOCAL_ROOT
+  ? pathToFileURL(`${process.env.RESUME_FORGE_LOCAL_ROOT}/`)
+  : new URL("../../../", import.meta.url);
 const base = new URL(
-  parseEnv(
-    readFileSync(
-      new URL("../../../.local/database.env", import.meta.url),
-      "utf8",
-    ),
-  ).DATABASE_URL,
+  parseEnv(readFileSync(new URL(".local/database.env", localRoot), "utf8"))
+    .DATABASE_URL,
 );
 assert.equal(base.hostname, "127.0.0.1");
 assert.equal(base.port, "55432");

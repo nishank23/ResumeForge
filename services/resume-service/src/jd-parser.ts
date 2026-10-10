@@ -5,11 +5,15 @@ import {
 } from "./jd-contracts.js";
 
 // Comprehensive catalog of common tech and industry keywords by category
-const KEYWORD_CATALOG: Array<{ name: string; category: ParsedKeywordDto["category"]; aliases?: string[] }> = [
+const KEYWORD_CATALOG: Array<{
+  name: string;
+  category: ParsedKeywordDto["category"];
+  aliases?: string[];
+}> = [
   // Languages & Core Runtimes
   { name: "TypeScript", category: "technical" },
   { name: "JavaScript", category: "technical" },
-  { name: "Python", category: "technical" },
+  { name: "Python", category: "technical", aliases: ["Pythin"] },
   { name: "Node.js", category: "technical", aliases: ["Node", "NodeJS"] },
   { name: "Java", category: "technical" },
   { name: "Go", category: "technical", aliases: ["Golang"] },
@@ -24,6 +28,28 @@ const KEYWORD_CATALOG: Array<{ name: string; category: ParsedKeywordDto["categor
   { name: "HTML5", category: "technical", aliases: ["HTML"] },
   { name: "CSS3", category: "technical", aliases: ["CSS"] },
 
+  // Data engineering vocabulary used by imported informal JDs.
+  {
+    name: "BigQuery",
+    category: "tools",
+    aliases: ["Google BigQuery", "GCP BQ", "BQ"],
+  },
+  { name: "Airflow", category: "tools", aliases: ["Apache Airflow"] },
+  { name: "Spark", category: "tools", aliases: ["Apache Spark", "PySpark"] },
+  { name: "Hive", category: "tools", aliases: ["Apache Hive"] },
+  {
+    name: "HDFS",
+    category: "tools",
+    aliases: ["Hadoop Distributed File System"],
+  },
+  { name: "ETL", category: "domain", aliases: ["Extract Transform Load"] },
+  { name: "Data modeling", category: "domain", aliases: ["Data modelling"] },
+  {
+    name: "Data migration",
+    category: "domain",
+    aliases: ["Data conversion", "conv/migration"],
+  },
+  { name: "HR", category: "domain", aliases: ["Human Resources"] },
   // Frameworks & Libraries
   { name: "React", category: "technical", aliases: ["React.js", "ReactJS"] },
   { name: "Next.js", category: "technical", aliases: ["NextJS"] },
@@ -54,7 +80,11 @@ const KEYWORD_CATALOG: Array<{ name: string; category: ParsedKeywordDto["categor
 
   // Cloud & Infrastructure / DevOps
   { name: "AWS", category: "tools", aliases: ["Amazon Web Services"] },
-  { name: "GCP", category: "tools", aliases: ["Google Cloud", "Google Cloud Platform"] },
+  {
+    name: "GCP",
+    category: "tools",
+    aliases: ["Google Cloud", "Google Cloud Platform"],
+  },
   { name: "Azure", category: "tools", aliases: ["Microsoft Azure"] },
   { name: "Docker", category: "tools" },
   { name: "Kubernetes", category: "tools", aliases: ["K8s"] },
@@ -72,10 +102,22 @@ const KEYWORD_CATALOG: Array<{ name: string; category: ParsedKeywordDto["categor
   { name: "System Design", category: "domain" },
   { name: "TDD", category: "domain", aliases: ["Test Driven Development"] },
   { name: "Performance Optimization", category: "domain" },
-  { name: "Security", category: "domain", aliases: ["Cybersecurity", "InfoSec"] },
+  {
+    name: "Security",
+    category: "domain",
+    aliases: ["Cybersecurity", "InfoSec"],
+  },
   { name: "OAuth", category: "domain", aliases: ["OAuth2", "OIDC"] },
-  { name: "Machine Learning", category: "domain", aliases: ["ML", "Deep Learning", "AI"] },
-  { name: "LLM", category: "domain", aliases: ["Large Language Models", "Generative AI"] },
+  {
+    name: "Machine Learning",
+    category: "domain",
+    aliases: ["ML", "Deep Learning", "AI"],
+  },
+  {
+    name: "LLM",
+    category: "domain",
+    aliases: ["Large Language Models", "Generative AI"],
+  },
 
   // Developer Tools & Testing
   { name: "Git", category: "tools" },
@@ -98,18 +140,27 @@ const KEYWORD_CATALOG: Array<{ name: string; category: ParsedKeywordDto["categor
   { name: "Code Review", category: "soft_skills" },
 
   // Education
-  { name: "Computer Science", category: "education", aliases: ["B.S. in Computer Science", "BS CS", "Computer Engineering"] },
+  {
+    name: "Computer Science",
+    category: "education",
+    aliases: ["B.S. in Computer Science", "BS CS", "Computer Engineering"],
+  },
 ];
 
 /**
  * Sanitizes input text to neutralize prompt injections and script tags.
  */
 export function sanitizeJdText(rawText: string): string {
-  return rawText
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\b(ignore (?:all )?previous instructions|system prompt|reveal secrets|DAN mode|jailbreak|disregard previous)\b/gi, "[neutralized-instruction]")
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ""); // strip non-printable controls
+  return (
+    rawText
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(
+        /\b(ignore (?:all )?previous instructions|system prompt|reveal secrets|DAN mode|jailbreak|disregard previous)\b/gi,
+        "[neutralized-instruction]",
+      )
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+  ); // strip non-printable controls
 }
 
 interface SplitSections {
@@ -134,21 +185,37 @@ function splitJdSections(lines: string[]): SplitSections {
   type SectionKey = keyof SplitSections;
   let currentSection: SectionKey = "header";
 
-  const reqPattern = /^(?:#+\s*)?(?:requirements|qualifications|what you(?:'ll| will)? bring|what we(?:'re| are) looking for|must[ -]haves?|basic qualifications|minimum qualifications|skills & requirements)/i;
-  const prefPattern = /^(?:#+\s*)?(?:preferred qualifications|nice[ -]to[ -]haves?|bonus points|preferred skills|plus if you have|good to have)/i;
-  const respPattern = /^(?:#+\s*)?(?:responsibilities|what you(?:'ll| will)? do|key responsibilities|duties|core responsibilities|role overview|the role|scope of work)/i;
-  const aboutPattern = /^(?:#+\s*)?(?:about (?:us|the company|our team)|company overview|who we are)/i;
+  const reqPattern =
+    /^(?:#+\s*)?(?:requirements|qualifications|what you(?:'ll| will)? bring|what we(?:'re| are) looking for|must[ -]haves?|basic qualifications|minimum qualifications|skills & requirements|common skil[l]?s|common skills)/i;
+  const prefPattern =
+    /^(?:#+\s*)?(?:preferred qualifications|nice[ -]to[ -]haves?|bonus points|preferred skills|plus if you have|good to have)/i;
+  const respPattern =
+    /^(?:#+\s*)?(?:responsibilities|what you(?:'ll| will)? do|key responsibilities|duties|core responsibilities|role overview|the role|scope of work)/i;
+  const aboutPattern =
+    /^(?:#+\s*)?(?:about (?:us|the company|our team)|company overview|who we are)/i;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
+    if (
+      /\b(additional skill|preferred|nice to have|bonus)\b/i.test(trimmed) &&
+      !prefPattern.test(trimmed)
+    ) {
+      sections.preferred.push(trimmed);
+      continue;
+    }
     if (prefPattern.test(trimmed)) {
       currentSection = "preferred";
       continue;
     }
     if (reqPattern.test(trimmed)) {
       currentSection = "requirements";
+      const inline = trimmed
+        .replace(reqPattern, "")
+        .replace(/^[\s:-]+/, "")
+        .trim();
+      if (inline) sections.requirements.push(inline);
       continue;
     }
     if (respPattern.test(trimmed)) {
@@ -161,7 +228,10 @@ function splitJdSections(lines: string[]): SplitSections {
     }
 
     // Check if line looks like a major new heading
-    if (/^(?:#+\s*)?[A-Z][A-Za-z0-9\s&,/]{2,40}:?$/.test(trimmed) && trimmed.length < 50) {
+    if (
+      /^(?:#+\s*)?[A-Z][A-Za-z0-9\s&,/]{2,40}:?$/.test(trimmed) &&
+      trimmed.length < 50
+    ) {
       // If it doesn't match known sections, put in other
       if (currentSection !== "header") {
         currentSection = "other";
@@ -180,14 +250,17 @@ function extractJobTitle(lines: string[], explicitTitle?: string): string {
   }
 
   for (const line of lines) {
-    const match = line.match(/^(?:Job )?Title:\s*(.+)$/i) || line.match(/^(?:Position|Role):\s*(.+)$/i);
+    const match =
+      line.match(/^(?:Job )?Title:\s*(.+)$/i) ||
+      line.match(/^(?:Position|Role):\s*(.+)$/i);
     if (match && match[1]) {
       return match[1].trim().slice(0, 200);
     }
   }
 
   // Look for common title keywords in first 5 lines
-  const titleKeywords = /\b(Engineer|Developer|Manager|Architect|Designer|Analyst|Consultant|Director|Lead|Specialist|Scientist|DevOps|Administrator|Coordinator|Officer)\b/i;
+  const titleKeywords =
+    /\b(Engineer|Developer|Manager|Architect|Designer|Analyst|Consultant|Director|Lead|Specialist|Scientist|DevOps|Administrator|Coordinator|Officer)\b/i;
   for (let i = 0; i < Math.min(5, lines.length); i++) {
     const rawLine = lines[i];
     if (!rawLine) continue;
@@ -200,30 +273,42 @@ function extractJobTitle(lines: string[], explicitTitle?: string): string {
   // Fallback to first line if reasonably short, else Target Position
   const firstLine = lines[0];
   if (firstLine && firstLine.length <= 100) {
-    return firstLine.replace(/^#+\s*/, "").trim().slice(0, 200);
+    return firstLine
+      .replace(/^#+\s*/, "")
+      .trim()
+      .slice(0, 200);
   }
 
   return "Target Position";
 }
 
-function extractCompany(lines: string[], rawText: string, explicitCompany?: string): string {
+function extractCompany(
+  lines: string[],
+  rawText: string,
+  explicitCompany?: string,
+): string {
   if (explicitCompany && explicitCompany.trim()) {
     return explicitCompany.trim().slice(0, 200);
   }
 
   for (const line of lines) {
-    const match = line.match(/^Company:\s*(.+)$/i) || line.match(/^Organization:\s*(.+)$/i);
+    const match =
+      line.match(/^Company:\s*(.+)$/i) || line.match(/^Organization:\s*(.+)$/i);
     if (match && match[1]) {
       return match[1].trim().slice(0, 200);
     }
   }
 
-  const aboutMatch = rawText.match(/About\s+([A-Z][A-Za-z0-9\s&]{2,30}?)(?:,|\.|\n|is\b)/i);
+  const aboutMatch = rawText.match(
+    /About\s+([A-Z][A-Za-z0-9\s&]{2,30}?)(?:,|\.|\n|is\b)/i,
+  );
   if (aboutMatch && aboutMatch[1]) {
     return aboutMatch[1].trim().slice(0, 200);
   }
 
-  const joinMatch = rawText.match(/(?:join|at|with)\s+([A-Z][A-Za-z0-9&]{2,25})\b/i);
+  const joinMatch = rawText.match(
+    /(?:join|at|with)\s+([A-Z][A-Za-z0-9&]{2,25})\b/i,
+  );
   if (joinMatch && joinMatch[1]) {
     return joinMatch[1].trim().slice(0, 200);
   }
@@ -231,30 +316,51 @@ function extractCompany(lines: string[], rawText: string, explicitCompany?: stri
   return "Target Company";
 }
 
-function detectExperienceLevel(text: string, title?: string): ParsedJdContentDto["experienceLevel"] {
+function detectExperienceLevel(
+  text: string,
+  title?: string,
+): ParsedJdContentDto["experienceLevel"] {
   if (title) {
     const titleLower = title.toLowerCase();
-    if (/\b(vp|vice president|chief|head of|c-level|executive)\b/i.test(titleLower)) return "executive";
+    if (
+      /\b(vp|vice president|chief|head of|c-level|executive)\b/i.test(
+        titleLower,
+      )
+    )
+      return "executive";
     if (/\b(principal|staff|lead|tech lead)\b/i.test(titleLower)) return "lead";
     if (/\b(senior|sr\.?)\b/i.test(titleLower)) return "senior";
     if (/\b(mid[- ]level|intermediate)\b/i.test(titleLower)) return "mid";
-    if (/\b(junior|jr\.?|entry[- ]level|associate|intern)\b/i.test(titleLower)) return "entry";
+    if (/\b(junior|jr\.?|entry[- ]level|associate|intern)\b/i.test(titleLower))
+      return "entry";
   }
 
   const lower = text.toLowerCase();
   if (/\b(vp|vice president|chief|head of|c-level|executive)\b/i.test(lower)) {
     return "executive";
   }
-  if (/\b(principal|staff engineer|staff developer|solutions architect|enterprise architect|tech lead)\b/i.test(lower)) {
+  if (
+    /\b(principal|staff engineer|staff developer|solutions architect|enterprise architect|tech lead)\b/i.test(
+      lower,
+    )
+  ) {
     return "lead";
   }
   if (/\b(senior|sr\.?|[5-9]\+?\s*years?|10\+\s*years?)\b/i.test(lower)) {
     return "senior";
   }
-  if (/\b(mid[- ]level|intermediate|3\+\s*years?|4\s*years?|2[-–]5\s*years?)\b/i.test(lower)) {
+  if (
+    /\b(mid[- ]level|intermediate|3\+\s*years?|4\s*years?|2[-–]5\s*years?)\b/i.test(
+      lower,
+    )
+  ) {
     return "mid";
   }
-  if (/\b(junior|jr\.?|entry[- ]level|associate|intern|new grad|0[-–]2\s*years?)\b/i.test(lower)) {
+  if (
+    /\b(junior|jr\.?|entry[- ]level|associate|intern|new grad|0[-–]2\s*years?)\b/i.test(
+      lower,
+    )
+  ) {
     return "entry";
   }
   return "unknown";
@@ -279,7 +385,6 @@ function extractKeywords(
   const seen = new Set<string>();
 
   const reqText = sections.requirements.join("\n").toLowerCase();
-  const prefText = sections.preferred.join("\n").toLowerCase();
   const allLines = rawText.split("\n");
 
   for (const item of KEYWORD_CATALOG) {
@@ -290,7 +395,10 @@ function extractKeywords(
     for (const term of names) {
       // Escape for regex word boundary
       const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`(^|[^a-zA-Z0-9_])${escaped}([^a-zA-Z0-9_]|$)`, "i");
+      const regex = new RegExp(
+        `(^|[^a-zA-Z0-9_])${escaped}([^a-zA-Z0-9_]|$)`,
+        "i",
+      );
 
       if (regex.test(rawText)) {
         matchedName = item.name;
@@ -310,11 +418,16 @@ function extractKeywords(
 
       // Determine if required or preferred
       const lowerName = matchedName.toLowerCase();
-      const inReqSection = reqText.includes(lowerName);
-      const inPrefSection = prefText.includes(lowerName);
-      const isExplicitMust = /\b(must have|required|essential|minimum)\b/i.test(evidence);
+      const variants = [
+        lowerName,
+        ...(item.aliases ?? []).map((v) => v.toLowerCase()),
+      ];
+      const inReqSection = variants.some((v) => reqText.includes(v));
+      const isExplicitMust = /\b(must have|required|essential|minimum)\b/i.test(
+        evidence,
+      );
 
-      const required = isExplicitMust || (inReqSection && !inPrefSection);
+      const required = isExplicitMust || inReqSection;
 
       foundKeywords.push({
         name: matchedName,
@@ -329,10 +442,13 @@ function extractKeywords(
 }
 
 function cleanBullets(lines: string[]): string[] {
-  return lines
-    .map((line) => line.replace(/^[-*•–—\d.)\s]+/, "").trim())
-    .filter((line) => line.length > 5)
-    .slice(0, 30);
+  return [
+    ...new Set(
+      lines
+        .map((line) => line.replace(/^[-*•–—\d.)\s]+/, "").trim())
+        .filter((line) => line.length > 5),
+    ),
+  ].slice(0, 30);
 }
 
 /**
@@ -344,7 +460,10 @@ export function parseJdText(
   explicitCompany?: string,
 ): ParsedJdContentDto {
   const sanitized = sanitizeJdText(rawJD);
-  const lines = sanitized.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = sanitized
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   const sections = splitJdSections(lines);
   const jobTitle = extractJobTitle(lines, explicitTitle);
@@ -353,12 +472,24 @@ export function parseJdText(
   const roleType = detectRoleType(sanitized);
 
   const requirements = cleanBullets(
-    sections.requirements.length > 0 ? sections.requirements : lines.filter((l) => /^[•*-]\s+/.test(l)),
+    sections.requirements.length > 0
+      ? sections.requirements
+      : lines.filter((l) => /^[•*-]\s+/.test(l)),
   );
   const responsibilities = cleanBullets(
     sections.responsibilities.length > 0
       ? sections.responsibilities
-      : lines.filter((l) => /\b(will|responsible|lead|build|design|manage|maintain|implement)\b/i.test(l)),
+      : lines
+          .flatMap((l) =>
+            l
+              .replace(/^(?:common skil[l]?s|common skills)\s*[-:]?\s*/i, "")
+              .split(/,(?![^()]*\))/),
+          )
+          .filter((l) =>
+            /\b(will|responsible|lead|build|design|manage|maintain|implement|pipelines?|modeling|modelling|conversion|migration|HR knowledge|knows HR)\b/i.test(
+              l,
+            ),
+          ),
   );
 
   const keywords = extractKeywords(sanitized, sections);

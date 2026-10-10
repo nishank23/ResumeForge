@@ -463,3 +463,266 @@
     margin: 0 auto;
   }
 }
+
+.rf-readiness-fill {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+}
+.rf-readiness-components {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.rf-readiness-components > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.rf-readiness-components small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.rf-readiness-components strong {
+  white-space: nowrap;
+}
+.rf-readiness-issue {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.rf-readiness-issue h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.rf-readiness-issue p,
+.rf-readiness-explainer {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rf-readiness-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rf-readiness-issue summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  min-height: 28px;
+  padding: 4px 0;
+}
+.rf-readiness-issue[data-check-status="passed"] {
+  border-inline-start: 3px solid var(--primary);
+}
+.rf-readiness-guidance {
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--primary);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+.rf-readiness-guidance strong {
+  font-size: 14px;
+}
+.rf-readiness-guidance p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rf-ai-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rf-ai-original {
+  padding: 12px 16px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-muted);
+  margin: 12px 0;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rf-ai-original p + p {
+  margin-top: 12px;
+}
+.rf-description-assist {
+  padding: 12px 16px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-muted);
+  margin: 12px 0;
+}
+.rf-description-assist p {
+  font-size: 13px;
+  margin: 8px 0;
+}
+.rf-ats-modes {
+  margin-bottom: 16px;
+}
+.rf-jd-evidence {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.rf-jd-evidence summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.rf-jd-evidence p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.rf-jd-match .rf-jd-composer {
+  display: grid;
+  gap: 12px;
+}
+.rf-jd-match .rf-readiness-issue > p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Compact assessment hierarchy: five areas, source actions inside each disclosure. */
+.rf-assessment-feedback {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.rf-assessment-feedback h3 {
+  margin: 0;
+}
+.rf-assessment-feedback .rf-issue-filters {
+  gap: 3px;
+}
+.rf-assessment-feedback .rf-issue-filters button {
+  font-size: 11px;
+  padding: 8px 4px;
+  min-height: 36px;
+}
+.rf-assessment-feedback .rf-issue-filters span {
+  margin-left: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.rf-readiness-explainer {
+  margin: 0;
+}
+.rf-check-area,
+.rf-assessment-details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+}
+.rf-check-area > summary,
+.rf-assessment-details > summary {
+  cursor: pointer;
+  padding: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rf-check-area > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rf-check-area > summary::before {
+  content: "+";
+  color: var(--primary);
+  font-size: 16px;
+  width: 12px;
+}
+.rf-check-area[open] > summary::before {
+  content: "−";
+}
+.rf-check-area > summary small {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.rf-check-area-body {
+  padding: 0 10px 10px;
+  display: grid;
+  gap: 8px;
+}
+.rf-check-area-body .rf-readiness-issue {
+  padding: 10px;
+  border-radius: 6px;
+}
+.rf-check-area-body .rf-readiness-issue h4 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.rf-check-area-body .rf-readiness-issue-actions {
+  gap: 4px;
+  margin-top: 6px;
+}
+.rf-assessment-details > :not(summary) {
+  margin: 0 12px 12px;
+}
+.rf-assessment-details .rf-readiness-components {
+  padding: 0;
+  border: 0;
+  gap: 10px;
+}
+.rf-jd-match .rf-jd-composer {
+  padding-top: 4px;
+  gap: 10px;
+}
+.rf-jd-match .rf-jd-composer textarea {
+  min-height: 112px;
+  max-height: 220px;
+}
+.rf-jd-match .rf-jd-evidence {
+  padding: 8px 0;
+}
+.rf-jd-match .rf-ats-readiness p,
+.rf-service-tools .rf-ats-readiness p {
+  margin: 8px 0;
+}
+
+.rf-service-tools .rf-ats-readiness {
+  padding-bottom: 12px;
+}
+.rf-service-tools .rf-ats-meter-heading h3 {
+  margin: 0;
+  line-height: 1.4;
+}
+.rf-service-tools .rf-ats-score-value {
+  margin: 12px 0 8px;
+}
+.rf-service-tools .rf-ats-score-value > span:first-child {
+  font-size: 32px;
+}
+.rf-service-tools .rf-ats-track {
+  height: 10px;
+}
+
+/* Rule cards describe a resume issue once, with exact entry actions inside. */
+.rf-rule-card { padding: 12px; border: 1px solid var(--border, #e0e4ec); border-radius: 10px; background: var(--background, #fff); }
+.rf-rule-heading { display: flex; align-items: flex-start; gap: 8px; }
+.rf-rule-heading > svg { flex: none; margin-top: 2px; color: #a65b08; }
+.rf-rule-card[data-check-status="passed"] .rf-rule-heading > svg { color: #267449; }
+.rf-rule-heading h4 { margin: 0; flex: 1; font-size: 14px; line-height: 1.45; font-weight: 600; }
+.rf-rule-advice { color: var(--muted-foreground, #536079); font-size: 11px; line-height: 20px; }
+.rf-rule-target { margin: 6px 0; color: var(--muted-foreground, #536079); font-size: 12px; overflow-wrap: anywhere; }
+.rf-rule-reason { margin: 8px 0; font-size: 12px; }
+.rf-rule-reason summary, .rf-rule-instances > summary { cursor: pointer; color: var(--muted-foreground, #536079); }
+.rf-rule-reason p { line-height: 1.55; overflow-wrap: anywhere; }
+.rf-rule-instances { margin-top: 8px; font-size: 12px; }
+.rf-rule-instance { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border, #e0e4ec); }
+.rf-rule-instance > strong, .rf-rule-instance > small { display: block; overflow-wrap: anywhere; }
+.rf-rule-instance > small { margin-top: 3px; color: var(--muted-foreground, #536079); }

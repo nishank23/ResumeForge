@@ -1,5 +1,12 @@
 # F19 — Existing Resume File Import
 
+## Alternate two-column layout fix — 2026-10-09
+
+The supplied final CV exposed row-by-row cross-column interleaving, missed Personal Profile, company-first role metadata and unspaced PDF bullet markers. The local PDF worker now separates independent narrative columns only when a persistent empty gutter and sufficient long text on both sides support that interpretation; right-aligned dates remain in the original row. The parser additionally preserves numeric months, date/location metadata, inline CGPA, standalone skill categories/parenthesized qualifiers, and separate language/proficiency fields.
+
+The private file's six sections, three jobs, two projects, one education, 14 work/project bullets, 12 skills, four language pairs and both links survive parsing and the strict editor save-envelope round-trip. The older single-column sample still parses. Synthetic regressions cover the layout; no real file is committed or sent to a provider. Fresh uploads use the fix; confirmed existing versions are not overwritten. Local reviewed intake remains bounded by D14. Font emphasis/layout/rating dots, arbitrary columns, OCR and full provenance remain pending. [Evidence, Chrome automation limitation and manual steps](../../README.md#alternate-layout-import-and-no-jd-rule-cards--2026-10-09).
+
+
 ## Bounded personal intake — 2026-10-04
 
 The latest user request authorizes a local personal slice before full Phase 6. Accept text PDF, DOCX, TXT/MD up to 10 MB, 30 PDF pages, 2,000 DOCX entries/20 MB declared expansion and 500,000 extracted characters. PDF.js/Mammoth run in a bounded local worker (8 seconds, two concurrent workers); no external provider, macro, HTML render or network resource execution. Authenticate and recheck access after parsing. Reject scanned/encrypted/corrupt/unsafe/unsupported files with recovery.

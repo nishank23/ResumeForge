@@ -8,9 +8,10 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "node --experimental-strip-types --test test/extractor.test.mjs test/parser.test.mjs test/pdf-text.test.mjs test/route.test.mjs test/jd-parser.test.mjs test/generator.test.mjs test/gap-analyzer.test.mjs test/upload.test.mjs test/pdf-export.test.mjs",
+    "test": "node --experimental-strip-types --test test/extractor.test.mjs test/parser.test.mjs test/pdf-text.test.mjs test/route.test.mjs test/jd-parser.test.mjs test/generator.test.mjs test/gap-analyzer.test.mjs test/upload.test.mjs test/pdf-export.test.mjs test/readiness.test.mjs test/ats-workflow.test.mjs",
     "test:db": "node --test test/resume.test.mjs test/jd.test.mjs test/generator.db.test.mjs test/gap-analysis.db.test.mjs",
-    "test:editor:db": "node --experimental-strip-types --test test/editor.db.test.mjs"
+    "test:editor:db": "node --experimental-strip-types --test test/editor.db.test.mjs",
+    "test:ats": "node --test test/ats-workflow.test.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans": "5.3.0",
@@ -20,6 +21,7 @@
     "@resume-forge/access-policy": "workspace:*",
     "@resume-forge/audit-contracts": "workspace:*",
     "@resume-forge/prisma-client": "workspace:*",
+    "@resume-forge/resume-core": "workspace:*",
     "@resume-forge/shared-types": "workspace:*",
     "hono": "^4.7.0",
     "mammoth": "1.13.0",

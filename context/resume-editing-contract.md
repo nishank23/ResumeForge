@@ -1,5 +1,29 @@
 # Contextual Resume Editing Contract
 
+## AI action and replacement review — 2026-10-10
+
+AI consent checkboxes are removed at the user's request. The explicit Improve with AI action sends only selected saved description/visible achievements; opening the dialog never submits. JD method buttons keep their broader professional-only scope distinct. Provider processing intent remains explicit in the existing API payload. Scoped proposal review now shows word-level struck-through removals and adjacent replacements with full Original/Suggested disclosures. Cancel/failure do not save; Apply preserves current version checks, target isolation and one immutable version. Shared prompt/validation grammar permits narrow shorthand and action inflections while guarding other factual vocabulary, numbers, negatives and slash-separated technologies. [Current contract](../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
+
+## Current no-JD guidance and import retention — 2026-10-09
+
+General readiness uses versioned `readiness-v2` rule families with exact-entry Fix/View and per-check Dismiss/Restore. Additional editing advice is score-neutral and cannot change approved weighted math. A family completes only after every current instance passes. Old rubric history remains readable; current-version/rubric checks prevent stale preference writes and refresh without creating a content version. The private adapter supplies only contact-presence boolean guidance; no raw header/contact value enters resume-core or any AI projection. Manual header Fix uses the existing owner-only contact dialog.
+
+Alternate-layout imports retain independent PDF columns, company-first role entries, all visible bullets, numeric months, CGPA, skill categories and language/proficiency fields. The source's fonts/emphasis/layout are not reconstructed. Confirmed existing imports remain immutable; fresh review/save is required. Editor primitives remain shadcn-based shared controls and Tiptap, with no Performative UI layer added to these cards. [Current workflow](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
+
+
+## Current Gemini and compact assessment update — 2026-10-09
+
+The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](../docs/ats-workflow.md).
+
+
+## ## Connected scoped wording and JD actions — 2026-10-09
+
+ATS Fix opens the exact current entry and its description/guidance. Improve with AI requires a clean saved version and explicit MiMo consent, requests only that selection, shows Original/Suggested, and applies the stored proposal as a new immutable version. Cancel/failure preserve content; stale versions and expired proposals fail. Gemini is used only for optional JD semantic evidence. The timed local preview no longer serves the real editor. Live MiMo access is blocked by OpenCode free-tier client restrictions. [API, privacy, formatting and verification limits](../docs/ats-workflow.md).
+
+## General readiness and edit freshness — 2026-10-09
+
+The personal saved editor opens ATS Score and automatically checks a missing/outdated no-JD `readiness-v1` assessment on the current immutable saved version. Manual dialog candidates and applied local edits show a labeled Unsaved preview using the same contact-free pure projection/scorer; inline text contributes after blur/Enter. Preview never persists an assessment or changes content automatically. Save remains explicit; successful save triggers a version-bound check while the panel is visible (otherwise on reopening), while failure preserves stale evidence and a Retry action. Persisted run/preferences are disabled during pending edits, dialogs, conflicts and saves; manual navigation remains available between draft edits. Fix opens the current stable section/entry with issue title/reason, live check guidance and Go to field. View selects it; global Fix opens Edit Content with guidance. Deleted means persisted feedback dismissal with Restore and no score increase. Completed means all satisfied checks in the displayed saved assessment or explicitly unsaved preview; missing/removed rules do not imply resolution. Header/contact/source/hidden/layout data is excluded. JD matching, provider AI and actual exported-PDF checks remain disconnected. This supersedes earlier Completed-to-resolved planning semantics. [Manual checks](../README.md#general-resume-readiness--2026-10-09).
+
 ## Current A4 presentation correction — 2026-10-08
 
 The user explicitly requests a compact one-page builder and non-overlapping scroll controls. The fixed A4 paper (794×1123 CSS pixels minimum) uses bounded compact defaults where appearance is absent, preserving saved settings and all populated facts. Fit page/Fit width/100% changes only view scale; responsive app chrome must not reflow paper date/skill columns. Desktop contextual actions belong to the sticky header instead of paper gutters; the whole tool rail sticks/scrolls together. Long content remains in an extended sheet with an overflow notice and estimated page count. This is not automatic formatting-fit, shortening, full pagination or PDF parity. [Actual evidence and manual checks](../README.md#a4-resume-page-and-scroll-controls--2026-10-08) supersede the earlier continuous-canvas/52px-gutter presentation notes. Existing reviewed edit, privacy and expected-version-save contracts remain authoritative.
@@ -47,7 +71,7 @@ The signed-in reference review confirmed section forms, separate manual Save/Can
 
 Proposed structured content contains stable `sectionId` and `itemId` identifiers, a section type, allowed text fields/order and source fact references. They survive edits/reordering and are resolved under the authorized resume version. Contact/header fields are not eligible AI targets.
 
-Basic creation copies supported professional facts into a draft without needing AI or a JD. `Resume.jdHistoryId` may be absent for this mode; `atsScore`/breakdown are absent rather than zero. A completed content status means a usable content version exists, not that scoring or export has occurred. JD-specific scoring requires a supplied JD. Selecting a new JD for tailoring does not overwrite the provenance of older versions.
+Basic creation copies supported professional facts into a draft without needing AI or a JD. `Resume.jdHistoryId` may be absent for this mode; JD `atsScore`/breakdown are absent rather than zero; separately requested general readiness may populate its own metadata namespace. A completed content status means a usable content version exists, not that scoring or export has occurred. JD-specific scoring requires a supplied JD. Selecting a new JD for tailoring does not overwrite the provenance of older versions.
 
 Save or discard unsaved manual edits before requesting a suggestion, so the suggestion always names a persisted base version. Do not silently send a half-edited browser buffer as though it were saved. D03 sharing and D12 header policies still gate dependent data behavior.
 

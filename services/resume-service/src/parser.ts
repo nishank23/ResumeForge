@@ -120,7 +120,9 @@ export function parseResumeText(
       }
       case "certifications":
       case "languages": {
-        const bullets: ResumeBulletDto[] = rawSec.lines.map((text) => ({
+        const sourceLines = rawSec.kind === "languages"
+          ? pairLanguages(rawSec.lines) : rawSec.lines;
+        const bullets: ResumeBulletDto[] = sourceLines.map((text) => ({
           id: randomUUID(),
           text: cleanBullet(text),
           hidden: false,
@@ -183,7 +185,7 @@ const SECTION_PATTERNS: {
   {
     kind: "summary",
     regex:
-      /^(?:(?:professional\s+)?summary|profile|about\s+me|objective|executive\s+summary)$/i,
+      /^(?:(?:professional\s+)?summary|(?:personal\s+|professional\s+)?profile|about\s+me|objective|executive\s+summary)$/i,
     defaultLabel: "Professional summary",
   },
   {
@@ -354,6 +356,20 @@ function extractLocation(lines: string[]): {
         return { city: match[1].trim(), state: match[2].trim(), country: "" };
     }
   }
+  // Some narrow headers print "City Country" without punctuation. Only use
+  // separate header lines after name/headline; preserve unknown location text.
+  const names = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" });
+  const countries: string[] = [];
+  for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+    const name = names.of(String.fromCharCode(a, b));
+    if (name && name !== "Unknown Region") countries.push(name);
+  }
+  countries.sort((a, b) => b.length - a.length);
+  for (const line of lines.slice(2)) {
+    if (isContactOrUrlLine(line) || line.length > 80 || !/^[\p{L} .'-]+$/u.test(line)) continue;
+    const country = countries.find((c) => line.toLowerCase().endsWith(" " + c.toLowerCase()));
+    if (country) return { city: line.slice(0, -country.length).trim(), state: "", country: line.slice(-country.length) };
+  }
   return { city: "", state: "", country: "" };
 }
 
@@ -419,6 +435,15 @@ function parseStructuredEntries(
     const dateOnly = date && !line.replace(date[0], "").replace(/[|\s]/g, "");
     if (entry && dateOnly && !entry.startDate) {
       Object.assign(entry, parseDateRange(date[0]));
+      continue;
+    }
+    // Dates followed by location are entry metadata, not another job title.
+    if (entry && date && line.startsWith(date[0])) {
+      Object.assign(entry, parseDateRange(date[0]));
+      const remainder = line.slice(date[0].length).replace(/^[|\s]+/, "").trim();
+      const locationType = LOCATION_TYPE.exec(remainder)?.[0] ?? "";
+      entry.locationType = locationType;
+      entry.location = remainder.replace(LOCATION_TYPE, "").replace(/[()|]/g, "").trim();
       continue;
     }
     const upcoming = lines
@@ -495,10 +520,11 @@ function parseStructuredEntries(
       continue;
     }
     if (kind === "education") {
-      const grade = /GPA[:\s]+([0-4]\.\d{1,2}(?:\s*\/\s*4\.0)?)/i.exec(line);
+      const grade = /(?:C\.?\s*G\.?\s*P\.?\s*A\.?|GPA)\s*[:-]?\s*(\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?)/i.exec(line);
       if (grade?.[1]) {
         entry.grade = grade[1];
-        continue;
+        line = line.replace(grade[0], "").trim();
+        if (!line) continue;
       }
       if (
         metadata &&
@@ -512,6 +538,20 @@ function parseStructuredEntries(
         metadata = false;
         continue;
       }
+    }
+    // Company-first layouts put the role directly before its date row.
+    if (kind === "experience" && metadata && !explicitBullet && !entry.subtitle &&
+      /\b(?:developer|engineer|analyst|designer|manager|consultant|architect|specialist|intern|director|officer)\b/i.test(line) &&
+      DATE_RANGE_REGEX.test(lines[i + 1] ?? "")) {
+      entry.subtitle = entry.title;
+      entry.title = line;
+      continue;
+    }
+    if (kind === "projects" && metadata && !explicitBullet && !entry.subtitle &&
+      (line.includes(",") || /\b(?:Flutter|Android|React|Node\.?js|Python|Kotlin|JavaScript|TypeScript)\b/i.test(line)) &&
+      !/\b(?:developer|engineer|designer|lead|project)\b/i.test(line)) {
+      entry.technologies = line;
+      continue;
     }
     if (
       metadata &&
@@ -555,7 +595,13 @@ function parseEducationSection(lines: string[]): ResumeEducationEntryDto[] {
 function parseSkillsSection(lines: string[]): ResumeSkillGroupDto[] {
   const groups: ResumeSkillGroupDto[] = [];
 
-  for (const line of lines) {
+  let category = "General";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (!isBullet(line) && !/[:,•]/.test(line) && line.length <= 80 && isBullet(lines[i + 1] ?? "")) {
+      category = line;
+      continue;
+    }
     if (line.includes(":") && line.indexOf(":") < 40) {
       // E.g. "Languages: JavaScript, TypeScript, Python"
       const [category = "", itemsStr = ""] = line.split(":", 2);
@@ -581,11 +627,11 @@ function parseSkillsSection(lines: string[]): ResumeSkillGroupDto[] {
       }));
 
       if (items.length > 0) {
-        let defaultGroup = groups.find((g) => g.label === "General");
+        let defaultGroup = groups.find((g) => g.label === category);
         if (!defaultGroup) {
           defaultGroup = {
             id: randomUUID(),
-            label: "General",
+            label: category,
             items: [],
           };
           groups.push(defaultGroup);
@@ -602,19 +648,38 @@ function parseProjectsSection(lines: string[]): ResumeProjectEntryDto[] {
   return parseStructuredEntries(lines, "projects");
 }
 
+function pairLanguages(lines: string[]): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const next = lines[i + 1] ?? "";
+    if (/^(?:native|fluent|conversational|basic|beginner|intermediate|advanced|professional|elementary|JLPT\b|[ABC][12]\b)/i.test(next)) {
+      result.push(`${cleanBullet(lines[i] ?? "")} — ${cleanBullet(next)}`);
+      i++;
+    } else result.push(lines[i] ?? "");
+  }
+  return result;
+}
+
 function isBullet(line: string): boolean {
-  return /^[•\-*–—\u2022\u25E6\u2023]\s+|^\d+\.\s+/.test(line);
+  return /^[•\u25E6\u2023]\s*|^[-*–—]\s+|^\d+\.\s+/.test(line);
 }
 
 function cleanBullet(line: string): string {
-  return line.replace(/^[•\-*–—\u2022\u25E6\u2023]\s+|^\d+\.\s+/, "").trim();
+  return line.replace(/^[•\u25E6\u2023]\s*|^[-*–—]\s+|^\d+\.\s+/, "").trim();
 }
 
 function splitSkills(str: string): string[] {
-  return str
-    .split(/[,•|;]\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length <= 50);
+  // Commas inside qualifiers belong to the skill, e.g. Android (Kotlin, Java).
+  const result: string[] = [];
+  let depth = 0, current = "";
+  for (const char of str) {
+    if (char === "(") depth++;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (!depth && /[,•|;]/.test(char)) { result.push(current.trim()); current = ""; }
+    else current += char;
+  }
+  result.push(current.trim());
+  return result.filter((s) => s.length > 0 && s.length <= 50);
 }
 
 function parseDateRange(dateStr: string): {
@@ -641,6 +706,10 @@ function normalizeDate(str: string): string {
   if (yyyyMm && yyyyMm[1] && yyyyMm[2]) {
     return `${yyyyMm[1]}-${yyyyMm[2]}`;
   }
+
+  const numericMonth = /^(0?[1-9]|1[0-2])[/.-]([12]\d{3})$/.exec(str.trim());
+  if (numericMonth?.[1] && numericMonth[2])
+    return `${numericMonth[2]}-${numericMonth[1].padStart(2, "0")}`;
 
   // Extract 4-digit year
   const yearMatch = /\b([12]\d{3})\b/.exec(str);

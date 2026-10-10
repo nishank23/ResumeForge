@@ -1,6 +1,39 @@
 # Planned API Reference
 
+## AI processing actions — 2026-10-10
+
+The UI's explicit Improve with AI / Gemini Analyze action supplies the existing processing-intent flag; consent checkboxes are removed. `POST /api/v1/resume/:id/ai-rewrite` still requires `expectedVersion`, stable `target`, and `consent: true`; the default frontend call supplies true only when invoked. The server selects saved field IDs/text and returns the stored proposal. JD semantic requests likewise require explicit true; local requests require no provider intent. Apply accepts proposal ID/version only. No route, response or permission schema change; old clients remain valid. [Action/review contract](ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
+
+## Current general-readiness compatibility — 2026-10-09
+
+Existing readiness read/run/preference endpoints keep their actor/workspace/version contract. Responses accept v1/v2 history; new results use `readiness-v2`, with optional `scored: false` advice and private owner header targets. A run refreshes an older rubric on the same content version; replay also checks rubric identity. Preferences reject stale rubric/evaluation identity. Contact guidance contains only pass/fail and generic text, never raw values. JD scoring/feedback retains its existing rubric. [Current contract](ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
+
+
+## ## Personal JD and scoped AI routes — 2026-10-09
+
+Authenticated GET/POST /api/v1/resume/:id/jd-match, PUT /:id/jd-match/preferences, POST /:id/ai-rewrite and POST /:id/ai-rewrite/apply are connected. Every mutation validates the expected saved version and existing owner/action scope. Rewrite apply receives only the stored proposal ID, never client-supplied replacement text. The optional JD assessment `retrieval` field adds model, dimensions (768), indexed/reused chunk counts and requirement/section/item/similarity candidates. Older responses remain valid. No public search endpoint is added. [Private retrieval contract](resume-vector-search.md). These routes do not activate legacy generation/tailoring or Textkernel. [Schemas, permissions, consent and limits](ats-workflow.md).
+
+## Implemented personal general readiness — 2026-10-09
+
+These are private owner-only personal editor routes, not the legacy JD scoring/generation routes. They use the existing actor/workspace resolution and `ats.view`/`ats.run` policy names. No organization/vendor activation is implied.
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| GET | `/resume/:id/readiness` | Latest and preceding retained evaluation, current saved version, dismissed check IDs. An absent assessment is null, not 0. |
+| POST | `/resume/:id/readiness` | Strict `{ expectedVersion }`. Scores only the current immutable saved editor snapshot. Same version/input replays the same result. |
+| PUT | `/resume/:id/readiness/preferences` | Strict `{ expectedVersion, evaluationId, issueId, dismissed }`. Dismiss/restore only a failed check from the current evaluation. No score change. |
+
+The normal `{ data, requestId }` envelope contains `{ currentVersion, evaluation, previous, dismissed }`. An evaluation includes UUID identity/resume/version IDs, positive resumeVersion, SHA-256 contact-free inputHash, evaluatedAt, mode `general`, rubricVersion `readiness-v1`, bounded integer score, five weighted component counts and up to 100 generic checks with stable optional section/entry targets. `truncated` reports feedback truncation; all checks contribute to math.
+
+Strict validation rejects client-supplied scores/extra fields (422), stale versions/evaluation identities fail 409, missing/deleted/foreign resources fail 404, denied workspace fails 403, missing/expired actor fails 401 and infrastructure failure returns an unavailable error. Mutations share the resume advisory transaction lock with manual save/delete and require atomic sanitized audit. Responses are private/no-store. Existing role grants and schema remain unchanged. History/metadata limits fail visibly without deleting evidence. See [F07](../context/feature-specs/07-ats-scoring.md) and [README](../README.md#general-resume-readiness--2026-10-09).
+
 **Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, bounded personal editor routes described below, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
+
+## JD provider result foundation — 2026-10-09
+
+`packages/shared-types/src/jd-match.ts` defines browser-safe `jd-match-v1` outcomes for future JD use cases. `scored` carries mode `jd-match`, saved resume/version/snapshot and resume/JD input hashes, evaluation time, normalized score, provider/method/API/optional engine identity, native value/scale and nullable matched/unmatched/unknown criterion counts. `unavailable` carries an explicit sanitized failure code with no score. The schema rejects inconsistent normalization; vendor scores are not interchangeable calibrations or our proposed five-component rubric.
+
+This is a server-internal adapter foundation, **not an enabled HTTP route**. The user withdrew Textkernel after its signup barrier; Gemini/local matching is being considered and no provider is active. Prepared remote references and credentials cannot be browser-supplied selectors. New authenticated/current-version orchestration, scope/provenance, remote indexing/cleanup, audit and persistence must be implemented before exposing a JD endpoint. Existing general readiness and legacy personal-editor route restrictions remain unchanged. [Provider guide](ats-providers.md).
 
 ## Shared rules
 
@@ -67,7 +100,7 @@ These routes are enabled through the loopback gateway and restricted personal re
 | PUT    | `/resume/:id`   | Strict bounded content and expectedVersion; creates a new immutable version/audit atomically. Stale revision returns 409. Saved JSON retains editorDraft rich text/IDs/dates/visibility/languages/appearance.                                        |
 | POST   | `/resume/parse` | Authenticated local PDF/DOCX/TXT/MD extraction into review only; access checked again after processing. 10 MB, 30 pages, bounded archive/text/worker limits. No persistence until reviewed create.                                                   |
 
-Document bodies are bounded to 2,000,000 bytes. Parse transport allows 15,000,000 bytes for multipart/base64 overhead while decoded files remain capped at 10 MB. Personal owner-only snapshots may contain resume-local contacts; master UserContact/professional fields are never imported. Original bytes are discarded, confirmed text remains private version data. Full D12/F19 contact separation/staging/export remain pending. AI, generation, legacy direct import, JD, delete, sharing and export are blocked in this runtime. Wider route tables below remain planned or merged backend capabilities, not enabled frontend promises.
+Document bodies are bounded to 2,000,000 bytes. Parse transport allows 15,000,000 bytes for multipart/base64 overhead while decoded files remain capped at 10 MB. Personal owner-only snapshots may contain resume-local contacts; master UserContact/professional fields are never imported. Original bytes are discarded, confirmed text remains private version data. Full D12/F19 contact separation/staging/export remain pending. Legacy generation/tailoring, direct import and sharing remain blocked. Current readiness/JD/scoped AI, recoverable delete and owner PDF routes are described above. Wider route tables below remain planned or merged backend capabilities, not enabled frontend promises.
 
 ## Resume service
 

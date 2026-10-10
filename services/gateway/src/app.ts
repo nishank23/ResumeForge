@@ -37,6 +37,12 @@ export function createGatewayApp(request: typeof fetch = fetch) {
   app.on(["GET", "PUT", "DELETE"], "/api/v1/resume/:id", proxy);
   app.post("/api/v1/resume/:id/restore", proxy);
   app.get("/api/v1/resume/:id/pdf", proxy);
+  app.on(["GET", "POST"], "/api/v1/resume/:id/readiness", proxy);
+  app.put("/api/v1/resume/:id/readiness/preferences", proxy);
+  app.on(["GET", "POST"], "/api/v1/resume/:id/jd-match", proxy);
+  app.put("/api/v1/resume/:id/jd-match/preferences", proxy);
+  app.post("/api/v1/resume/:id/ai-rewrite", proxy);
+  app.post("/api/v1/resume/:id/ai-rewrite/apply", proxy);
   async function proxy(c: Context) {
     const origin = c.req.header("Origin");
     if (origin && origin !== "http://localhost:3000")
@@ -66,7 +72,12 @@ export function createGatewayApp(request: typeof fetch = fetch) {
             : { body: c.req.raw.body, duplex: "half" }),
           redirect: "manual",
           signal: AbortSignal.timeout(
-            c.req.path.endsWith("/pdf") ? 30_000 : 10_000,
+            c.req.path.endsWith("/pdf")
+              ? 30_000
+              : c.req.path.endsWith("/jd-match") ||
+                  c.req.path.endsWith("/ai-rewrite")
+                ? 60_000
+                : 10_000,
           ),
         },
       );

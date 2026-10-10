@@ -345,6 +345,7 @@ model ResumeVersion {
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
 
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Restrict)
+  searchChunks ResumeSearchChunk[]
 
   @@unique([resumeId, versionNumber])
 }
@@ -371,4 +372,25 @@ model TaskRun {
 
   @@index([workspaceId])
   @@index([profileId])
+}
+
+// Private, derived cache. SQL migration owns RLS and the cosine HNSW index.
+model ResumeSearchChunk {
+  id String @id @default(uuid()) @db.Uuid
+  versionId String @db.Uuid
+  resumeId String @db.Uuid
+  ownerUserId String @db.Uuid
+  workspaceId String @db.Uuid
+  sectionId String
+  itemId String
+  model String
+  dimensions Int
+  projectionVersion String
+  sourceHash String
+  text String
+  embedding Unsupported("vector(768)")
+  generatedAt DateTime @default(now()) @db.Timestamptz(3)
+  version ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  @@unique([versionId, sectionId, itemId, model, projectionVersion])
+  @@index([ownerUserId, workspaceId, resumeId, versionId])
 }

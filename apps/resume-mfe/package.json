@@ -19,7 +19,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "7.89.0",
-    "react-router": "^7.6.0"
+    "react-router": "^7.6.0",
+    "@resume-forge/resume-core": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

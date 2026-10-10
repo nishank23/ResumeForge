@@ -283,3 +283,63 @@ test("summary commas never become a contact location", () => {
   assert.equal(r.header.city, "");
   assert.equal(r.header.state, "");
 });
+
+// Reproduce the alternate layout using invented facts only.
+test("company-first entries, numeric dates, category rows and language levels retain every field", () => {
+ const r = parseResumeText(`Alex Stone
+Mobile Developer
+alex@example.invalid
+Pune India
+PERSONAL PROFILE
+Builds mobile systems with supported tools.
+PROJECTS
+Ledger App
+Flutter, Nodejs
+09/2024 – 05/2025
+•Developed a billing application for users.
+•Implemented document export with supported facts.
+Orbit
+Android (Kotlin)
+08/2024 – 01/2025
+•Created an offline time calculation tool.
+EDUCATION
+Example Institute Of Technology
+B.Tech - Information Technology C.G.P.A. - 9.10
+2018 – 2022 | Pune
+WORK EXPERIENCE
+Example Studio
+Full Stack Developer
+Nov 2023 – Present | Pune, India
+•Built system applications using supported tools.
+•Developed backend APIs with
+Node.js and Express.
+Second Studio
+Mobile App Developer
+Nov 2022 – July 2023 | Surat
+•Delivered mobile applications.
+Third Studio
+Android Developer
+June 2022 – Nov 2022 | (Remote)
+•Built a family tracking application.
+SKILLS
+Mobile
+• Flutter • Android (Kotlin, Java) • REST API Integration
+Backend
+• Node.js • Express • MongoDB
+LANGUAGES
+English
+Fluent
+Japanese
+JLPT N5 (Learning)`);
+ assert.deepEqual(r.sections.map(s=>s.kind),["summary","projects","education","experience","skills","languages"]);
+ assert.equal(r.header.city,"Pune"); assert.equal(r.header.country,"India");
+ const projects=r.sections[1].entries;
+ assert.deepEqual(projects.map(e=>[e.title,e.technologies,e.startDate,e.endDate,e.bullets.length]),[["Ledger App","Flutter, Nodejs","2024-09","2025-05",2],["Orbit","Android (Kotlin)","2024-08","2025-01",1]]);
+ const school=r.sections[2].entries[0];assert.equal(r.sections[2].entries.length,1);
+ assert.equal(school.subtitle,"B.Tech");assert.equal(school.fieldOfStudy,"Information Technology");assert.equal(school.grade,"9.10");assert.equal(school.location,"Pune");
+ const jobs=r.sections[3].entries;assert.deepEqual(jobs.map(e=>[e.title,e.subtitle,e.bullets.length]),[["Full Stack Developer","Example Studio",2],["Mobile App Developer","Second Studio",1],["Android Developer","Third Studio",1]]);
+ assert.equal(jobs[0].startDate,"2023-11");assert.equal(jobs[0].location,"Pune, India");assert.equal(jobs[2].locationType,"Remote");
+ assert.equal(jobs[0].bullets[1].text,"Developed backend APIs with Node.js and Express.");
+ assert.deepEqual(r.sections[4].groups.map(g=>[g.label,g.items.map(i=>i.text)]),[["Mobile",["Flutter","Android (Kotlin, Java)","REST API Integration"]],["Backend",["Node.js","Express","MongoDB"]]]);
+ assert.deepEqual(r.sections[5].entries[0].bullets.map(b=>b.text),["English — Fluent","Japanese — JLPT N5 (Learning)"]);
+});

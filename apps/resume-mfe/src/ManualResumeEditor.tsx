@@ -1,7 +1,21 @@
+import { readinessHints } from "@resume-forge/shared-types";
+import { JdMatchPanel, type JdServices } from "./JdMatchPanel";
+import {
+  ServerRewriteDialog,
+  rewriteTarget,
+  type RewriteServices,
+} from "./ServerRewriteDialog";
+import {
+  computeReadiness,
+  readinessProjection,
+  type ReadinessCheck,
+} from "@resume-forge/resume-core";
+import type { ReadinessPanelProps } from "./ReadinessPanel";
 import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -49,8 +63,6 @@ import {
   type SectionKind,
 } from "./editor-draft";
 import { EditResumeDialog } from "./EditResumeDialog";
-import { ImproveWithAiDialog } from "./ImproveWithAiDialog";
-import { acceptLocalAiPreview } from "./editor-ai-preview";
 import { ResumeDocument } from "./ResumeDocument";
 import { ResumePage } from "./ResumePage";
 import { SectionActions } from "./SectionActions";
@@ -60,7 +72,6 @@ import {
   ContentPanel,
   DesignPanel,
   AtsPanel,
-  JdPanel,
   type EditorPanel,
 } from "./EditorToolPanels";
 import {
@@ -76,12 +87,16 @@ interface EditSession {
   base: ResumeDraft;
   target: DraftTarget;
   candidate: ResumeDraft;
+  guidance?: ReadinessCheck;
 }
 export function ManualResumeEditor({
   context,
   initialDraft,
   onSave,
   onDownload,
+  readiness,
+  jdMatch,
+  rewrite,
   savedVersion = 0,
   saveLabel = "Save changes",
 }: {
@@ -89,6 +104,9 @@ export function ManualResumeEditor({
   initialDraft: ResumeDraft;
   onSave: (draft: ResumeDraft) => Promise<number>;
   onDownload?: () => Promise<void>;
+  readiness?: Pick<ReadinessPanelProps, "load" | "run" | "dismiss">;
+  jdMatch?: JdServices;
+  rewrite?: RewriteServices;
   savedVersion?: number;
   saveLabel?: string;
 }) {
@@ -125,8 +143,11 @@ export function ManualResumeEditor({
     error: boolean;
   } | null>(null);
   const [noticeKey, setNoticeKey] = useState(0);
-  const [panel, setPanel] = useState<EditorPanel>("content");
+  const [panel, setPanel] = useState<EditorPanel>(
+    readiness ? "ats" : "content",
+  );
   const [panelOpen, setPanelOpen] = useState(true);
+  const [atsMode, setAtsMode] = useState<"readiness" | "jd">("readiness");
   const [leaving, setLeaving] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const [barHeight, setBarHeight] = useState(72);
@@ -146,6 +167,16 @@ export function ManualResumeEditor({
   const canvasRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const draft = session?.candidate ?? history.current;
+  const readinessPreview = useMemo(
+    () => computeReadiness(readinessProjection(draft), readinessHints(draft)),
+    [draft],
+  );
+  const previewChanged =
+    isDirty(history) ||
+    !!(
+      session &&
+      JSON.stringify(session.candidate) !== JSON.stringify(history.current)
+    );
   const appearance = draft.appearance ?? DEFAULT_APPEARANCE;
   const selection =
     selected.type === "header" || targetValue(history.current, selected)
@@ -271,7 +302,11 @@ export function ManualResumeEditor({
       select(target);
     }, 150);
   };
-  const addEntry = (targetSection = section, base = history.current) => {
+  const addEntry = (
+    targetSection = section,
+    base = history.current,
+    guidance?: ReadinessCheck,
+  ) => {
     if (!targetSection) return;
     const next = structuredClone(base);
     const match = next.sections.find((s) => s.id === targetSection.id);
@@ -284,11 +319,12 @@ export function ManualResumeEditor({
       itemId: id,
     };
     setSelected(target);
-    setSession({ base: next, target, candidate: next });
+    setSession({ base: next, target, candidate: next, guidance });
   };
   const startEdit = (
     target: DraftTarget = selection,
     base = history.current,
+    guidance?: ReadinessCheck,
   ) => {
     const targetSection = sectionFor(base, target);
     if (targetSection?.kind === "skills")
@@ -299,11 +335,11 @@ export function ManualResumeEditor({
       ["experience", "education", "projects"].includes(targetSection.kind) &&
       !targetSection.entries.length
     ) {
-      addEntry(targetSection, base);
+      addEntry(targetSection, base, guidance);
       return;
     }
     setSelected(target);
-    setSession({ base, target, candidate: base });
+    setSession({ base, target, candidate: base, guidance });
   };
   const updatePreview = useCallback((candidate: ResumeDraft) => {
     setSession((current) =>
@@ -471,6 +507,34 @@ export function ManualResumeEditor({
     if (dirty || inlinePending || savedVersion === 0) setLeaving(true);
     else context.onNavigate(`/w/${context.activeWorkspace.id}/resumes`);
   };
+  const aiTarget = aiSession
+    ? rewriteTarget(aiSession.base, aiSession.target)
+    : undefined;
+  const actionDisabled = !savedVersion
+    ? "Save this resume first."
+    : conflict
+      ? "Reopen the latest saved resume to resolve the conflict."
+      : dirty || inlinePending || saving
+        ? "Save changes before requesting ATS or AI actions."
+        : undefined;
+  const onAtsTarget = (check: ReadinessCheck, edit: boolean) => {
+    const target = check.target;
+    if (!target) {
+      setPanel("content");
+      setPanelOpen(true);
+      announce(
+        `${check.title}: ${check.reason} Use Edit Content to add the missing section or entry.`,
+      );
+      return;
+    }
+    if (target.type !== "header" && !targetValue(history.current, target)) {
+      error("This assessment target is no longer present. Save and recheck.");
+      return;
+    }
+    select(target);
+    if (edit) startEdit(target, history.current, check);
+    else focusActions();
+  };
   return (
     <div
       className={`rf-manual-workspace rf-tools-workspace${panelOpen ? " has-tool-panel" : ""}`}
@@ -623,8 +687,8 @@ export function ManualResumeEditor({
             {onDownload
               ? dirty || inlinePending
                 ? "Save changes before downloading PDF."
-                : `PDF uses saved version ${String(savedVersion)}. AI and ATS are not connected.`
-              : "Save this resume to enable PDF download. AI and ATS are not connected."}
+                : `PDF uses saved version ${String(savedVersion)}. ATS actions use this saved version.`
+              : "Save this resume to enable PDF download, JD matching and AI requests."}
           </span>
         </div>
         {saveFailure ? (
@@ -676,8 +740,90 @@ export function ManualResumeEditor({
                   onChange={changeAppearance}
                 />
               ) : null}
-              {panel === "ats" ? <AtsPanel /> : null}
-              {panel === "jd" ? <JdPanel /> : null}
+              {panel === "ats" ? (
+                <div
+                  className="rf-issue-filters rf-ats-modes"
+                  aria-label="ATS assessment type"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={atsMode === "readiness"}
+                    onClick={() => {
+                      setAtsMode("readiness");
+                    }}
+                  >
+                    Resume readiness
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={atsMode === "jd"}
+                    onClick={() => {
+                      setAtsMode("jd");
+                    }}
+                  >
+                    JD match
+                  </button>
+                </div>
+              ) : null}
+              {panel === "ats" && atsMode === "readiness" ? (
+                <AtsPanel
+                  {...readiness}
+                  label={(check) => {
+                    if (!check.target) return "Resume";
+                    if (check.target.type === "header") return "Contact details";
+                    const value = targetValue(history.current, check.target);
+                    const section = sectionFor(history.current, check.target);
+                    return value && "title" in value ? `${value.title || "Untitled entry"} · ${section?.label ?? ""}` : section?.label ?? "Section";
+                  }}
+                  savedVersion={savedVersion}
+                  preview={
+                    previewChanged || !savedVersion
+                      ? readinessPreview
+                      : undefined
+                  }
+                  navigationDisabled={
+                    !!(
+                      conflict ||
+                      inlinePending ||
+                      saving ||
+                      session ||
+                      aiSession ||
+                      deleting ||
+                      leaving
+                    )
+                  }
+                  disabledReason={
+                    !savedVersion
+                      ? "Save this resume before checking readiness."
+                      : conflict
+                        ? "Reopen the latest resume to resolve the save conflict."
+                        : dirty ||
+                            inlinePending ||
+                            saving ||
+                            session ||
+                            aiSession ||
+                            deleting ||
+                            leaving
+                          ? "Save changes and close edit dialogs before checking readiness."
+                          : undefined
+                  }
+                  onTarget={onAtsTarget}
+                />
+              ) : null}
+              {panel === "jd" || (panel === "ats" && atsMode === "jd") ? (
+                <JdMatchPanel
+                  draft={draft}
+                  services={jdMatch}
+                  savedVersion={savedVersion}
+                  disabledReason={
+                    actionDisabled ||
+                    (session || aiSession || deleting || leaving
+                      ? "Close edit dialogs before running JD analysis."
+                      : undefined)
+                  }
+                  onTarget={onAtsTarget}
+                />
+              ) : null}
             </aside>
           ) : null}
           <div
@@ -730,7 +876,8 @@ export function ManualResumeEditor({
                   >
                     {targetLabel(history.current, selection)}
                   </span>
-                  {selection.type !== "header" ? (
+                  {selection.type !== "header" &&
+                  rewriteTarget(history.current, selection) ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -813,9 +960,10 @@ export function ManualResumeEditor({
             <p className="rf-paper-caption">
               Save changes stores a new version in your account. Text edits
               apply on blur or Enter; Escape cancels the active text edit. Alt
-              Enter opens details. AI suggestions are temporary previews; ATS
-              remains unavailable. PDF downloads use your saved version and
-              exclude unsaved edits.
+              Enter opens details. AI suggestions require review before saving.
+              General readiness checks show draft previews and automatically
+              check saved versions. JD matching and PDF downloads use your saved
+              version and exclude unsaved edits.
             </p>
           </div>
         </div>
@@ -832,20 +980,25 @@ export function ManualResumeEditor({
           />
         </div>
       ) : null}
-      {aiSession ? (
-        <ImproveWithAiDialog
+      {aiSession && aiTarget ? (
+        <ServerRewriteDialog
           base={aiSession.base}
-          target={aiSession.target}
+          target={aiTarget}
+          services={rewrite}
+          disabledReason={
+            actionDisabled ||
+            (!rewrite
+              ? "Save this resume before requesting AI suggestions."
+              : undefined)
+          }
           onClose={closeAiPreview}
-          onAccept={(preview) => {
-            const result = acceptLocalAiPreview(
-              historyRef.current.current,
-              preview,
-            );
-            if (!result.ok) return result.error;
-            dispatch({ type: "edit", value: result.draft });
+          onApplied={(next) => {
+            dispatch({ type: "edit", value: next });
+            dispatch({ type: "checkpoint", value: next });
             closeAiPreview();
-            announce("Suggested changes accepted locally. Undo is available.");
+            announce(
+              "AI changes saved as a new version. ATS results need a recheck.",
+            );
           }}
         />
       ) : null}
@@ -854,6 +1007,25 @@ export function ManualResumeEditor({
           sample={sampleDraft}
           base={session.base}
           target={session.target}
+          guidance={session.guidance}
+          onImprove={
+            rewrite && rewriteTarget(session.base, session.target)
+              ? () => {
+                  const target = structuredClone(session.target);
+                  const base = structuredClone(history.current);
+                  setSession(null);
+                  setAiSession({ base, target });
+                }
+              : undefined
+          }
+          improveDisabledReason={actionDisabled}
+          guidanceResult={
+            session.guidance
+              ? readinessPreview.checks.find(
+                  (check) => check.id === session.guidance?.id,
+                )
+              : undefined
+          }
           onPreview={updatePreview}
           onCancel={() => {
             setSelected(
