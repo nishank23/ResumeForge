@@ -1,5 +1,11 @@
 # resume-forge — Agent Instructions
 
+## Active worktree and UI branch — 2026-10-10
+
+PR [#4](https://github.com/resuming-v2/ResumeForge/pull/4) merges the completed project rewrite fixes into main at `c713cf43426dd67b10b96ef563baa6d21d7ba03d`. The user requests **ux-ui-update**, without an agent prefix, for subsequent UI/UX work. It is created from that merged main commit in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2` and tracks `origin/ux-ui-update`.
+
+Use **ux-ui-update** for commands, edits, task claims and checks, including scheduled runs. This supersedes the active `features` branch requirement below; preserve the other checkouts and their private runtime data. Main remains the integration branch. The new design direction uses suitable installed Performative UI components while establishing an original resume workspace rather than copying CareerZenith. Follow [UI redesign plan](docs/ux-ui-update-plan.md); preserve shadcn accessibility, Tiptap, document/PDF isolation and existing data flows.
+
 ## Scope and current gate
 
 These instructions govern the standalone resume-forge project rooted here. All required product context, feature specifications, and build plans live in this workspace.

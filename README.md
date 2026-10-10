@@ -1,5 +1,11 @@
 # resume-forge
 
+## UI branch and redesign direction — 2026-10-10
+
+Project rewrite fixes are committed as `571deca` and merged into **main** through [PR #4](https://github.com/resuming-v2/ResumeForge/pull/4), merge commit `c713cf4`. The new **ux-ui-update** branch starts from merged main, tracks `origin/ux-ui-update`, and is checked out in the existing frontend worktree.
+
+The next design uses fitting [Performative UI](https://performative-ui.vercel.app/) components with an original Forge identity. The catalog and installed 0.7.0 types were inspected; no package upgrade or visual implementation is included in this branch setup. [Palette, layout, component mapping and acceptance](docs/ux-ui-update-plan.md) guide the next slice. The first-screen preference remains open; library-first is the provisional order.
+
 ## Project rewrite shorthand fix — 2026-10-10
 
 Fixed on **features**. The supplied final CV reproduced two false rejections: singular `app` had no `application` equivalent, and `UI` could not expand to the complete phrase `user interface`. Prompt and validation now support both exact equivalents. Singular/plural application terms stay separate, and the words in `user interface` must remain adjacent. Invented factual vocabulary, removed source facts, changed numbers, negative wording, slash-separated technologies and cross-field edits still fail validation. No model, timeout, permission or persistence behavior changes.
@@ -169,8 +175,8 @@ Verification commands, actual browser results and remaining test limits are in t
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-10T05:31:56.655Z",
-  "lastResult": "Project rewrite fix verified with 86 tests, build/lint and live reviews; prepared for requested PR integration and new ux-ui-update branch."
+  "updatedAt": "2026-10-10T05:36:02.907Z",
+  "lastResult": "PR #4 merged to main; ux-ui-update created, pushed and checked out. Recorded original Performative UI plan and new branch workflow; visual work pending."
 }
 ```
 <!-- END:CURRENT_TASK -->

@@ -1,5 +1,11 @@
 # Progress Tracker
 
+## PR integration and UX/UI branch setup — 2026-10-10
+
+Committed all seven pending project rewrite files as `571deca`; pushed features and created/attached PR #4. GitHub confirms the PR merged into **main** at `c713cf4`. Created, pushed and checked out **ux-ui-update** from that merge in the existing frontend worktree. Preserved the other checkouts. Prior 86-test/build/lint and live-review proof covers the unchanged fix; branch setup adds documentation only and needs no product regression rerun.
+
+Inspected the official Performative UI catalog in the browser and installed 0.7.0 exports/types. Recorded an original palette, document-focused layout, component mapping and verification criteria in [redesign plan](../docs/ux-ui-update-plan.md). Screen-order preference is pending; library-first is provisional. Visual redesign is not implemented by this setup. AGENTS.md and branch workflow now identify ux-ui-update for subsequent work.
+
 ## Project rewrite shorthand rejection — 2026-10-10
 
 Reproduced the requested final-CV project failure on **features**. Live/provider diagnostics identified singular app/application and UI/user interface false rejections. Added the exact singular alias and whole-phrase normalization, and aligned the Gemini prompt while retaining separate singular/plural terms and factual/numeric/technical/contact/target safeguards. Temporary diagnostic instrumentation is removed; real input/output remains outside Git.
