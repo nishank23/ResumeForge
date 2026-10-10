@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Lock, UserRound } from "lucide-react";
 import {
-  Badge,
   Button,
   FormField,
   Input,
+  DocumentStatus,
+  RequestFeedback,
   Textarea,
   useSession,
   type ShellFederationContext,
@@ -212,8 +213,11 @@ function ConnectedProfile({ context }: { context: ShellFederationContext }) {
         <p>The source of your experience. A foundation for every resume.</p>
       </div>
       {loading && !loaded ? (
-        <div className="rf-profile-state" role="status">
-          Loading your professional details…
+        <div className="rf-profile-state">
+          <RequestFeedback
+            label="Loading your professional details"
+            reducedMotion={context.reducedMotion}
+          />
         </div>
       ) : null}
       {failure ? (
@@ -250,7 +254,7 @@ function ConnectedProfile({ context }: { context: ShellFederationContext }) {
               <h2>{base?.fullName ?? "Your professional details"}</h2>
               <p>{context.activeWorkspace.name}</p>
             </div>
-            <Badge variant="outline">
+            <DocumentStatus tone={saving || dirty ? "pending" : "saved"}>
               {saving
                 ? "Saving…"
                 : dirty
@@ -258,7 +262,7 @@ function ConnectedProfile({ context }: { context: ShellFederationContext }) {
                   : base
                     ? "Saved to account"
                     : "New profile"}
-            </Badge>
+            </DocumentStatus>
           </div>
           <form
             className="rf-profile-form"

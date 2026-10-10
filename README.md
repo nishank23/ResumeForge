@@ -1,5 +1,92 @@
 # resume-forge
 
+## UI release preparation — 2026-10-10
+
+All pending Forge Studio UI, upload/template, device-theme and full-screen sign-in changes are prepared for the requested ux-ui-update PR integration. Fresh frontend tests: **85 passes** (shared 13, shell 15, profile 7, resume 50). Shared and all four frontend builds, affected lint and whitespace checks passed. Private runtime configuration, resume inputs and local data remain excluded. After merge, the active development branch becomes **fixes**; the existing frontend worktree and runtime locations remain the same. Dated local/uncommitted notes below describe earlier verification checkpoints.
+
+## Full-screen ASCII sign-in — 2026-10-10
+
+The signed-out **Forge Studio** scene now fills the viewport edge to edge. The old bordered hero box and outer spacing are removed. Resume workspace, the existing theme toggle and both footer messages sit inside the ASCII scene, alongside the wordmark and Google card. Desktop retains the two-column layout; tablet/mobile stack naturally and scroll when content needs more room. The sign-in static ASCII field covers the full scene on mobile/touch and reduced motion. The library's smaller fallback and existing activity guards stay unchanged.
+
+Manual check: open `http://localhost:3000/sign-in` while signed out. Confirm the background reaches every edge, header/footer stay within it, and Google remains available. Resize to phone width: content should stack without horizontal scrolling. Theme controls still select the existing browser-local preference; Use device theme in Preferences restores device mode.
+
+Verification: **15 shell tests**, shared/shell/auth lint, shared build and all four frontend production builds (including TypeScript) pass. Live dark-theme Chrome verifies a 1440×638 hero at x=0/y=0 with zero border/radius, and 320px/390px/900px responsive bounds. The final 390px static fallback has no canvas and fills the 844px scene; temporary viewport overrides were reset. Google OAuth, light-theme preview, backend/save/AI/PDF flows were not rerun for this layout-only slice. [Detailed evidence](docs/ux-ui-update-verification.md#full-screen-ascii-sign-in). Changes remain uncommitted on **ux-ui-update**.
+
+## Device theme default — 2026-10-10
+
+Forge Studio now uses the device’s light/dark preference on first visit. System mode follows `prefers-color-scheme` changes while the app is open. The existing theme icon selects a manual light/dark override, saved only in this browser under `resume-forge:theme`. **Preferences → Appearance → Color theme** offers **Use device theme**, **Light**, and **Dark**; choosing device mode clears the override. Blocked browser storage does not break the current visit, but manual choices cannot survive reload in that case. The resolved light/dark value still reaches every remote through the existing shell context. Initial theme is applied before React mounts; resume paper and saved PDF formatting remain independent.
+
+Manual checks:
+
+1. Open `http://localhost:3000`, then Preferences → Appearance → Color theme → Use device theme. A dark device should show dark UI; a light device should show light UI.
+2. Change the device appearance while the app is open. Device mode should follow it. Choose Light or Dark explicitly, reload, and confirm that choice remains even when device appearance differs. The header/editor theme icon also saves a manual choice.
+3. Select Use device theme again, reload, and confirm the current device appearance returns.
+
+Verification: **15 shell tests pass**, including five new theme regressions for first visits, device updates/manual override/reset, reload persistence, invalid/blocked storage, and subscription cleanup. Shell production build (including TypeScript checking), lint and whitespace checks pass. Live Chrome on a dark device verifies the default, a light override across reload, the header toggle, and restored device mode across reload. Live OS appearance changes, standalone remote entrypoints and backend workflows were not retested. [Evidence](docs/ux-ui-update-verification.md#device-theme-default).
+
+## Upload dialog, AI actions and template gallery — 2026-10-10
+
+Implemented locally on **ux-ui-update**. **My resumes → Upload resume** opens a dialog over the library, without navigating first. File validation, extraction errors and editable review remain in that dialog; nested section editing works there too. Confirm and save uses the existing authenticated, idempotent create/version API, then opens the saved editor. Cancel before parsing saves nothing; closing an imported review asks whether to discard it. Closing during a save is guarded. The direct `/resumes/upload` route uses the same flow for compatibility.
+
+**Improve with AI** uses the same Performative UI glow/sparkle action on the floating toolbar, manual edit dialog and AI request dialog. A solid white sparkle retains contrast in both themes. Opening an AI dialog still sends nothing; explicit submission, grounding, review and version checks are unchanged.
+
+Shared dialogs now portal to a root overlay, escaping the scrolling inspector and paper paint layers. Background scroll is locked while open; the topmost nested dialog owns Escape and focus, visible controls form its Tab loop, and closing restores focus. The gallery has its own scroll area and an always-visible Done action.
+
+**Template → Browse templates** offers **Forge Classic**, **Forge Modern** (Arial, indigo headings), and **Forge Editorial** (Times body, Georgia headings, wider margins). These are original single-column formatting templates using the current browser/PDF renderer, not new column layouts. Choosing changes only a draft's validated appearance. Undo/Cancel restores prior formatting; Save stores the exact settings in an immutable version, so future preset changes cannot alter an older PDF.
+
+Template ownership lives in `apps/resume-mfe/src/templates/` inside the existing resume MFE. Add a versioned definition to `registry.ts`; the gallery discovers it automatically. No separate MFE deployment, dependency, backend schema or service is required for additional supported formatting styles. [Module guide](apps/resume-mfe/src/templates/README.md) explains the bounds and future layout boundary.
+
+**Manual checks:**
+
+1. Open `http://localhost:3000` and **My resumes → Upload resume**. Confirm the library remains behind the dialog and its URL stays the same. Try an empty file, then a valid PDF/DOCX/TXT/MD. Errors should allow another choice.
+2. Review extracted text and edit a field. Escape from an inner Edit dialog must keep upload review open. Close the review; try Keep reviewing and Discard upload. Confirm and save should create one resume, then reopen it after refresh.
+3. Open a saved project. Check the AI sparkle in light/dark on its floating action, Edit dialog and AI request dialog. Cancel should preserve content and saved version.
+4. Open Template → Browse templates. Try Modern and Editorial: the gallery stays above the paper and shows selection. Done returns to the editor; Undo/Cancel restores formatting. Save, refresh and download PDF to check the saved style and content. Repeat at phone width.
+
+**Actual verification:** 80 frontend tests (shared 13, shell 10, profile 7, resume MFE 50), shared/four MFE builds, five-package typecheck/lint and whitespace check pass. New template tests prove isolated settings, strict save-envelope round trips, unchanged facts, undo/cancel and honest custom-formatting labels. Chrome verifies both themes, 320px/390px bounds, modal focus/return, nested Escape, empty-file recovery, synthetic import/review/Confirm and save (version 1), Modern/Undo and Editorial save/reload (synthetic version 6). Editorial PDF downloaded through the native Save picker: 68,871 bytes, one page, project title/description retained. Chrome extension file-URL permission was unchanged; native picker testing bypassed the automation limitation without changing access. New Gemini generation/Apply, every file format/layout and broad accessibility/performance checks were not repeated. [Evidence](docs/ux-ui-update-verification.md#upload-ai-action-and-template-refinements).
+
+## Forge Studio entry and editor refinements — 2026-10-10
+
+Implemented locally on **ux-ui-update**. Signed-out visitors see a standalone **Forge Studio** sign-in with Performative UI's AsciiHero and a large wordmark; workspace navigation appears only after verification. Google sign-in and authenticated visits to `/sign-in` open the server-selected **My resumes** route directly. Session verification shows loading instead of flashing the welcome. **Preferences → Account → Sign out** remains available, including the existing failed-logout recovery.
+
+Saved-resume search now uses a quiet field and normal Search button. The selected-entry **Improve with AI** button uses Performative UI's glow and sparkle and keeps its existing scoped dialog. The builder removes the read-only A4/page-count and Fit-to-width strip, uses a neutral outer paper surround, and retains actual automatic fit-to-width sizing. Real document margins and PDF formatting are unchanged. Editor entry now starts in its loading state instead of briefly showing an empty Resume unavailable error. Navigation uses a short fade; reduced motion disables it and the animated ASCII field.
+
+**Manual checks:**
+
+1. At `http://localhost:3000`, open Preferences and sign out. Confirm no workspace sidebar, a large Forge Studio heading and ASCII sign-in artwork in both themes.
+2. Continue with the existing Google account. Confirm My resumes opens with its sidebar. Visiting `/sign-in` while signed in should return to My resumes.
+3. Search for **Forge UI QA**. Both Search and Enter focus Saved resumes; the search button has no AI sparkle or glow.
+4. Open **Forge UI QA (Synthetic)**, select its project, and inspect the glowing Improve with AI action below that entry. Open its dialog and Cancel; saved version 5 should remain unchanged.
+5. Check light/dark and narrow widths. No A4/Fit-to-width labels should appear; paper still fits its available width. Preferences → Reduce motion stops the navigation fade and uses static ASCII.
+
+**Verification:** 78 frontend unit tests, shared and all four frontend builds, five-package typecheck/lint and `git diff --check` pass. Chrome verified actual sign-out/Google sign-in/direct authenticated entry, Search and Enter, scoped AI dialog/Cancel, centered entry toolbar, both themes, 320px/390px fit and reduced motion. No new AI generation, save mutation, file import or completed PDF download was needed for this refinement. [Detailed evidence](docs/ux-ui-update-verification.md). Changes remain uncommitted.
+
+## Forge Studio design — 2026-10-10
+
+Implemented the approved Studio direction locally on **ux-ui-update**, after the preceding rewrite fixes merged into main through [PR #4](https://github.com/resuming-v2/ResumeForge/pull/4). This supersedes the earlier ocean/teal redesign. Charcoal and violet dark surfaces pair with soft violet light surfaces. Sora headings and DM Sans controls distinguish the application while saved resume typography and white PDF paper remain independent.
+
+**My resumes** now has a full-width ASCII spotlight with Upload/Create above the saved list. Performative UI's AsciiHero, PromptHero, Prompt, Temperature, NodeGraphBackground, ChatBubble and TokenStream join the existing shared adapters. The editor puts paper left and a compact inspector right, with **Content / Template / Review**, **Editor / Preview**, and **Focus** controls. Review contains **ATS readiness / Tailor to job**; duplicate JD navigation is removed. Score displays remain read-only, rule groups retain exact-entry Fix/View/Dismiss/Restore, and secondary actions collapse. AI reviews retain red removals, green replacements and explicit versioned Apply. TokenStream reveals a validated response notice after the result arrives; it does not simulate server streaming.
+
+The change preserves existing APIs, authentication, saved-version checks, scoring weights, fact validation, Tiptap and native dialog focus handling. No backend, database, credential, dependency or printable-document change is included. Animated backgrounds unmount on mobile/touch, reduced motion, hidden tabs and offscreen views. [Design and component constraints](docs/ux-ui-update-plan.md), [actual checks and limitations](docs/ux-ui-update-verification.md).
+
+### Check Forge Studio
+
+The personal stack runs at **http://localhost:3000**. If stopped, start it from the frontend worktree; do not start a second stack over occupied ports.
+
+```sh
+cd /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2
+RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 pnpm dev:personal
+```
+
+1. Open **My resumes**. Upload/Create sits above saved resumes. Search through the PromptHero field; sort and existing PDF/delete icon actions remain available. Delete asks for the named document and offers Undo.
+2. Open **Forge UI QA (Synthetic)** or create your own test resume. The workspace sidebar hides. **All resumes** restores it. Edit a field, blur it, then **Save changes**; reload to check the stored version.
+3. Switch between **Content**, **Template** and **Review**. **Focus** hides the inspector; **Show tools** restores it. **Preview** hides editing actions. Paper defaults to Fit to width in both themes.
+4. Review **ATS readiness**. Expand a rule, inspect its Reason and use Fix for its exact target. Open **Tailor to job**, edit the JD and select Local rules or Gemini + rules. Short JDs remain editable while Analyze is disabled. Click Analyze, or press Cmd/Ctrl+Enter, to compare the saved version. Existing unsaved-edit guards still apply.
+5. Select one saved project/work entry and **Improve with AI**. Submit explicitly, review removed/replacement words and full original/suggested text, then Cancel or **Apply and save version**. Only the reviewed target may change. No-change/error states remain visible.
+6. Switch light/dark and enable **Reduced motion** in Preferences. At 320px/390px, check tools, library and dialogs without horizontal page overflow. ASCII/NodeGraph use static mobile and reduced-motion fallbacks; paper stays white.
+
+Verification: **77 unit tests**, all four frontend builds, five-package typecheck/lint and whitespace checks pass. Browser checks cover library search, sidebar return, Focus, themes, 320px/390px editor layouts, local JD submission, synthetic save/reopen, Gemini no-change/replacement review and Apply. Forge UI QA is now saved at **version 5**. Normal Google sign-in recovery also succeeded. Sign-out, a new real-file browser import, completed downloaded PDF contents and full accessibility/performance audits were not exercised. UI changes remain uncommitted.
+
 ## Project rewrite shorthand fix — 2026-10-10
 
 Fixed on **features**. The supplied final CV reproduced two false rejections: singular `app` had no `application` equivalent, and `UI` could not expand to the complete phrase `user interface`. Prompt and validation now support both exact equivalents. Singular/plural application terms stay separate, and the words in `user interface` must remain adjacent. Invented factual vocabulary, removed source facts, changed numbers, negative wording, slash-separated technologies and cross-field edits still fail validation. No model, timeout, permission or persistence behavior changes.
@@ -72,7 +159,6 @@ RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 pnpm --fi
 
 Text extraction does not preserve the original PDF fonts, bold emphasis, decorative layout or language rating dots. Bold advice checks editor rich text only. Conservative column recognition is verified for the supplied layout, not every multi-column design; OCR/scanned PDFs and broader import provenance remain pending. Current changes remain local and uncommitted.
 
-
 ## Private vector retrieval — 2026-10-09
 
 Implemented locally on **features**: optional Gemini JD analysis now retrieves professional evidence from PostgreSQL/pgvector. Each visible experience/project entry becomes a private, version-bound `gemini-embedding-001` vector with **768 dimensions**. Ownership, current version, model and projection are checked before retrieval; save/delete purges derived cache. Contacts, hidden fields and extraction source are excluded. Fixed backend rules still own numeric scores; cosine similarity never earns points alone. Local scoring needs no AI call.
@@ -127,13 +213,13 @@ Implemented on **features** in the frontend worktree. The **ATS Score** panel no
 
 The user approved these `readiness-v1` weights on 2026-10-08:
 
-| Component | Weight | Checks |
-| --- | --- | --- |
-| Structure | 25% | Visible background and skills, distinct populated headings, at least two populated sections. Summary and paid employment are optional. |
-| Experience detail | 25% | Experience/project titles, context subtitles, and at least one description or achievement with eight words. Projects can supply experience evidence. |
-| Skills presentation | 20% | Visible skills, category labels, normalized duplicates and concise items. More keywords do not earn extra points. |
-| Achievement clarity | 15% | Every visible statement in an experience/project entry has 8–60 word tokens. Metrics are optional. No grammar, truth or impact judgment. |
-| Date consistency | 15% | Complete ranges, chronological order and consistent Present. Year-only ranges are allowed; undated projects are optional. No gap or future-date inference. |
+| Component           | Weight | Checks                                                                                                                                                     |
+| ------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure           | 25%    | Visible background and skills, distinct populated headings, at least two populated sections. Summary and paid employment are optional.                     |
+| Experience detail   | 25%    | Experience/project titles, context subtitles, and at least one description or achievement with eight words. Projects can supply experience evidence.       |
+| Skills presentation | 20%    | Visible skills, category labels, normalized duplicates and concise items. More keywords do not earn extra points.                                          |
+| Achievement clarity | 15%    | Every visible statement in an experience/project entry has 8–60 word tokens. Metrics are optional. No grammar, truth or impact judgment.                   |
+| Date consistency    | 15%    | Complete ranges, chronological order and consistent Present. Year-only ranges are allowed; undated projects are optional. No gap or future-date inference. |
 
 Each component is the rounded percentage of passed checks; the total is the rounded weighted sum. Empty professional content scores 0. The server scores visible professional fields from the current immutable saved version. Header/contact fields, original extraction text, hidden content and appearance are excluded from this projection. No third-party transfer occurs, and assessment feedback contains generic reasons and stable target IDs rather than raw resume text. The master profile and UserContact are unchanged.
 
@@ -169,8 +255,8 @@ Verification commands, actual browser results and remaining test limits are in t
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-10T05:31:56.655Z",
-  "lastResult": "Project rewrite fix verified with 86 tests, build/lint and live reviews; prepared for requested PR integration and new ux-ui-update branch."
+  "updatedAt": "2026-10-10T19:28:16.149Z",
+  "lastResult": "Full-screen ASCII sign-in; header/footer inside; responsive static fallback. 15 shell tests, lint, shared/four frontend builds and browser bounds pass."
 }
 ```
 <!-- END:CURRENT_TASK -->

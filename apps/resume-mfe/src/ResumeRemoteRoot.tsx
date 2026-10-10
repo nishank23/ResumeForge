@@ -3,9 +3,11 @@ import type {
   RewriteProposal,
 } from "@resume-forge/shared-types";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   Button,
+  AsciiSpotlight,
+  RequestFeedback,
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
@@ -17,7 +19,6 @@ import {
   fromResumeContent,
   type SavedResume,
 } from "./resume-api";
-import type { ResumeDraft } from "./editor-draft";
 import { downloadResumePdf } from "./download-resume";
 import "./resume-library.css";
 export interface ResumeRemoteRootProps {
@@ -38,13 +39,8 @@ export function ResumeRemoteRoot({
   );
   const [saved, setSaved] = useState<SavedResume | null>(null),
     [error, setError] = useState(""),
-    [loading, setLoading] = useState(false),
+    [loading, setLoading] = useState(view === "editor" && !!resumeId),
     [retry, setRetry] = useState(0);
-  const [staged, setStaged] = useState<{
-      draft: ResumeDraft;
-      text: string;
-    } | null>(null),
-    [fileName, setFileName] = useState("");
   const readinessId = saved?.id,
     readinessVersion = saved?.currentVersion;
   const readiness = useMemo(
@@ -103,12 +99,7 @@ export function ResumeRemoteRoot({
       readinessId && readinessVersion
         ? {
             request: (target: RewriteTarget) =>
-              api.requestRewrite(
-                readinessId,
-                readinessVersion,
-                target,
-                true,
-              ),
+              api.requestRewrite(readinessId, readinessVersion, target, true),
             apply: async (proposal: RewriteProposal) => {
               const next = await api.applyRewrite(
                 readinessId,
@@ -164,12 +155,18 @@ export function ResumeRemoteRoot({
         </a>
       </div>
     );
-  if (view === "library") return <ResumeLibrary context={context} />;
+  if (view === "library" || view === "upload")
+    return (
+      <ResumeLibrary context={context} initialUploadOpen={view === "upload"} />
+    );
   if (view === "editor") {
     if (loading)
       return (
-        <div className="rf-page" role="status">
-          Loading your resume…
+        <div className="rf-page">
+          <RequestFeedback
+            label="Loading your resume"
+            reducedMotion={context.reducedMotion}
+          />
         </div>
       );
     if (!saved)
@@ -234,42 +231,6 @@ export function ResumeRemoteRoot({
       </>
     );
   }
-  if (staged)
-    return (
-      <>
-        <div className="rf-import-review">
-          <h1>Review your imported resume</h1>
-          <p>
-            {fileName} is ready for review. Check names, dates and section
-            mapping. Save creates a new resume in your account.
-          </p>
-          <details>
-            <summary>Review the extracted text</summary>
-            <textarea
-              aria-label="Extracted resume text"
-              readOnly
-              value={staged.text}
-            />
-            <p>
-              Keep this reference open while correcting the document below.
-              Original layout is not preserved.
-            </p>
-          </details>
-        </div>
-        <ManualResumeEditor
-          key={createId.current}
-          context={context}
-          initialDraft={staged.draft}
-          savedVersion={0}
-          onSave={async (draft) => {
-            const next = await api.create(createId.current, draft, staged.text);
-            context.onNavigate?.(`/w/${workspaceId}/resumes/${next.id}`);
-            return next.currentVersion;
-          }}
-          saveLabel="Confirm and save resume"
-        />
-      </>
-    );
   return (
     <div
       className="rf-page"
@@ -280,100 +241,56 @@ export function ResumeRemoteRoot({
         <ArrowLeft size={16} /> My resumes
       </button>
       <div className="rf-page-heading">
-        <h1>
-          {view === "upload" ? "Bring your resume." : "Start a new resume."}
-        </h1>
-        <p>
-          {view === "upload"
-            ? "Your experience, ready to edit."
-            : "A blank page with room for your experience."}
-        </p>
+        <h1>Start a new resume.</h1>
+        <p>A blank page with room for your experience.</p>
       </div>
       <section className="rf-upload-panel">
-        <h2>
-          {view === "upload" ? "Upload your resume" : "Create a blank resume"}
-        </h2>
+        <AsciiSpotlight
+          bright
+          theme={context.theme}
+          reducedMotion={context.reducedMotion}
+        />
+        <h2>Create a blank resume</h2>
         <p>
           No profile setup needed. Your account name can fill the header;
           professional details come from you.
         </p>
-        {view === "upload" ? (
-          <>
-            <label className="rf-upload-choice">
-              <Upload size={24} />
-              <input
-                aria-label="Choose resume file"
-                type="file"
-                accept=".pdf,.docx,.txt,.md"
-                disabled={loading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file || busy.current) return;
-                  busy.current = true;
-                  setLoading(true);
-                  setError("");
-                  setFileName(file.name);
-                  void api
-                    .parse(file)
-                    .then(setStaged)
-                    .catch((e: unknown) => {
-                      setError(
-                        e instanceof Error ? e.message : "Could not read file.",
-                      );
-                    })
-                    .finally(() => {
-                      busy.current = false;
-                      setLoading(false);
-                    });
-                }}
-              />
-            </label>
-            <p>
-              Text-based PDF, DOCX, TXT or Markdown. Up to 10 MB. Processed
-              locally; review before saving. Scanned or encrypted PDFs need a
-              text-based copy.
-            </p>
-          </>
-        ) : (
-          <Button
-            disabled={loading}
-            onClick={() => {
-              if (busy.current) return;
-              busy.current = true;
-              setLoading(true);
-              void api
-                .create(
-                  createId.current,
-                  blankResume(
-                    state.status === "authenticated"
-                      ? (state.identity.name ?? "")
-                      : "",
-                  ),
-                )
-                .then((next) =>
-                  context.onNavigate?.(`/w/${workspaceId}/resumes/${next.id}`),
-                )
-                .catch((e: unknown) => {
-                  setError(
-                    e instanceof Error ? e.message : "Could not create resume.",
-                  );
-                })
-                .finally(() => {
-                  busy.current = false;
-                  setLoading(false);
-                });
-            }}
-          >
-            Create resume
-          </Button>
-        )}
+        <Button
+          disabled={loading}
+          onClick={() => {
+            if (busy.current) return;
+            busy.current = true;
+            setLoading(true);
+            void api
+              .create(
+                createId.current,
+                blankResume(
+                  state.status === "authenticated"
+                    ? (state.identity.name ?? "")
+                    : "",
+                ),
+              )
+              .then((next) =>
+                context.onNavigate?.(`/w/${workspaceId}/resumes/${next.id}`),
+              )
+              .catch((e: unknown) => {
+                setError(
+                  e instanceof Error ? e.message : "Could not create resume.",
+                );
+              })
+              .finally(() => {
+                busy.current = false;
+                setLoading(false);
+              });
+          }}
+        >
+          Create resume
+        </Button>
         {loading ? (
-          <p role="status">
-            {view === "upload"
-              ? "Reading your resume…"
-              : "Creating your resume…"}
-          </p>
+          <RequestFeedback
+            label="Creating your resume"
+            reducedMotion={context.reducedMotion}
+          />
         ) : null}
         {error ? <p role="alert">{error}</p> : null}
       </section>

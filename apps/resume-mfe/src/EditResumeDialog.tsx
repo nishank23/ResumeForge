@@ -268,6 +268,7 @@ export function EditResumeDialog({
           <Button
             size="sm"
             variant="outline"
+            glow
             disabled={dirty || !!improveDisabledReason}
             onClick={onImprove}
           >

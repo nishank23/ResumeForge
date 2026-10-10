@@ -19,6 +19,7 @@ import {
 } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
+import { Button as PerformativeButton } from "performative-ui";
 import { cn } from "../../utils/cn";
 
 // ── Button ────────────────────────────────────────────────────────────
@@ -56,8 +57,10 @@ export const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
+  readonly glow?: boolean;
   readonly loading?: boolean;
   readonly loadingText?: string;
 }
@@ -68,6 +71,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       variant,
       size,
+      glow = false,
       loading = false,
       loadingText,
       disabled,
@@ -79,24 +83,37 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const isDisabled = Boolean(disabled) || loading;
     return (
-      <button
+      <PerformativeButton
+        variant={glow ? "glow" : "solid"}
+        sparkle={glow}
+        data-variant={variant ?? "default"}
+        data-size={size ?? "md"}
+        size={size === "icon" || size == null ? "md" : size}
         ref={ref}
         type={type}
         disabled={isDisabled}
         aria-busy={loading || undefined}
         aria-disabled={isDisabled || undefined}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={cn(
+          "rf-button",
+          glow && "rf-ai-action",
+          buttonVariants({ variant, size }),
+          className,
+        )}
         {...props}
       >
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden="true" />
+            <Loader2
+              className="h-4 w-4 animate-spin shrink-0"
+              aria-hidden="true"
+            />
             <span>{loadingText ?? children}</span>
           </>
         ) : (
           children
         )}
-      </button>
+      </PerformativeButton>
     );
   },
 );
@@ -185,13 +202,21 @@ export interface FieldErrorProps extends HTMLAttributes<HTMLParagraphElement> {
   readonly message?: string;
 }
 
-export function FieldError({ message, className, children, ...props }: FieldErrorProps) {
+export function FieldError({
+  message,
+  className,
+  children,
+  ...props
+}: FieldErrorProps) {
   const content = message ?? children;
   if (!content) return null;
   return (
     <p
       role="alert"
-      className={cn("mt-1.5 text-xs font-medium text-[var(--destructive)]", className)}
+      className={cn(
+        "mt-1.5 text-xs font-medium text-[var(--destructive)]",
+        className,
+      )}
       {...props}
     >
       {content}
@@ -289,7 +314,10 @@ Select.displayName = "Select";
 
 // ── Checkbox ──────────────────────────────────────────────────────────
 
-export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
+export interface CheckboxProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type"
+> {
   readonly label: string;
   readonly description?: string;
 }
@@ -311,11 +339,17 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {...props}
         />
         <div className="text-sm leading-tight">
-          <label htmlFor={id} className="font-medium text-[var(--foreground)] cursor-pointer">
+          <label
+            htmlFor={id}
+            className="font-medium text-[var(--foreground)] cursor-pointer"
+          >
             {label}
           </label>
           {description ? (
-            <p id={descId} className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+            <p
+              id={descId}
+              className="mt-0.5 text-xs text-[var(--muted-foreground)]"
+            >
               {description}
             </p>
           ) : null}
@@ -342,44 +376,63 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 );
 Card.displayName = "Card";
 
-export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-5", className)} {...props} />
-  ),
-);
+export const CardHeader = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-5", className)}
+    {...props}
+  />
+));
 CardHeader.displayName = "CardHeader";
 
-export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3
-      ref={ref}
-      className={cn("text-base font-semibold leading-snug tracking-tight", className)}
-      {...props}
-    />
-  ),
-);
+export const CardTitle = forwardRef<
+  HTMLHeadingElement,
+  HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-base font-semibold leading-snug tracking-tight",
+      className,
+    )}
+    {...props}
+  />
+));
 CardTitle.displayName = "CardTitle";
 
 export const CardDescription = forwardRef<
   HTMLParagraphElement,
   HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-[var(--muted-foreground)]", className)} {...props} />
+  <p
+    ref={ref}
+    className={cn("text-sm text-[var(--muted-foreground)]", className)}
+    {...props}
+  />
 ));
 CardDescription.displayName = "CardDescription";
 
-export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-5 pt-0", className)} {...props} />
-  ),
-);
+export const CardContent = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-5 pt-0", className)} {...props} />
+));
 CardContent.displayName = "CardContent";
 
-export const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center gap-3 p-5 pt-0", className)} {...props} />
-  ),
-);
+export const CardFooter = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center gap-3 p-5 pt-0", className)}
+    {...props}
+  />
+));
 CardFooter.displayName = "CardFooter";
 
 // ── Badge ─────────────────────────────────────────────────────────────
@@ -410,11 +463,12 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
 export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return (
+    <span className={cn(badgeVariants({ variant }), className)} {...props} />
+  );
 }
 
 // ── Tabs (WAI-ARIA keyboard navigable) ────────────────────────────────
@@ -461,18 +515,26 @@ export function Tabs({
   );
 }
 
-export function TabsList({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function TabsList({
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const container = listRef.current;
     if (!container) return;
     const triggers = Array.from(
-      container.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'),
+      container.querySelectorAll<HTMLButtonElement>(
+        '[role="tab"]:not(:disabled)',
+      ),
     );
     if (triggers.length === 0) return;
 
-    const currentIndex = triggers.findIndex((el) => el === document.activeElement);
+    const currentIndex = triggers.findIndex(
+      (el) => el === document.activeElement,
+    );
     if (currentIndex === -1) return;
 
     let nextIndex: number | null = null;
@@ -514,7 +576,12 @@ export interface TabsTriggerProps extends ButtonHTMLAttributes<HTMLButtonElement
   readonly value: string;
 }
 
-export function TabsTrigger({ value, className, children, ...props }: TabsTriggerProps) {
+export function TabsTrigger({
+  value,
+  className,
+  children,
+  ...props
+}: TabsTriggerProps) {
   const ctx = useContext(TabsContext);
   if (!ctx) throw new Error("TabsTrigger must be used within Tabs");
   const isSelected = ctx.activeTab === value;
@@ -529,7 +596,9 @@ export function TabsTrigger({ value, className, children, ...props }: TabsTrigge
       aria-selected={isSelected}
       aria-controls={panelId}
       tabIndex={isSelected ? 0 : -1}
-      onClick={() => { ctx.setActiveTab(value); }}
+      onClick={() => {
+        ctx.setActiveTab(value);
+      }}
       className={cn(
         "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
         isSelected
@@ -548,7 +617,12 @@ export interface TabsContentProps extends HTMLAttributes<HTMLDivElement> {
   readonly value: string;
 }
 
-export function TabsContent({ value, className, children, ...props }: TabsContentProps) {
+export function TabsContent({
+  value,
+  className,
+  children,
+  ...props
+}: TabsContentProps) {
   const ctx = useContext(TabsContext);
   if (!ctx) throw new Error("TabsContent must be used within Tabs");
   const isSelected = ctx.activeTab === value;
@@ -573,7 +647,10 @@ export function TabsContent({ value, className, children, ...props }: TabsConten
 
 // ── Skeleton ──────────────────────────────────────────────────────────
 
-export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function Skeleton({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       aria-hidden="true"
@@ -588,10 +665,16 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
 
 // ── Table ─────────────────────────────────────────────────────────────
 
-export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
+export function Table({
+  className,
+  ...props
+}: TableHTMLAttributes<HTMLTableElement>) {
   return (
     <div className="w-full overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)]">
-      <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
+      <table
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
     </div>
   );
 }
@@ -602,7 +685,10 @@ export function TableHeader({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn("border-b border-[var(--border)] bg-[var(--surface-muted)]", className)}
+      className={cn(
+        "border-b border-[var(--border)] bg-[var(--surface-muted)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -612,19 +698,33 @@ export function TableBody({
   className,
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("divide-y divide-[var(--border)]", className)} {...props} />;
-}
-
-export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
   return (
-    <tr
-      className={cn("transition-colors hover:bg-[var(--surface-muted)]/60", className)}
+    <tbody
+      className={cn("divide-y divide-[var(--border)]", className)}
       {...props}
     />
   );
 }
 
-export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
+export function TableRow({
+  className,
+  ...props
+}: HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr
+      className={cn(
+        "transition-colors hover:bg-[var(--surface-muted)]/60",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TableHead({
+  className,
+  ...props
+}: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
@@ -636,8 +736,16 @@ export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCel
   );
 }
 
-export function TableCell({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("p-4 align-middle text-[var(--foreground)]", className)} {...props} />;
+export function TableCell({
+  className,
+  ...props
+}: TdHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td
+      className={cn("p-4 align-middle text-[var(--foreground)]", className)}
+      {...props}
+    />
+  );
 }
 
 // ── Tooltip ───────────────────────────────────────────────────────────
@@ -655,10 +763,18 @@ export function Tooltip({ content, children, className }: TooltipProps) {
   return (
     <span
       className={cn("relative inline-flex items-center", className)}
-      onMouseEnter={() => { setOpen(true); }}
-      onMouseLeave={() => { setOpen(false); }}
-      onFocus={() => { setOpen(true); }}
-      onBlur={() => { setOpen(false); }}
+      onMouseEnter={() => {
+        setOpen(true);
+      }}
+      onMouseLeave={() => {
+        setOpen(false);
+      }}
+      onFocus={() => {
+        setOpen(true);
+      }}
+      onBlur={() => {
+        setOpen(false);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Escape") setOpen(false);
       }}

@@ -392,7 +392,7 @@
   color: inherit;
 }
 .rf-resume-document .tiptap[contenteditable="true"]:focus {
-  outline: 2px solid #4338ca;
+  outline: 2px solid #6631c2;
   outline-offset: 3px;
   border-radius: 2px;
   scroll-margin-top: 110px;
@@ -762,15 +762,15 @@
   cursor: pointer;
 }
 .rf-paper-selectable:hover {
-  outline: 1px dashed #8b86b9;
+  outline: 1px dashed #9180ad;
   outline-offset: 3px;
 }
 .rf-paper-selectable.is-selected {
-  outline: 1px dashed #4338ca;
+  outline: 1px dashed #6631c2;
   outline-offset: 3px;
 }
 .rf-paper-selectable:focus-visible {
-  outline: 2px solid #4338ca;
+  outline: 2px solid #6631c2;
   outline-offset: 3px;
 }
 .rf-paper-selectable.is-hidden {
@@ -1076,14 +1076,14 @@
   gap: 2px;
   padding: 5px;
   max-width: calc(100% - 24px);
-  border: 1px solid #47435b;
+  border: 1px solid #36535f;
   border-radius: 7px;
-  background: #171725;
+  background: #102d3a;
   box-shadow: 0 4px 10px #1118272e;
   color: #fff;
 }
 .rf-floating-actions button {
-  color: #f5f3ff;
+  color: var(--foreground);
   height: 32px;
   font-size: 11px;
 }
@@ -1091,14 +1091,14 @@
   background: transparent;
 }
 .rf-floating-actions button:hover {
-  background: #383247;
+  background: var(--surface-muted);
 }
 .rf-floating-actions button:focus-visible {
-  outline: 2px solid #c4b5fd;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 .rf-floating-actions button:has(.lucide-sparkles) {
-  color: #c4b5fd;
+  color: var(--primary);
   padding-inline: 9px;
 }
 .rf-floating-actions button[aria-label] {
@@ -1126,7 +1126,7 @@
   font-weight: 400;
 }
 .rf-inline-resume-text[contenteditable="true"]:focus {
-  outline: 1px solid #4338ca;
+  outline: 1px solid #6631c2;
   outline-offset: 2px;
 }
 .rf-resume-header h2 .rf-inline-resume-text[contenteditable="true"] {
@@ -1376,16 +1376,6 @@
 }
 
 /* A4 geometry is stable at every breakpoint; only the surrounding view zooms. */
-.rf-page-view-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
 .rf-page-viewport {
   width: 100%;
   overflow-x: auto;
@@ -1461,7 +1451,6 @@
 }
 @media print {
   .rf-floating-actions,
-  .rf-page-view-controls,
   .rf-page-overflow {
     display: none;
   }

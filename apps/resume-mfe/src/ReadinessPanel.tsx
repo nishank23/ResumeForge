@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@resume-forge/shared";
+import {
+  AssessmentMeter,
+  Button,
+  DocumentStatus,
+  RequestFeedback,
+} from "@resume-forge/shared";
 import type {
   ReadinessCheck,
   ReadinessResult,
@@ -10,6 +15,7 @@ import { READINESS_RUBRIC } from "@resume-forge/resume-core";
 import { needsReadinessCheck } from "./readiness-feedback";
 export interface ReadinessPanelProps {
   savedVersion: number;
+  reducedMotion?: boolean;
   disabledReason?: string;
   navigationDisabled?: boolean;
   preview?: ReadinessResult;
@@ -25,6 +31,7 @@ export interface ReadinessPanelProps {
 }
 export function ReadinessPanel({
   savedVersion,
+  reducedMotion,
   disabledReason,
   navigationDisabled,
   preview,
@@ -79,7 +86,8 @@ export function ReadinessPanel({
   const stale =
     !!evaluation &&
     (evaluation.resumeVersion !== savedVersion ||
-      state.currentVersion !== savedVersion || evaluation.rubricVersion !== READINESS_RUBRIC);
+      state.currentVersion !== savedVersion ||
+      evaluation.rubricVersion !== READINESS_RUBRIC);
   const blocked = busy || loading || !!disabledReason || !run;
   const mutate = async (operation: () => Promise<ReadinessState>) => {
     if (busy) return;
@@ -106,7 +114,16 @@ export function ReadinessPanel({
       >
         <div className="rf-ats-meter-heading">
           <h3 id="rf-ats-meter-heading">Resume readiness</h3>
-          <span className="rf-ats-status">
+          <DocumentStatus
+            className="rf-ats-status"
+            tone={
+              preview || loading || busy || stale
+                ? "pending"
+                : evaluation
+                  ? "saved"
+                  : "neutral"
+            }
+          >
             {preview
               ? "Unsaved preview"
               : loading || busy
@@ -116,42 +133,12 @@ export function ReadinessPanel({
                   : stale
                     ? "Needs recheck"
                     : "Evaluated"}
-          </span>
+          </DocumentStatus>
         </div>
-        <div
-          className="rf-ats-score-value"
-          aria-label={
-            result
-              ? `Resume readiness ${String(result.score)} out of 100${preview ? ", unsaved preview" : stale ? ", outdated" : ""}`
-              : "Readiness not evaluated"
-          }
-        >
-          <span>{result?.score ?? "—"}</span>
-          <span> / 100</span>
-        </div>
-        <div
-          className="rf-ats-scale"
-          role="img"
-          aria-label={
-            result
-              ? `Internal readiness score ${String(result.score)} out of 100`
-              : "Readiness scale, not evaluated"
-          }
-        >
-          <div className="rf-ats-track">
-            {result ? (
-              <span
-                className="rf-readiness-fill"
-                style={{ width: `${String(result.score)}%` }}
-              />
-            ) : null}
-          </div>
-          <div className="rf-ats-ticks" aria-hidden="true">
-            {[0, 25, 50, 75, 100].map((t) => (
-              <span key={t}>{t}</span>
-            ))}
-          </div>
-        </div>
+        <AssessmentMeter
+          value={result?.score}
+          label="General resume readiness"
+        />
         <p>General readiness · no JD needed.</p>
         <details className="rf-assessment-details">
           <summary>Score breakdown & details</summary>
@@ -192,8 +179,8 @@ export function ReadinessPanel({
         </details>
         {stale && !preview ? (
           <p role="status">
-            This assessment belongs to an older saved version or rule set. It remains
-            visible until the latest check succeeds.
+            This assessment belongs to an older saved version or rule set. It
+            remains visible until the latest check succeeds.
           </p>
         ) : null}
         {disabledReason && !preview ? (
@@ -253,9 +240,14 @@ export function ReadinessPanel({
         </>
       ) : (
         <div className="rf-panel-empty" role="status">
-          <strong>
-            {loading ? "Checking your resume" : "No saved assessment"}
-          </strong>
+          {loading ? (
+            <RequestFeedback
+              label="Checking your resume"
+              reducedMotion={reducedMotion}
+            />
+          ) : (
+            <strong>No saved assessment</strong>
+          )}
           <p>Save your resume to get a versioned assessment.</p>
         </div>
       )}

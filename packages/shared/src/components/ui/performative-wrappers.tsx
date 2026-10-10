@@ -58,9 +58,9 @@ export interface AuroraBackdropProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const RESUME_FORGE_AURORA_BLOBS = [
-  { color: "rgba(67, 56, 202, 0.24)", x: 18, y: 26, size: 58 },
-  { color: "rgba(99, 102, 241, 0.20)", x: 82, y: 24, size: 48 },
-  { color: "rgba(2, 132, 199, 0.16)", x: 52, y: 78, size: 50 },
+  { color: "rgba(138, 99, 222, 0.20)", x: 18, y: 26, size: 58 },
+  { color: "rgba(184, 154, 255, 0.16)", x: 82, y: 24, size: 48 },
+  { color: "rgba(102, 49, 194, 0.10)", x: 52, y: 78, size: 50 },
 ];
 
 export function AuroraBackdrop({
@@ -120,7 +120,8 @@ export function NodeGraphBackdrop({
   const { isCompact, isCoarsePointer } = useMobileOrTouchViewport();
 
   // Unmount animated canvas completely when reduced-motion is active or container is offscreen/hidden tab
-  const shouldRenderCanvas = !isReducedMotion && isActive;
+  const shouldRenderCanvas =
+    !isReducedMotion && isActive && !isCompact && !isCoarsePointer;
   // Bound mobile rendering budget and disable cursor effects on touch/mobile
   const boundedDensity = isCompact
     ? Math.min(density, 18)
@@ -144,10 +145,10 @@ export function NodeGraphBackdrop({
       {shouldRenderCanvas ? (
         <NodeGraphBackground
           density={boundedDensity}
-          speed={0.28}
+          speed={0.07}
           linkDistance={115}
-          colors={["#6366f1", "#818cf8", "#0284c7"]}
-          linkColor="#6366f1"
+          colors={["#B89AFF", "#8A63DE", "#9672D2"]}
+          linkColor="#9672D2"
           baseOpacity={0.28}
           hoverDistance={disableCursorEffects ? 0 : 140}
           hoverGravity={disableCursorEffects ? 0 : 0.003}
@@ -159,7 +160,7 @@ export function NodeGraphBackdrop({
           className="h-full w-full opacity-35"
           style={{
             background:
-              "radial-gradient(circle at 25% 30%, rgba(99, 102, 241, 0.16), transparent 60%), radial-gradient(circle at 75% 70%, rgba(2, 132, 199, 0.12), transparent 60%)",
+              "radial-gradient(circle at 25% 30%, rgba(138, 99, 222, 0.16), transparent 60%), radial-gradient(circle at 75% 70%, rgba(184, 154, 255, 0.12), transparent 60%)",
           }}
         />
       )}

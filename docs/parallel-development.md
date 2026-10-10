@@ -1,5 +1,15 @@
 # Frontend and backend development lanes
 
+## Release branch transition — 2026-10-10
+
+The user authorized committing all pending ux-ui-update work, creating and merging its PR into main, retiring local/remote features and ux-ui-update after integration, then creating and checking out **fixes** from merged main. Subsequent work uses **fixes** in the existing frontend worktree. This supersedes earlier active-branch names below. Preserve the detached primary runtime checkout and backend worktree. Branch retirement occurs only after confirming all their commits are included in main.
+
+## Current UI branch workflow — 2026-10-10
+
+The user requested PR integration of the completed fixes, then a new branch named **ux-ui-update**. PR [#4](https://github.com/resuming-v2/ResumeForge/pull/4) is merged into main at `c713cf43426dd67b10b96ef563baa6d21d7ba03d`. The new branch was created from that commit, pushed to origin and checked out in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. Future work and scheduled checks use **ux-ui-update**, superseding the active features requirement below.
+
+The original detached checkout, authoritative private runtime files and separate backend checkout remain intact. Existing ownership, task locks, contract and integration rules apply. [Original Performative UI design direction](ux-ui-update-plan.md) is planning for the new branch, not completed visual work.
+
 ## Current branch workflow — 2026-10-08
 
 The user requests one integration PR into `main`, deletion of the old remote frontend/backend branches after the merge, and a new `features` branch created from the merged main commit. Subsequent work uses `features` in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`; the directory name does not prescribe a branch prefix. Push `features` with an upstream to `origin/features`. Do not recreate the retired remote branches.

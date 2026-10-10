@@ -39,16 +39,10 @@ export function ResumePage({ children }: { children: ReactNode }) {
   const pages = Math.ceil(size.height / PAGE_HEIGHT);
   return (
     <div className="rf-page-viewer">
-      <div className="rf-page-view-controls" aria-label="Resume page layout">
-        <span>
-          A4 · {pages} {pages === 1 ? "page" : "pages"}
-        </span>
-        <span>Fit to width</span>
-      </div>
       {pages > 1 ? (
         <p className="rf-page-overflow" role="status">
-          Content exceeds one A4 page. Adjust spacing in Customize Template; all
-          text is kept.
+          Content exceeds one A4 page. Adjust spacing in Template; all text is
+          kept.
         </p>
       ) : null}
       <div ref={viewport} className="rf-page-viewport">

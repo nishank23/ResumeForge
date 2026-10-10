@@ -1,33 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  FilePlus2,
-  FileText,
-  Search,
-  Upload,
-  LoaderCircle,
-  Download,
-  Trash2,
-} from "lucide-react";
+import { FilePlus2, FileText, Upload, Download, Trash2 } from "lucide-react";
 import {
   Button,
+  GlassCardSurface,
+  AsciiSpotlight,
+  StudioPrompt,
+  DocumentStatus,
+  RequestFeedback,
   ConfirmDeleteDialog,
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 import { blankResume, createResumeApi, type ResumeRow } from "./resume-api";
+import { ResumeImportDialog } from "./ResumeImportDialog";
 import { downloadResumePdf } from "./download-resume";
 import "./resume-library.css";
 
 export function ResumeLibrary({
   context,
+  initialUploadOpen = false,
 }: {
   context: ShellFederationContext;
+  initialUploadOpen?: boolean;
 }) {
   const { requestApi, state } = useSession();
   const api = useMemo(
     () => createResumeApi(requestApi, context.activeWorkspace.id),
     [requestApi, context.activeWorkspace.id],
   );
+  const [uploadOpen, setUploadOpen] = useState(initialUploadOpen);
   const [rows, setRows] = useState<ResumeRow[]>([]),
     [query, setQuery] = useState("");
   const [sort, setSort] = useState("updated"),
@@ -195,267 +196,308 @@ export function ResumeLibrary({
     <div className="rf-page rf-resume-library">
       <div className="rf-page-heading">
         <h1>My resumes</h1>
-        <p>Your documents. Your next chapter.</p>
+        <p>Keep your work, and every saved version, within reach.</p>
       </div>
-      <section
-        className="rf-library-start"
-        aria-labelledby="rf-library-start-title"
-      >
-        <div className="rf-library-paper" aria-hidden="true">
-          <FileText size={32} />
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-        <div>
-          <h2 id="rf-library-start-title">Start with what you’ve done.</h2>
-          <p>
-            Bring your own resume, or build one from a blank page.
-            <br />
-            Your saved work stays here when you come back.
-          </p>
-        </div>
-        <div className="rf-library-start-actions">
-          <Button
-            onClick={() => context.onNavigate?.(`${prefix}/upload`)}
-            disabled={
-              creating || loadingMore || deleting || restoring || !!downloading
-            }
-          >
-            <Upload size={17} /> Upload resume
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void create();
-            }}
-            disabled={
-              creating || loadingMore || deleting || restoring || !!downloading
-            }
-          >
-            <FilePlus2 size={17} />
-            {creating ? "Creating…" : "Create resume"}
-          </Button>
-        </div>
-      </section>
-      <div className="rf-library-list-heading">
-        <h2 ref={listHeading} tabIndex={-1}>
-          Continue where you left off
-        </h2>
-        <span>
-          {loading
-            ? "Loading…"
-            : `${String(rows.length)} ${rows.length === 1 ? "resume" : "resumes"}`}
-        </span>
-      </div>
-      <div className="rf-library-filters">
-        <label className="rf-library-search">
-          <Search size={19} />
-          <input
-            aria-label="Search loaded resumes"
-            placeholder="Search loaded resumes"
-            value={query}
-            maxLength={200}
-            onChange={(e) => {
-              setQuery(e.target.value);
-            }}
+      <div className="rf-library-desk">
+        <GlassCardSurface
+          glowOnHover={false}
+          className="rf-library-start"
+          aria-labelledby="rf-library-start-title"
+        >
+          <AsciiSpotlight
+            theme={context.theme}
+            reducedMotion={context.reducedMotion}
           />
-        </label>
-        <label className="rf-library-sort">
-          Sort by
-          <select
-            aria-label="Sort resumes"
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-            }}
-          >
-            <option value="updated">Last updated</option>
-            <option value="title">Name</option>
-          </select>
-        </label>
-      </div>
-      {notice ? (
-        <div className="rf-library-notice" role="status">
-          <p>{notice}</p>
-          {deletedRow ? (
+          <div className="rf-library-paper" aria-hidden="true">
+            <FileText size={32} />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <h2 id="rf-library-start-title">Your next chapter starts here</h2>
+            <p>
+              Upload your resume or begin with a blank page. Keep every version
+              in one place.
+            </p>
+          </div>
+          <div className="rf-library-start-actions">
             <Button
-              variant="outline"
-              size="sm"
-              disabled={restoring || !!downloading || deleting}
-              onClick={() => {
-                void restore();
-              }}
+              onClick={() => { setUploadOpen(true); }}
+              disabled={
+                creating ||
+                loadingMore ||
+                deleting ||
+                restoring ||
+                !!downloading
+              }
             >
-              {restoring ? "Restoring…" : "Undo delete"}
+              <Upload size={17} /> Upload resume
             </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="rf-library-error" role="alert">
-          <p>{error}</p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setRetry((v) => v + 1);
-            }}
-            disabled={loading || deleting || restoring || !!downloading}
-          >
-            Retry loading
-          </Button>
-        </div>
-      ) : null}
-      {loading ? (
-        <div className="rf-library-empty" role="status">
-          Loading your saved resumes…
-        </div>
-      ) : !shown.length ? (
-        <div className="rf-library-empty">
-          <FileText size={30} />
-          <h3>
-            {query ? "No matching resumes" : "Your first resume starts here"}
-          </h3>
-          <p>
-            {query
-              ? "Try a different name or clear your search."
-              : "Upload your resume or create a blank one above. No profile setup needed."}
-          </p>
-          {query ? (
             <Button
               variant="outline"
               onClick={() => {
-                setQuery("");
+                void create();
               }}
+              disabled={
+                creating ||
+                loadingMore ||
+                deleting ||
+                restoring ||
+                !!downloading
+              }
             >
-              Clear search
+              <FilePlus2 size={17} />
+              {creating ? (
+                <RequestFeedback
+                  label="Creating"
+                  reducedMotion={context.reducedMotion}
+                />
+              ) : (
+                "Create resume"
+              )}
             </Button>
+          </div>
+        </GlassCardSurface>
+        <section className="rf-library-collection" aria-label="Saved resumes">
+          <div className="rf-library-list-heading">
+            <h2 ref={listHeading} tabIndex={-1}>
+              Saved resumes
+            </h2>
+            <span>
+              {loading
+                ? "Loading…"
+                : `${String(rows.length)} ${rows.length === 1 ? "resume" : "resumes"}`}
+            </span>
+          </div>
+          <div className="rf-library-filters">
+            <StudioPrompt
+              hero
+              quietSearch
+              label="Search resumes"
+              value={query}
+              onChange={setQuery}
+              onSubmit={() => listHeading.current?.focus()}
+              maxLength={200}
+              placeholder="Find a saved resume"
+              submitLabel="Search"
+            />
+            <label className="rf-library-sort">
+              Sort by
+              <select
+                aria-label="Sort resumes"
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value);
+                }}
+              >
+                <option value="updated">Last updated</option>
+                <option value="title">Name</option>
+              </select>
+            </label>
+          </div>
+          {notice ? (
+            <div className="rf-library-notice" role="status">
+              <p>{notice}</p>
+              {deletedRow ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={restoring || !!downloading || deleting}
+                  onClick={() => {
+                    void restore();
+                  }}
+                >
+                  {restoring ? "Restoring…" : "Undo delete"}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-      ) : (
-        <div className="rf-library-table-wrap">
-          <table className="rf-library-table">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Saved version</th>
-                <th scope="col">Updated</th>
-                <th scope="col">
-                  <span className="rf-visually-hidden">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <button
-                      className="rf-library-name"
-                      onClick={() => context.onNavigate?.(`${prefix}/${r.id}`)}
-                    >
-                      <span className="rf-library-file-icon">
-                        <FileText size={21} />
-                      </span>
-                      <span>
-                        {r.title}
-                        <small
-                          title={
-                            r.status === "draft"
-                              ? "Saved to your account; reopen to keep editing."
-                              : undefined
+          {error ? (
+            <div className="rf-library-error" role="alert">
+              <p>{error}</p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRetry((v) => v + 1);
+                }}
+                disabled={loading || deleting || restoring || !!downloading}
+              >
+                Retry loading
+              </Button>
+            </div>
+          ) : null}
+          {loading ? (
+            <div className="rf-library-empty">
+              <RequestFeedback
+                label="Loading your saved resumes"
+                reducedMotion={context.reducedMotion}
+              />
+            </div>
+          ) : !shown.length ? (
+            <div className="rf-library-empty">
+              <FileText size={30} />
+              <h3>
+                {query
+                  ? "No matching resumes"
+                  : "Your first resume starts here"}
+              </h3>
+              <p>
+                {query
+                  ? "Try a different name or clear your search."
+                  : "Upload your resume or create a blank one above. No profile setup needed."}
+              </p>
+              {query ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuery("");
+                  }}
+                >
+                  Clear search
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rf-library-table-wrap">
+              <table className="rf-library-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Saved version</th>
+                    <th scope="col">Updated</th>
+                    <th scope="col">
+                      <span className="rf-visually-hidden">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <button
+                          className="rf-library-name"
+                          onClick={() =>
+                            context.onNavigate?.(`${prefix}/${r.id}`)
                           }
                         >
-                          {r.status === "draft" ? "Saved" : r.status}
-                        </small>
-                      </span>
-                    </button>
-                  </td>
-                  <td>
-                    <span className="rf-library-version">
-                      Version {r.currentVersion}
-                    </span>
-                  </td>
-                  <td>
-                    <time dateTime={r.updatedAt}>
-                      {new Intl.DateTimeFormat(undefined, {
-                        dateStyle: "medium",
-                      }).format(new Date(r.updatedAt))}
-                    </time>
-                  </td>
-                  <td>
-                    <div className="rf-library-row-actions">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={
-                          downloading === r.id
-                            ? `Preparing ${r.title} as PDF`
-                            : `Download ${r.title} as PDF`
-                        }
-                        aria-busy={downloading === r.id}
-                        title={
-                          downloading === r.id
-                            ? "Preparing PDF…"
-                            : "Download saved version as PDF"
-                        }
-                        disabled={
-                          creating ||
-                          loadingMore ||
-                          !!downloading ||
-                          deleting ||
-                          restoring
-                        }
-                        onClick={() => {
-                          void download(r);
-                        }}
-                      >
-                        {downloading === r.id ? (
-                          <LoaderCircle size={18} aria-hidden="true" />
-                        ) : (
-                          <Download size={18} aria-hidden="true" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rf-library-delete"
-                        aria-label={`Delete ${r.title}`}
-                        title="Delete resume"
-                        disabled={
-                          creating ||
-                          loadingMore ||
-                          !!downloading ||
-                          deleting ||
-                          restoring
-                        }
-                        onClick={() => {
-                          setDeleteError("");
-                          setDeleteTarget(r);
-                        }}
-                      >
-                        <Trash2 size={18} aria-hidden="true" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {more ? (
-        <Button
-          variant="outline"
-          disabled={
-            loadingMore || loading || deleting || restoring || !!downloading
-          }
-          onClick={() => {
-            void loadMore();
+                          <span className="rf-library-file-icon">
+                            <FileText size={21} />
+                          </span>
+                          <span>
+                            {r.title}
+                            <small
+                              title={
+                                r.status === "draft"
+                                  ? "Saved to your account; reopen to keep editing."
+                                  : undefined
+                              }
+                            >
+                              <DocumentStatus>
+                                {r.status === "draft" ? "Saved" : r.status}
+                              </DocumentStatus>
+                            </small>
+                          </span>
+                        </button>
+                      </td>
+                      <td>
+                        <span className="rf-library-version">
+                          Version {r.currentVersion}
+                        </span>
+                      </td>
+                      <td>
+                        <time dateTime={r.updatedAt}>
+                          {new Intl.DateTimeFormat(undefined, {
+                            dateStyle: "medium",
+                          }).format(new Date(r.updatedAt))}
+                        </time>
+                      </td>
+                      <td>
+                        <div className="rf-library-row-actions">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={
+                              downloading === r.id
+                                ? `Preparing ${r.title} as PDF`
+                                : `Download ${r.title} as PDF`
+                            }
+                            aria-busy={downloading === r.id}
+                            title={
+                              downloading === r.id
+                                ? "Preparing PDF…"
+                                : "Download saved version as PDF"
+                            }
+                            disabled={
+                              creating ||
+                              loadingMore ||
+                              !!downloading ||
+                              deleting ||
+                              restoring
+                            }
+                            onClick={() => {
+                              void download(r);
+                            }}
+                          >
+                            {downloading === r.id ? (
+                              <span aria-hidden="true">…</span>
+                            ) : (
+                              <Download size={18} aria-hidden="true" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rf-library-delete"
+                            aria-label={`Delete ${r.title}`}
+                            title="Delete resume"
+                            disabled={
+                              creating ||
+                              loadingMore ||
+                              !!downloading ||
+                              deleting ||
+                              restoring
+                            }
+                            onClick={() => {
+                              setDeleteError("");
+                              setDeleteTarget(r);
+                            }}
+                          >
+                            <Trash2 size={18} aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {more ? (
+            <Button
+              variant="outline"
+              disabled={
+                loadingMore || loading || deleting || restoring || !!downloading
+              }
+              onClick={() => {
+                void loadMore();
+              }}
+            >
+              {loadingMore ? "Loading…" : "Load more resumes"}
+            </Button>
+          ) : null}
+        </section>
+      </div>
+      {uploadOpen ? (
+        <ResumeImportDialog
+          context={context}
+          api={api}
+          onClose={() => {
+            setUploadOpen(false);
+            if (initialUploadOpen) context.onNavigate?.(prefix);
           }}
-        >
-          {loadingMore ? "Loading…" : "Load more resumes"}
-        </Button>
+        />
       ) : null}
       <ConfirmDeleteDialog
         open={!!deleteTarget}

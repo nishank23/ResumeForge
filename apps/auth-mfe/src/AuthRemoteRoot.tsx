@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { FileText, ShieldCheck } from "lucide-react";
+import { FileText, Moon, ShieldCheck, Sun } from "lucide-react";
 import {
-  AuroraBackdrop,
+  AsciiSpotlight,
   Button,
   GlassCardSurface,
+  RequestFeedback,
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
@@ -81,30 +82,62 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
       data-remote-module="auth_mfe"
       data-react-version={React.version}
     >
-      <AuroraBackdrop staticMode reducedMotion={context?.reducedMotion} />
+      <AsciiSpotlight
+        theme={context?.theme}
+        reducedMotion={context?.reducedMotion}
+        bright
+        fullScreen
+      />
+      <header className="rf-auth-header">
+        <span>Resume workspace</span>
+        {context?.onToggleTheme ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={context.onToggleTheme}
+            aria-label={
+              context.theme === "light"
+                ? "Switch to dark theme"
+                : "Switch to light theme"
+            }
+          >
+            {context.theme === "light" ? (
+              <Moon size={18} aria-hidden="true" />
+            ) : (
+              <Sun size={18} aria-hidden="true" />
+            )}
+          </Button>
+        ) : null}
+      </header>
       <div className="rf-auth-content">
-        <span className="rf-auth-icon">
-          <FileText size={28} />
-        </span>
-        <h1>
-          Your next chapter
-          <br />
-          starts here.
-        </h1>
-        <p>
-          One place for your experience.
-          <br />A focused resume for every opportunity.
-        </p>
+        <div className="rf-auth-story">
+          <span className="rf-auth-icon">
+            <FileText size={28} aria-hidden="true" />
+          </span>
+          <h1>Forge Studio</h1>
+          <p className="rf-auth-tagline">Your experience, well told.</p>
+          <p>
+            Collect your work. Refine your story. Make a resume for the
+            opportunity in front of you.
+          </p>
+          <span className="rf-auth-foot">
+            <ShieldCheck size={16} aria-hidden="true" />
+            Saved to your account. AI edits need your review.
+          </span>
+        </div>
         <GlassCardSurface glowOnHover={false}>
-          <h2>Welcome to resume-forge</h2>
+          <h2>{signedIn ? "Your account" : "Make your next move"}</h2>
           <p>
             {signedIn
-              ? "Google sign-in succeeded. Your local session is active."
-              : "Sign in to your account."}
+              ? "You’re signed in. Your resumes are ready."
+              : "Create your resume workspace. Sign in or get started with Google."}
           </p>
           {error ? <p role="alert">{error}</p> : null}
           {session.status === "loading" ? (
-            <p role="status">Checking your session…</p>
+            <RequestFeedback
+              label="Checking your session"
+              reducedMotion={context?.reducedMotion}
+            />
           ) : null}
           {session.status === "error" && !logoutFailed ? (
             <p role="alert">
@@ -128,15 +161,12 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
             </Button>
           ) : null}
           {signedIn ? (
-            <p>
-              Open your resumes to upload a file or start a new document.
-            </p>
+            <p>Open your resumes to upload a file or start a new document.</p>
           ) : null}
           <div className="rf-auth-actions">
             <Button
               onClick={signedIn ? handleLogout : handleLoginGoogle}
-              disabled={loading}
-              variant="outline"
+              disabled={loading || session.status === "loading" || logoutFailed}
             >
               {loading
                 ? "Please wait…"
@@ -145,7 +175,7 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
                   : "Continue with Google"}
             </Button>
             <Button disabled variant="outline">
-              LinkedIn — awaiting credentials
+              LinkedIn coming soon
             </Button>
             {signedIn && context?.onNavigate ? (
               <Button
@@ -160,11 +190,11 @@ export function AuthRemoteRoot({ context }: AuthRemoteRootProps) {
             ) : null}
           </div>
         </GlassCardSurface>
-        <span className="rf-auth-foot">
-          <ShieldCheck size={16} />
-          Your resume data remains private and secure.
-        </span>
       </div>
+      <footer className="rf-auth-footer">
+        <span>Built around your experience.</span>
+        <span>Your resumes save to your account</span>
+      </footer>
     </section>
   );
 }

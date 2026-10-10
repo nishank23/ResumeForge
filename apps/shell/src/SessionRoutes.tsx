@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
-import { Link, Navigate, Outlet, useLocation, useParams } from "react-router";
-import { Button, type SessionState } from "@resume-forge/shared";
+import { Link, Navigate, Outlet, useParams } from "react-router";
+import {
+  Button,
+  RequestFeedback,
+  type SessionState,
+} from "@resume-forge/shared";
 import { resolveProtectedRoute, sessionHome } from "./routing";
 
 export function SessionRecovery({
@@ -13,7 +17,8 @@ export function SessionRecovery({
   if (session.status === "loading")
     return (
       <div className="rf-empty" role="status" aria-live="polite">
-        <h1>Checking your session</h1>
+        <h1>Opening your workspace</h1>
+        <RequestFeedback label="Checking your session" />
         <p>Your workspace will open once your session is verified.</p>
       </div>
     );
@@ -89,22 +94,20 @@ export function HomeRoute({
   return <SessionRecovery session={session} retry={retry} />;
 }
 
-/** Only the known OAuth success flag triggers handoff; return URLs are ignored. */
+/** A verified identity always owns the destination; callback/return flags are never authority. */
 export function SignInRoute({
   session,
+  retry,
   children,
 }: {
   session: SessionState;
+  retry: () => Promise<void>;
   children: ReactNode;
 }) {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  if (
-    session.status === "authenticated" &&
-    params.get("auth") === "success" &&
-    !params.has("auth_error")
-  )
+  if (session.status === "authenticated")
     return <Navigate to={sessionHome(session.identity)} replace />;
+  if (session.status === "loading")
+    return <SessionRecovery session={session} retry={retry} />;
   return children;
 }
 

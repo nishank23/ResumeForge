@@ -1,3 +1,4 @@
+import { TextComparison } from "@resume-forge/shared";
 import { wordDiff } from "./word-diff";
 
 export function RewriteTextChange({
@@ -27,10 +28,10 @@ export function RewriteTextChange({
       </p>
       <details>
         <summary>Read original and suggested text</summary>
-        <h4>Original</h4>
-        <p>{change.original}</p>
-        <h4>Suggested</h4>
-        <p>{change.proposed}</p>
+        <TextComparison
+          original={change.original}
+          suggested={change.proposed}
+        />
       </details>
     </section>
   );
