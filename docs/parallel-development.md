@@ -1,5 +1,9 @@
 # Frontend and backend development lanes
 
+## Release branch transition — 2026-10-10
+
+The user authorized committing all pending ux-ui-update work, creating and merging its PR into main, retiring local/remote features and ux-ui-update after integration, then creating and checking out **fixes** from merged main. Subsequent work uses **fixes** in the existing frontend worktree. This supersedes earlier active-branch names below. Preserve the detached primary runtime checkout and backend worktree. Branch retirement occurs only after confirming all their commits are included in main.
+
 ## Current UI branch workflow — 2026-10-10
 
 The user requested PR integration of the completed fixes, then a new branch named **ux-ui-update**. PR [#4](https://github.com/resuming-v2/ResumeForge/pull/4) is merged into main at `c713cf43426dd67b10b96ef563baa6d21d7ba03d`. The new branch was created from that commit, pushed to origin and checked out in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. Future work and scheduled checks use **ux-ui-update**, superseding the active features requirement below.

@@ -1,6 +1,13 @@
 import { AssessmentFeedback } from "./AssessmentFeedback";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@resume-forge/shared";
+import {
+  StudioPrompt,
+  AssessmentMeter,
+  Button,
+  DocumentStatus,
+  EvidenceNote,
+  RequestFeedback,
+} from "@resume-forge/shared";
 import type { ReadinessCheck } from "@resume-forge/resume-core";
 import type { JdState } from "@resume-forge/shared-types";
 import { targetLabel, type ResumeDraft } from "./editor-draft";
@@ -17,12 +24,14 @@ export function JdMatchPanel({
   draft,
   services,
   savedVersion,
+  reducedMotion,
   disabledReason,
   onTarget,
 }: {
   draft: ResumeDraft;
   services?: JdServices;
   savedVersion: number;
+  reducedMotion?: boolean;
   disabledReason?: string;
   onTarget: (check: ReadinessCheck, edit: boolean) => void;
 }) {
@@ -102,7 +111,16 @@ export function JdMatchPanel({
       <section className="rf-ats-readiness" aria-label="Job description match">
         <div className="rf-ats-meter-heading">
           <h3>Match this job</h3>
-          <span className="rf-ats-status">
+          <DocumentStatus
+            className="rf-ats-status"
+            tone={
+              busy || stale || evaluation?.partial
+                ? "pending"
+                : evaluation
+                  ? "saved"
+                  : "neutral"
+            }
+          >
             {busy
               ? "Analyzing…"
               : stale
@@ -112,28 +130,12 @@ export function JdMatchPanel({
                   : evaluation
                     ? "Evaluated"
                     : "Not evaluated"}
-          </span>
+          </DocumentStatus>
         </div>
-        <div className="rf-ats-score-value">
-          <span>{evaluation?.score ?? "—"}</span>
-          <span> / 100</span>
-        </div>
-        <div
-          className="rf-ats-track"
-          role="img"
-          aria-label={
-            evaluation?.score != null
-              ? `JD heuristic ${String(evaluation.score)} out of 100`
-              : "Overall JD score unavailable"
-          }
-        >
-          {evaluation?.score != null ? (
-            <span
-              className="rf-readiness-fill"
-              style={{ width: `${String(evaluation.score)}%` }}
-            />
-          ) : null}
-        </div>
+        <AssessmentMeter
+          value={evaluation?.score}
+          label="Job description match"
+        />
         <p>Compare saved facts with this JD. No hiring prediction.</p>
         {evaluation ? (
           <p>
@@ -157,15 +159,17 @@ export function JdMatchPanel({
             : "Add job description"}
         </summary>
         <div className="rf-jd-composer">
-          <label htmlFor="rf-jd-text">Job description</label>
-          <textarea
-            id="rf-jd-text"
+          <StudioPrompt
+            label="Job description"
             value={text}
-            maxLength={12000}
-            disabled={busy}
+            onChange={setText}
             placeholder="Paste responsibilities and required skills"
-            onChange={(e) => {
-              setText(e.target.value);
+            disabled={busy}
+            submitDisabled={blocked || text.trim().length < 50}
+            submitLabel={semantic ? "Analyze with Gemini" : "Analyze match"}
+            onSubmit={() => {
+              if (services && !blocked && text.trim().length >= 50)
+                void mutate(() => services.run(text, semantic, semantic));
             }}
           />
           <div
@@ -208,21 +212,13 @@ export function JdMatchPanel({
             </p>
           ) : null}
           {disabledReason ? <p role="status">{disabledReason}</p> : null}
-          <Button
-            size="sm"
-            disabled={blocked || text.trim().length < 50}
-            aria-busy={busy}
-            onClick={() => {
-              if (services)
-                void mutate(() => services.run(text, semantic, semantic));
-            }}
-          >
-            {busy
-              ? "Analyzing…"
-              : evaluation
-                ? "Recheck this JD"
-                : "Analyze this JD"}
-          </Button>
+
+          {busy ? (
+            <RequestFeedback
+              label="Analyzing job match"
+              reducedMotion={reducedMotion}
+            />
+          ) : null}
           {error ? (
             <p role="alert" className="rf-ai-error">
               {error}
@@ -331,7 +327,7 @@ export function JdMatchPanel({
                 </p>
               ) : null}
               {evaluation.warnings.map((w) => (
-                <p key={w}>{w}</p>
+                <EvidenceNote key={w}>{w}</EvidenceNote>
               ))}
               <p>
                 {evaluation.rubricVersion}

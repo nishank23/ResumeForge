@@ -62,3 +62,11 @@ These are browser navigation controls, not backend permission enforcement. No pr
 - [x] Provide a server-only, noncached loopback adapter with bounded strict responses, timeout, redirect refusal and production guard. Preserve external browser CORS and refresh behavior.
 
 This completes the identity prerequisite for private profile use cases, not action/resource authorization or private route persistence. Hosted service identity/TLS/distributed session storage remain deferred. See [actor contract and verification](../../docs/actor-resolution.md).
+
+## Verified-session welcome handoff — 2026-10-10
+
+The current shell sends every authenticated `/sign-in` visit to the personal resume route derived from the verified identity. Query flags (`signed_in`, legacy `auth`, `auth_error`, or return URLs) never select a workspace or grant access. Pending verification renders session loading; anonymous or failed sessions retain welcome/recovery. This supersedes the historical success-flag-only navigation rule above. Sign-out is available in Preferences; failed revocation still uses the existing retry recovery. Browser testing confirms normal existing-account Google sign-out/sign-in and direct library landing. No OAuth provider, token, membership or service policy changes are included.
+
+## Full-screen auth presentation — 2026-10-10
+
+Signed-out shell entry now uses one edge-to-edge ASCII scene containing its header/theme control, wordmark, Google card and footer. Desktop/mobile layouts and extended static fallback preserve readable controls. Existing provider/session/retry handlers and verified library handoff remain unchanged; this is not additional OAuth acceptance evidence. [Checks and manual steps](../../README.md#full-screen-ascii-sign-in--2026-10-10).

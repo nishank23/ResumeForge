@@ -1,5 +1,9 @@
 # F19 — Existing Resume File Import
 
+## Library modal intake — 2026-10-10
+
+Upload selection, bounded parsing/error recovery and editable review now happen in a dialog over My resumes. Legacy upload URLs share the same component. Nested field editing retains review; discarding does not create a resume. Explicit Confirm and save uses the existing idempotent owned create/version API and navigates to the saved editor. Original parser formats/limits and privacy policy remain unchanged. [Actual checks and manual guide](../../README.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10). Full F19 provenance/OCR/shared-scope acceptance remains pending.
+
 ## Alternate two-column layout fix — 2026-10-09
 
 The supplied final CV exposed row-by-row cross-column interleaving, missed Personal Profile, company-first role metadata and unspaced PDF bullet markers. The local PDF worker now separates independent narrative columns only when a persistent empty gutter and sufficient long text on both sides support that interpretation; right-aligned dates remain in the original row. The parser additionally preserves numeric months, date/location metadata, inline CGPA, standalone skill categories/parenthesized qualifiers, and separate language/proficiency fields.

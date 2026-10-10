@@ -45,3 +45,9 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 ## Usability refinement and verification limits — 2026-09-30
 
 Revisited the earlier completed foundation after the user rejected its crowded presentation. The current UI uses shared styles, focused routes, responsive document/assistant views, honest preview states and concealed diagnostics. Browser evidence is recorded in [UI review](../../docs/ui-redesign-review.md). Narrow mobile, tablet, desktop, native radio keyboard control, section focus, profile validation, dark document isolation and synthetic failure recovery were checked. This is not a comprehensive screen-reader, IME, performance-budget or real authorization test; the earlier broad acceptance checkboxes must not be read as new evidence for those checks.
+
+## Device theme default — 2026-10-10
+
+The authenticated shell and sign-in app default to `prefers-color-scheme`, with device/light/dark selection in Preferences and a browser-local manual override from existing theme toggles. Device changes update system mode; manual mode stays fixed across reload when storage is available. Theme is resolved before initial React mounting and propagated through the existing light/dark federation contract. White resume/PDF surfaces remain independent.
+
+Five new shell regressions cover device/override/reset behavior, persistence, invalid/blocked storage and observer cleanup. All 15 shell tests, shell build/typechecking, lint and whitespace validation pass. Chrome verifies the dark-device default and override/reset reload paths; live OS setting changes and standalone remote presentation were not retested.

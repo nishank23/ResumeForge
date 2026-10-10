@@ -1,5 +1,17 @@
 # UI Context
 
+## Device theme follow-up — 2026-10-10
+
+The shell defaults to the device color scheme and follows changes while system mode is selected. Preferences provides device/light/dark options; manual header/editor toggles save a browser-local override. Device mode clears that override. The shell passes only resolved light/dark values to existing remotes, keeping the public federation contract and white printable paper unchanged.
+
+**Studio entry refinement — 2026-10-10:** Public sign-in has a large Forge Studio wordmark and full-screen AsciiHero without workspace sidebar. Header/theme controls and footer messages sit inside the edge-to-edge scene, with stacked mobile content and a full-height static fallback. Verified sessions always enter the server-derived resume library; pending verification does not flash sign-in. Preferences retains sign-out/recovery. Search is a quiet utility, while selected-entry Improve with AI uses real Performative glow/sparkle. Removed read-only A4/Fit-to-width labels and pink outer paper chrome; automatic scaling and printable margins remain. Navigation fades respect reduced motion. [Current checks and limits](../docs/ux-ui-update-verification.md#latest-entry-and-editor-refinement-evidence).
+
+## Approved Forge Studio system — 2026-10-10
+
+The user approved implementation of Forge Studio on **ux-ui-update**, superseding ocean/teal and earlier second-rail guidance. Dark: Carbon #111014, Glass #1B1921, Raised #292531, Ink #F8F6FD, Secondary #B8B1C6, Violet #B89AFF. Light: Canvas #F5F3F8, Paper #FFFFFF, Raised #EEE8F7, Ink #271F35, Secondary #6B607C, Violet #6631C2. Primary buttons use white text on #8252DE dark / #7439CB light. Sora serves short headings and the wordmark; DM Sans serves controls and prose, with sans fallbacks. Google Fonts uses display=swap; offline font delivery is not guaranteed.
+
+A full-width ASCII spotlight places Upload/Create above the saved library. In the editor, paper sits left and a compact inspector right. Content/Template/Review provide one tool row; Editor/Preview and Focus control the working view. Review contains ATS readiness and Tailor to job only. Temperature is an inert score display with a semantic meter; exact-entry actions and status preferences remain. Secondary rules collapse, while the first priority opens. NodeGraph is contained in welcome/review headers. Validated-response playback supplements the explicit AI diff review. Resume paper, stored typography and PDF output remain independent. [Design](../docs/ux-ui-update-plan.md) and [actual verification](../docs/ux-ui-update-verification.md).
+
 ## Foldable workspace navigation — 2026-10-04
 
 The first workspace column (My resumes, My profile, Job descriptions and Preferences) now folds independently of the editor tools. Collapse sidebar below the Forge logo changes the desktop column to a 72px icon rail; Expand sidebar restores its labels. Icons retain accessible names, native hover titles, active-route indication and 44px navigation targets. The choice stays during workspace navigation and resets on reload. At 760px and below, the existing labeled mobile menu remains authoritative. Short desktop windows scroll the sidebar to keep account navigation reachable. [Actual verification and manual checks](../docs/workspace-sidebar-verification.md).
@@ -9,7 +21,6 @@ The first workspace column (My resumes, My profile, Job descriptions and Prefere
 The user requests a left tool rail with Back to all resumes, Edit Content, Customize Template, ATS Score and Optimize for JD. This explicitly supersedes the earlier panel-removal direction for navigation and section shortcuts; the canvas and existing dialogs remain the content editors. Preserve Forge tokens (#f7f8fa background, #ffffff paper/surface, #172033 ink, #536079 secondary ink, #e0e4ec rules, #4338ca accent), system sans UI and Georgia document hierarchy. A narrow rail, collapsible companion panel and generous paper stage encode distinct navigation/editing/document roles without extra decorative effects. Mobile uses horizontal tools and a scrollable panel.
 
 Browser-only formatting supports one original template preview, spacing presets, margins and four typography roles, with whole-draft local history. Desktop Editor adds stable action gutters; Preview shows actual spacing. No fake ATS ratings/issue counts or working JD/PDF claims. [Scope, evidence and limitations](../docs/editor-panels-verification.md). Full F20/persistence/render contracts remain pending.
-
 
 **Latest frontend correction — 2026-10-04:** Languages are a compact row within Skills, distinct from Programming Languages. Click or Enter/Space opens a category/tag dialog; Skills has no floating AI/action bar or direct inline editing. Extra paragraph/bullet/skill-row spacing is removed while typed line breaks remain. Save/Cancel/history remain local. [Current verification](../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) supersedes historical separate-Languages/per-skill toolbar descriptions below; mobile verification is pending.
 

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
-import { Button, Dialog } from "@resume-forge/shared";
+import {
+  Button,
+  Dialog,
+  RequestFeedback,
+  ValidatedResponse,
+} from "@resume-forge/shared";
 import type {
   RewriteProposal,
   RewriteTarget,
@@ -40,6 +44,7 @@ export function ServerRewriteDialog({
   target,
   services,
   disabledReason,
+  reducedMotion,
   onClose,
   onApplied,
 }: {
@@ -47,6 +52,7 @@ export function ServerRewriteDialog({
   target: RewriteTarget;
   services?: RewriteServices;
   disabledReason?: string;
+  reducedMotion?: boolean;
   onClose: () => void;
   onApplied: (draft: ResumeDraft) => void;
 }) {
@@ -129,7 +135,11 @@ export function ServerRewriteDialog({
             ? proposal.changes.length
               ? "Suggested changes"
               : "No changes needed"
-            : "Improve this description"
+            : section?.kind === "projects"
+              ? "Improve project description"
+              : section?.kind === "experience"
+                ? "Improve experience description"
+                : "Improve summary"
       }
       description={targetLabel(base, target)}
       onOpenChange={(open) => {
@@ -153,11 +163,11 @@ export function ServerRewriteDialog({
             </Button>
           ) : !proposal ? (
             <Button
+              glow
               disabled={busy || !!disabledReason || !original.length}
               aria-busy={busy}
               onClick={() => void request()}
             >
-              <Sparkles size={16} />
               {busy ? "Reviewing…" : "Improve with AI"}
             </Button>
           ) : null}
@@ -190,10 +200,10 @@ export function ServerRewriteDialog({
         </>
       ) : proposal.changes.length ? (
         <>
-          <p>
-            Check that each change preserves your facts. Applying saves one
-            version for this selection.
-          </p>
+          <ValidatedResponse
+            text="Your suggestions are ready. Review each replacement before saving this version."
+            reducedMotion={reducedMotion}
+          />
           <div className="rf-ai-diff-key" aria-label="Change legend">
             <span className="rf-ai-removed-key">Removed</span>
             <span className="rf-ai-added-key">Replacement</span>
@@ -210,6 +220,12 @@ export function ServerRewriteDialog({
           unchanged.
         </p>
       )}
+      {busy ? (
+        <RequestFeedback
+          label="Reviewing your wording"
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
       {disabledReason ? <p role="status">{disabledReason}</p> : null}
       {error ? (
         <p role="alert" className="rf-ai-error">

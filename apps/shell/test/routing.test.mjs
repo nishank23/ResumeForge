@@ -207,34 +207,55 @@ test("actual nested route never mounts children before verification or on scope 
   assert.equal(mounts, 1);
 });
 
-test("OAuth handoff cannot follow injected return URLs or hide callback errors", () => {
+test("verified sign-in visits hand off without mounting the welcome or trusting URL flags", () => {
+  let mounts = 0;
+  function Welcome() {
+    mounts++;
+    return h("p", null, "Sign-in recovery sentinel");
+  }
   const render = (session, search) =>
     renderToStaticMarkup(
       h(
         MemoryRouter,
         { initialEntries: [`/sign-in${search}`] },
-        h(SignInRoute, { session }, h("p", null, "Sign-in recovery sentinel")),
+        h(SignInRoute, { session, retry }, h(Welcome)),
       ),
     );
-  assert.equal(
-    render(authenticated, "?auth=success&returnTo=https://evil.invalid"),
+  for (const search of [
     "",
-  );
-  assert.match(
-    render(
-      authenticated,
-      "?auth_error=cancelled&returnTo=https://evil.invalid",
+    "?signed_in=1",
+    "?auth=success",
+    "?returnTo=https://evil.invalid",
+    "?auth_error=cancelled",
+  ]) {
+    assert.equal(render(authenticated, search), "");
+    assert.equal(mounts, 0);
+  }
+  for (const session of [
+    { status: "anonymous" },
+    { status: "error", operation: "logout" },
+  ]) {
+    assert.match(
+      render(session, "?signed_in=1&returnTo=https://evil.invalid"),
+      /Sign-in recovery sentinel/,
+    );
+  }
+});
+
+test("sign-in waits for session verification without flashing the welcome", () => {
+  const html = renderToStaticMarkup(
+    h(
+      MemoryRouter,
+      null,
+      h(
+        SignInRoute,
+        { session: { status: "loading" }, retry },
+        h("p", null, "Welcome sentinel"),
+      ),
     ),
-    /Sign-in recovery sentinel/,
   );
-  assert.match(
-    render(authenticated, "?auth=success&auth_error=cancelled"),
-    /Sign-in recovery sentinel/,
-  );
-  assert.match(
-    render({ status: "anonymous" }, "?auth=success"),
-    /Sign-in recovery sentinel/,
-  );
+  assert.match(html, /Opening your workspace/);
+  assert.equal(html.includes("Welcome sentinel"), false);
 });
 
 test("legacy onboarding never mounts profile creation or sample content", () => {

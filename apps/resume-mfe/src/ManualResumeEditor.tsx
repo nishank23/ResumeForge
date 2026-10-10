@@ -22,6 +22,9 @@ import {
   type CSSProperties,
 } from "react";
 import {
+  ArrowLeft,
+  Moon,
+  Sun,
   ArrowDown,
   ArrowUp,
   Check,
@@ -30,12 +33,13 @@ import {
   EyeOff,
   Pencil,
   Redo2,
-  Sparkles,
   Trash2,
   Undo2,
 } from "lucide-react";
 import {
   Button,
+  NodeGraphBackdrop,
+  DocumentStatus,
   ConfirmDeleteDialog,
   Dialog,
   StatusBanner,
@@ -147,7 +151,6 @@ export function ManualResumeEditor({
     readiness ? "ats" : "content",
   );
   const [panelOpen, setPanelOpen] = useState(true);
-  const [atsMode, setAtsMode] = useState<"readiness" | "jd">("readiness");
   const [leaving, setLeaving] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const [barHeight, setBarHeight] = useState(72);
@@ -542,20 +545,14 @@ export function ManualResumeEditor({
         { "--editor-header-height": `${String(barHeight)}px` } as CSSProperties
       }
     >
-      <EditorRail
-        active={panel}
-        open={panelOpen}
-        onSelect={(key) => {
-          setPanel(key);
-          setPanelOpen(true);
-        }}
-        onBack={goBack}
-        onToggle={() => {
-          setPanelOpen((open) => !open);
-        }}
-      />
       <div className="rf-editor-main">
         <header ref={barRef} className="rf-editor-bar">
+          <button type="button" className="rf-studio-back" onClick={goBack}>
+            <ArrowLeft size={18} aria-hidden="true" /> All resumes
+          </button>
+          <span className="rf-studio-wordmark">
+            Forge <span>Studio</span>
+          </span>
           <div className="rf-editor-title">
             <div>
               <h1>{history.current.title}</h1>
@@ -576,27 +573,25 @@ export function ManualResumeEditor({
               <Pencil size={14} />
             </Button>
           </div>
-          <div className="rf-mode-switch" aria-label="Resume view">
-            <button
-              type="button"
-              aria-pressed={mode === "editor"}
-              onClick={() => {
-                setMode("editor");
-              }}
-            >
-              Editor
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "preview"}
-              onClick={() => {
-                setMode("preview");
-              }}
-            >
-              Preview
-            </button>
-          </div>
           <div className="rf-editor-actions">
+            {context?.onToggleTheme ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={context.onToggleTheme}
+                aria-label={
+                  context.theme === "dark"
+                    ? "Switch to light theme"
+                    : "Switch to dark theme"
+                }
+              >
+                {context.theme === "dark" ? (
+                  <Sun size={18} />
+                ) : (
+                  <Moon size={18} />
+                )}
+              </Button>
+            ) : null}
             <div className="rf-history-actions">
               <button
                 type="button"
@@ -676,12 +671,15 @@ export function ManualResumeEditor({
         </header>
         <div className="rf-local-draft-note">
           <span>
-            <span className={`rf-draft-dot${dirty ? " is-dirty" : ""}`} />
-            {saving
-              ? "Saving…"
-              : dirty || !savedVersion
-                ? "Unsaved changes"
-                : "Saved to your account"}
+            <DocumentStatus
+              tone={saving || dirty || !savedVersion ? "pending" : "saved"}
+            >
+              {saving
+                ? "Saving…"
+                : dirty || !savedVersion
+                  ? "Unsaved changes"
+                  : "Saved to your account"}
+            </DocumentStatus>
           </span>
           <span id="rf-pdf-limit">
             {onDownload
@@ -707,6 +705,38 @@ export function ManualResumeEditor({
             )}
           </div>
         ) : null}
+        <EditorRail
+          active={panel}
+          open={panelOpen}
+          onSelect={(key) => {
+            setPanel(key);
+            setPanelOpen(true);
+          }}
+          onToggle={() => {
+            setPanelOpen((open) => !open);
+          }}
+        >
+          <div className="rf-mode-switch" aria-label="Resume view">
+            <button
+              type="button"
+              aria-pressed={mode === "editor"}
+              onClick={() => {
+                setMode("editor");
+              }}
+            >
+              Editor
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "preview"}
+              onClick={() => {
+                setMode("preview");
+              }}
+            >
+              Preview
+            </button>
+          </div>
+        </EditorRail>
         <div className={`rf-tools-layout${panelOpen ? " has-panel" : ""}`}>
           {panelOpen ? (
             <aside
@@ -715,7 +745,17 @@ export function ManualResumeEditor({
               className="rf-editor-tool-panel"
               aria-labelledby="rf-tool-panel-heading"
             >
-              <h2 id="rf-tool-panel-heading">{EDITOR_PANELS[panel].label}</h2>
+              <div className="rf-inspector-heading">
+                <NodeGraphBackdrop
+                  density={18}
+                  reducedMotion={context?.reducedMotion}
+                />
+                <h2 id="rf-tool-panel-heading">
+                  {panel === "ats" || panel === "jd"
+                    ? "Resume review"
+                    : EDITOR_PANELS[panel].label}
+                </h2>
+              </div>
               {panel === "content" ? (
                 <ContentPanel
                   draft={history.current}
@@ -740,40 +780,44 @@ export function ManualResumeEditor({
                   onChange={changeAppearance}
                 />
               ) : null}
-              {panel === "ats" ? (
+              {panel === "ats" || panel === "jd" ? (
                 <div
                   className="rf-issue-filters rf-ats-modes"
                   aria-label="ATS assessment type"
                 >
                   <button
                     type="button"
-                    aria-pressed={atsMode === "readiness"}
+                    aria-pressed={panel === "ats"}
                     onClick={() => {
-                      setAtsMode("readiness");
+                      setPanel("ats");
                     }}
                   >
-                    Resume readiness
+                    ATS readiness
                   </button>
                   <button
                     type="button"
-                    aria-pressed={atsMode === "jd"}
+                    aria-pressed={panel === "jd"}
                     onClick={() => {
-                      setAtsMode("jd");
+                      setPanel("jd");
                     }}
                   >
-                    JD match
+                    Tailor to job
                   </button>
                 </div>
               ) : null}
-              {panel === "ats" && atsMode === "readiness" ? (
+              {panel === "ats" ? (
                 <AtsPanel
+                  reducedMotion={context?.reducedMotion}
                   {...readiness}
                   label={(check) => {
                     if (!check.target) return "Resume";
-                    if (check.target.type === "header") return "Contact details";
+                    if (check.target.type === "header")
+                      return "Contact details";
                     const value = targetValue(history.current, check.target);
                     const section = sectionFor(history.current, check.target);
-                    return value && "title" in value ? `${value.title || "Untitled entry"} · ${section?.label ?? ""}` : section?.label ?? "Section";
+                    return value && "title" in value
+                      ? `${value.title || "Untitled entry"} · ${section?.label ?? ""}`
+                      : (section?.label ?? "Section");
                   }}
                   savedVersion={savedVersion}
                   preview={
@@ -810,8 +854,9 @@ export function ManualResumeEditor({
                   onTarget={onAtsTarget}
                 />
               ) : null}
-              {panel === "jd" || (panel === "ats" && atsMode === "jd") ? (
+              {panel === "jd" ? (
                 <JdMatchPanel
+                  reducedMotion={context?.reducedMotion}
                   draft={draft}
                   services={jdMatch}
                   savedVersion={savedVersion}
@@ -881,6 +926,8 @@ export function ManualResumeEditor({
                     <Button
                       size="sm"
                       variant="ghost"
+                      glow
+                      className="rf-ai-entry-action"
                       onClick={() => {
                         setAiSession({
                           base: structuredClone(historyRef.current.current),
@@ -888,7 +935,7 @@ export function ManualResumeEditor({
                         });
                       }}
                     >
-                      <Sparkles size={14} /> Improve with AI
+                      Improve with AI
                     </Button>
                   ) : null}
                   {itemArrows ? (
@@ -982,6 +1029,7 @@ export function ManualResumeEditor({
       ) : null}
       {aiSession && aiTarget ? (
         <ServerRewriteDialog
+          reducedMotion={context?.reducedMotion}
           base={aiSession.base}
           target={aiTarget}
           services={rewrite}

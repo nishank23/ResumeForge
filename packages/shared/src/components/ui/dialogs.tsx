@@ -7,6 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { Button } from "./primitives";
@@ -15,6 +16,9 @@ import { Button } from "./primitives";
 
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const modalStack: HTMLElement[] = [];
+let originalBodyOverflow = "";
 
 function useModalFocusManagement(open: boolean, onClose: () => void) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -35,14 +39,30 @@ function useModalFocusManagement(open: boolean, onClose: () => void) {
     }
 
     const container = dialogRef.current;
+    const focusFirst = () => {
+      if (!container) return;
+      const requested = container.querySelector<HTMLElement>(
+        "[data-modal-initial-focus]",
+      );
+      const visible = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => element.getClientRects().length > 0);
+      (requested?.getClientRects().length
+        ? requested
+        : (visible[0] ?? container)
+      ).focus();
+    };
     if (container) {
-      const firstFocusable =
-        container.querySelector<HTMLElement>("[data-modal-initial-focus]") ??
-        container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      (firstFocusable ?? container).focus();
+      if (!modalStack.length) {
+        originalBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+      }
+      modalStack.push(container);
+      focusFirst();
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (modalStack.at(-1) !== container) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onCloseRef.current();
@@ -52,7 +72,7 @@ function useModalFocusManagement(open: boolean, onClose: () => void) {
       if (event.key === "Tab" && dialogRef.current) {
         const focusables = Array.from(
           dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-        );
+        ).filter((element) => element.getClientRects().length > 0);
         if (focusables.length === 0) return;
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
@@ -68,10 +88,24 @@ function useModalFocusManagement(open: boolean, onClose: () => void) {
       }
     };
 
+    const handleFocus = (event: FocusEvent) => {
+      if (!container || modalStack.at(-1) !== container) return;
+      if (event.target instanceof Node && !container.contains(event.target))
+        focusFirst();
+    };
+    document.addEventListener("focusin", handleFocus);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
+      document.removeEventListener("focusin", handleFocus);
       document.removeEventListener("keydown", handleKeyDown);
-      previousFocusRef.current?.focus();
+      if (container) {
+        const index = modalStack.indexOf(container);
+        if (index >= 0) modalStack.splice(index, 1);
+      }
+      if (!modalStack.length)
+        document.body.style.overflow = originalBodyOverflow;
+      if (previousFocusRef.current?.isConnected)
+        previousFocusRef.current.focus();
     };
   }, [open]);
 
@@ -110,11 +144,23 @@ export function Dialog({
     onOpenChange(false);
   });
 
+  // A step change can remove the focused file input. Keep focus in the review.
+  useEffect(() => {
+    const container = dialogRef.current;
+    if (
+      open &&
+      container &&
+      modalStack.at(-1) === container &&
+      !container.contains(document.activeElement)
+    )
+      container.focus();
+  }, [open, title, dialogRef]);
+
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="rf-modal-layer fixed inset-0 flex items-center justify-center p-4"
       role="presentation"
     >
       <div
@@ -170,7 +216,8 @@ export function Dialog({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -210,9 +257,9 @@ export function ConfirmDeleteDialog({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="rf-modal-layer fixed inset-0 flex items-center justify-center p-4"
       role="presentation"
     >
       <div
@@ -281,7 +328,8 @@ export function ConfirmDeleteDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

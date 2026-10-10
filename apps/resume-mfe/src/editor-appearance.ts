@@ -1,6 +1,6 @@
 import type { ResumeDraft, MutationResult } from "./editor-draft";
 
-// Bounded private editor appearance; PDF rendering remains disconnected.
+// Bounded editor appearance, persisted as exact settings and used by PDF rendering.
 export const PAPER_FONTS = {
   Georgia: 'Georgia, "Times New Roman", serif',
   Times: '"Times New Roman", Times, serif',

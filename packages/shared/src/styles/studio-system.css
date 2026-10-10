@@ -1,0 +1,921 @@
+/* Forge Studio: application surfaces only. Document typography stays in its own stylesheet. */
+.rf-workspace {
+  --frame: var(--surface);
+  --frame-ink: var(--foreground);
+  --frame-muted: var(--muted-foreground);
+  --frame-rule: var(--border);
+}
+.rf-brand,
+.rf-studio-wordmark,
+.rf-page-heading h1,
+.rf-resume-library .rf-library-start h2,
+.rf-inspector-heading h2,
+.rf-auth h1,
+.rf-auth h2 {
+  font-family: var(--font-heading);
+}
+.rf-brand {
+  font-size: 18px;
+  letter-spacing: -0.7px;
+}
+.rf-brand-studio {
+  color: var(--primary);
+  font-weight: 450;
+}
+.rf-brand-mark {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rf-nav a[aria-current="page"] {
+  color: var(--primary);
+  background: var(--surface-muted);
+}
+.rf-nav a:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+.rf-sidebar .rf-avatar {
+  background: var(--surface-muted);
+  color: var(--primary);
+}
+.rf-sidebar .rf-sidebar-toggle,
+.rf-workspace-label div > span,
+.rf-account small {
+  font-size: 12px;
+}
+.rf-workspace-label strong,
+.rf-nav a,
+.rf-account {
+  font-size: 14px;
+}
+.rf-preview-note p {
+  font-size: 12px;
+}
+.rf-page-heading h1 {
+  letter-spacing: -1.2px;
+  font-size: clamp(28px, 3vw, 36px);
+}
+.rf-topbar {
+  background: var(--background);
+  min-height: 64px;
+  font-size: 13px;
+}
+.rf-button.pui-btn[data-variant="default"],
+.rf-primary-link {
+  background: linear-gradient(145deg, var(--action-fill), var(--action-hover));
+  color: white;
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.rf-button.pui-btn[data-variant="default"]:hover:not(:disabled) {
+  background: var(--action-hover);
+}
+.rf-button.pui-btn {
+  font-size: 14px;
+}
+.rf-button.pui-btn[data-size="sm"] {
+  font-size: 13px;
+  min-height: 36px;
+}
+.rf-text-link {
+  color: var(--primary);
+}
+
+/* ASCII is the distinctive intake surface, with opaque copy above its quiet field. */
+.rf-ascii-spotlight {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+.rf-ascii-spotlight > pre {
+  margin: 0;
+  position: absolute;
+  inset: 0;
+  color: var(--primary);
+  opacity: 0.18;
+  font:
+    11px/15px ui-monospace,
+    monospace;
+  white-space: pre;
+  user-select: none;
+  mask-image: linear-gradient(to right, transparent, #000 60%);
+}
+.rf-ascii-spotlight[data-decorative-state="canvas-active"] > pre {
+  visibility: hidden;
+}
+.rf-resume-library .rf-library-desk {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.rf-resume-library .rf-library-desk > * {
+  width: 100%;
+}
+.rf-resume-library .rf-library-desk .rf-library-start.pui-glass-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 30px;
+  margin: 0;
+  padding: 40px;
+  min-height: 230px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+  overflow: hidden;
+}
+.rf-resume-library .rf-library-start > :not(.rf-ascii-spotlight) {
+  position: relative;
+  z-index: 1;
+}
+.rf-resume-library .rf-library-start .rf-library-paper {
+  display: none;
+}
+.rf-resume-library .rf-library-start h2 {
+  max-width: 20ch;
+  margin: 0 0 14px;
+  font-size: clamp(24px, 2.8vw, 34px);
+  letter-spacing: -1px;
+  line-height: 1.25;
+}
+.rf-resume-library .rf-library-start p {
+  max-width: 48ch;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.rf-resume-library .rf-library-start-actions {
+  min-width: 195px;
+}
+.rf-resume-library .rf-library-collection {
+  flex: 1;
+}
+.rf-resume-library .rf-library-table {
+  font-size: 14px;
+}
+.rf-resume-library .rf-library-table th {
+  font-size: 12px;
+}
+.rf-resume-library .rf-library-table td {
+  padding-block: 22px;
+}
+.rf-page .rf-upload-panel {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(24px, 5vw, 52px);
+  border-radius: 18px;
+}
+.rf-page .rf-upload-panel > :not(.rf-ascii-spotlight) {
+  position: relative;
+  z-index: 1;
+}
+.rf-page .rf-upload-panel > p {
+  max-width: 62ch;
+}
+
+/* Native, labeled form controls compose Performative Prompt / PromptHero. */
+.rf-studio-prompt {
+  min-width: 0;
+  width: 100%;
+}
+.rf-studio-prompt > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  margin-bottom: 8px;
+}
+.rf-studio-prompt :is(.pui-prompt, .pui-prompt-hero) {
+  width: 100%;
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.rf-studio-prompt :is(input, textarea) {
+  width: 100%;
+  min-width: 0;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.rf-studio-prompt textarea {
+  min-height: 112px;
+  max-height: 220px;
+  padding: 14px;
+}
+.rf-studio-prompt input {
+  min-height: 44px;
+}
+.rf-studio-prompt .pui-prompt-hero {
+  padding: 8px;
+  gap: 10px;
+}
+.rf-studio-prompt form:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.rf-studio-prompt button {
+  min-height: 40px;
+  font: inherit;
+}
+.rf-studio-prompt button[type="submit"] {
+  background: var(--action-fill);
+  color: white;
+  border-radius: 8px;
+}
+.rf-studio-prompt :is(input, textarea)::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+.rf-studio-prompt .pui-prompt__toolbar {
+  font-size: 12px;
+}
+.rf-resume-library .rf-library-filters .rf-studio-prompt {
+  flex: 1;
+}
+
+/* Search is a utility action. The AI glow belongs to contextual rewriting. */
+.rf-studio-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+}
+.rf-studio-search > label {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+.rf-studio-search .pui-prompt {
+  min-width: 0;
+  padding: 0 14px;
+}
+.rf-studio-search > .rf-button {
+  align-self: stretch;
+  min-height: 46px;
+  box-shadow: none;
+}
+
+/* A document-first studio with one review inspector. */
+.rf-tools-workspace .rf-editor-bar {
+  position: relative;
+  min-height: 90px;
+  gap: 18px;
+  padding: 18px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.rf-studio-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.rf-studio-back:hover {
+  color: var(--primary);
+}
+.rf-studio-wordmark {
+  font-size: 19px;
+  letter-spacing: -0.7px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.rf-studio-wordmark > span {
+  color: var(--primary);
+  font-weight: 400;
+}
+.rf-tools-workspace .rf-editor-title {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+  gap: 6px;
+}
+.rf-tools-workspace .rf-editor-title h1 {
+  font-size: 15px;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rf-tools-workspace .rf-editor-title p {
+  font-size: 12px;
+}
+.rf-tools-workspace .rf-local-draft-note {
+  padding: 8px 28px;
+  font-size: 12px;
+  background: var(--background);
+}
+.rf-tools-workspace .rf-editor-rail {
+  padding: 10px 28px;
+  background: var(--background);
+  gap: 12px;
+}
+.rf-tools-workspace .rf-editor-rail button {
+  font-size: 13px;
+}
+.rf-tools-workspace .rf-rail-tabs {
+  flex: 1;
+  gap: 4px;
+}
+.rf-tools-workspace .rf-mode-switch {
+  background: var(--surface);
+}
+.rf-tools-workspace .rf-mode-switch button {
+  min-height: 36px;
+}
+.rf-tools-workspace .rf-editor-rail .rf-panel-toggle {
+  margin: 0;
+}
+.rf-tools-workspace .rf-tools-layout {
+  padding: 0 24px 32px;
+}
+.rf-tools-workspace .rf-tools-layout.has-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 22px;
+  align-items: start;
+}
+.rf-tools-workspace .rf-editor-tool-panel {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.rf-inspector-heading {
+  position: relative;
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  margin: -4px 0 14px;
+}
+.rf-inspector-heading .rf-decorative-layer {
+  mask-image: linear-gradient(to right, transparent 30%, #000);
+}
+.rf-inspector-heading h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding-top: 6px;
+  font-size: 19px;
+  font-weight: 550;
+  letter-spacing: -0.5px;
+}
+.rf-tools-workspace .rf-paper-stage {
+  grid-column: 1;
+  grid-row: 1;
+  background: transparent;
+  padding: 22px clamp(0px, 1.2vw, 16px) 40px;
+}
+.rf-tools-workspace .rf-paper-meta {
+  font-size: 12px;
+}
+.rf-tools-workspace .rf-paper-meta > span:last-child {
+  display: none;
+}
+.rf-tools-workspace .rf-document-container {
+  box-shadow: 0 20px 65px #00000024;
+}
+.rf-tools-workspace .rf-service-tools .rf-ats-readiness {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.rf-ats-modes button {
+  font-size: 13px;
+}
+.rf-rule-card > .rf-rule-heading {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  align-items: center;
+}
+.rf-rule-heading::-webkit-details-marker {
+  display: none;
+}
+.rf-rule-heading::after {
+  content: "+";
+  color: var(--muted-foreground);
+  margin-left: auto;
+}
+.rf-rule-card[open] > .rf-rule-heading::after {
+  content: "−";
+}
+.rf-rule-card .rf-rule-body {
+  padding-top: 8px;
+}
+.rf-rule-card {
+  background: var(--surface);
+  border-left-width: 1px;
+  border-radius: 10px;
+}
+.rf-rule-card[data-check-status="passed"] {
+  border-left-color: var(--border);
+}
+.rf-rule-target,
+.rf-rule-reason,
+.rf-rule-instances {
+  font-size: 13px;
+}
+.rf-rule-reason summary {
+  min-height: 36px;
+  padding: 6px 0;
+}
+.rf-readiness-explainer {
+  font-size: 12px;
+}
+.rf-rule-card h4 {
+  font-size: 14px;
+}
+.rf-issue-filters button {
+  font-size: 12px;
+}
+.rf-ats-meter-heading h3 {
+  font-size: 14px;
+}
+
+/* Temperature has no read-only API: inert removes its upstream pointer/keyboard controls. */
+.rf-studio-score {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 14px 0;
+  font-variant-numeric: tabular-nums;
+}
+.rf-studio-score strong {
+  color: var(--foreground);
+  font: 550 36px/1 var(--font-heading);
+  letter-spacing: -1.5px;
+}
+.rf-studio-score > span {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.rf-temperature-display .pui-temperature {
+  min-height: 12px;
+  padding: 0;
+  cursor: default;
+  display: block;
+  font: inherit;
+}
+.rf-temperature-display .pui-temperature__track {
+  min-height: 12px;
+  margin: 0;
+}
+.rf-temperature-display
+  :is(
+    .pui-temperature__poles,
+    .pui-temperature__levels,
+    .pui-temperature__divider,
+    .pui-temperature__ripple
+  ) {
+  display: none;
+}
+.rf-temperature-display .pui-temperature__line {
+  border: 0;
+  height: 7px;
+  border-radius: 8px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    to right,
+    var(--primary) 0%,
+    var(--primary) calc(var(--pui-temp-pos) * 100%),
+    var(--border) calc(var(--pui-temp-pos) * 100%),
+    var(--border) 100%
+  );
+}
+.rf-temperature-display .pui-temperature__marker {
+  width: 9px;
+  height: 9px;
+  font-size: 0;
+  background: var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--surface-muted);
+  transition: none;
+}
+.rf-assessment-meter[data-unavailable="true"] .pui-temperature__marker {
+  display: none;
+}
+.rf-assessment-meter {
+  margin-bottom: 12px;
+}
+
+/* Scoped response review retains semantic del/ins and accessible dialogs. */
+.rf-validated-response.pui-chat-bubble {
+  background: var(--surface-muted);
+  border-color: var(--border);
+  box-shadow: none;
+  color: var(--foreground);
+  font: inherit;
+  margin-bottom: 20px;
+}
+.rf-validated-response {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.rf-ai-dialog.rf-ai-dialog {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 24px 90px #00000050;
+}
+.rf-ai-dialog.rf-ai-dialog > div:first-child h2 {
+  font-family: var(--font-heading);
+  font-size: 24px;
+}
+.rf-ai-dialog .rf-ai-dialog-body > h3 {
+  font-size: 14px;
+  color: var(--foreground);
+}
+.rf-ai-dialog .rf-ai-dialog-body > p,
+.rf-ai-scope {
+  font-size: 14px;
+}
+.rf-document-container > .rf-floating-actions {
+  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px #00000025;
+}
+.rf-ai-action.rf-button.pui-btn {
+  color: white;
+  background: linear-gradient(135deg, var(--action-fill), var(--action-hover));
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 8px;
+  isolation: isolate;
+  padding-inline: 12px;
+}
+.rf-ai-action.rf-button.pui-btn:hover {
+  background: var(--action-hover);
+}
+.rf-ai-action.pui-btn--glow::before {
+  background: linear-gradient(135deg, var(--primary), var(--action-fill));
+  animation: none;
+  opacity: 0.3;
+}
+
+@media (max-width: 1199px) and (min-width: 901px) {
+  .rf-tools-workspace .rf-tools-layout.has-panel {
+    grid-template-columns: minmax(0, 1fr) 315px;
+    gap: 10px;
+  }
+  .rf-tools-workspace .rf-editor-bar {
+    gap: 12px;
+    padding-inline: 20px;
+  }
+  .rf-studio-wordmark {
+    display: none;
+  }
+  .rf-tools-workspace .rf-editor-tool-panel {
+    padding: 16px;
+  }
+}
+@media (max-width: 900px) {
+  .rf-tools-workspace .rf-tools-layout.has-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .rf-tools-workspace .rf-editor-tool-panel {
+    position: static;
+    width: 100%;
+    max-height: 400px;
+    order: 1;
+    margin: 0;
+  }
+  .rf-tools-workspace .rf-paper-stage {
+    width: 100%;
+    order: 0;
+  }
+  .rf-tools-workspace .rf-editor-title {
+    border: 0;
+    padding-left: 0;
+  }
+  .rf-tools-workspace .rf-editor-bar {
+    gap: 12px;
+  }
+  .rf-tools-workspace .rf-editor-actions {
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+  .rf-resume-library .rf-library-desk .rf-library-start.pui-glass-card {
+    padding: 28px;
+    gap: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .rf-tools-workspace .rf-editor-bar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .rf-studio-wordmark {
+    margin-left: auto;
+    font-size: 18px;
+  }
+  .rf-tools-workspace .rf-editor-title {
+    order: 2;
+    flex: 1 1 100%;
+  }
+  .rf-tools-workspace .rf-editor-title h1 {
+    max-width: 32ch;
+  }
+  .rf-tools-workspace .rf-editor-actions {
+    order: 3;
+    margin: 0;
+    width: 100%;
+    gap: 4px;
+  }
+  .rf-tools-workspace .rf-editor-actions .rf-button.pui-btn {
+    font-size: 12px;
+    padding: 6px 9px;
+  }
+  .rf-tools-workspace .rf-editor-actions .rf-history-actions {
+    padding-right: 4px;
+    margin-right: 0;
+  }
+  .rf-tools-workspace .rf-editor-actions .rf-button[data-size="icon"] {
+    width: 34px;
+  }
+  .rf-tools-workspace .rf-local-draft-note {
+    padding: 10px 16px;
+  }
+  .rf-local-draft-note > span:last-child {
+    display: none;
+  }
+  .rf-tools-workspace .rf-editor-rail {
+    padding: 8px 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .rf-tools-workspace .rf-rail-tabs {
+    order: 0;
+    flex: 1 1 100%;
+    min-width: 0;
+    display: flex;
+  }
+  .rf-tools-workspace .rf-editor-rail .rf-rail-tabs button {
+    flex-direction: row;
+    min-height: 44px;
+    font-size: 13px;
+    padding: 8px;
+    flex: 1;
+    min-width: 0;
+    gap: 6px;
+  }
+  .rf-tools-workspace .rf-mode-switch {
+    margin-right: auto;
+  }
+  .rf-tools-workspace .rf-mode-switch button {
+    min-height: 40px;
+  }
+  .rf-tools-workspace .rf-tools-layout {
+    padding: 0 12px 24px;
+  }
+  .rf-tools-workspace .rf-paper-stage {
+    padding-inline: 0;
+  }
+  .rf-paper-meta > span {
+    font-size: 12px;
+  }
+  .rf-resume-library .rf-library-desk .rf-library-start.pui-glass-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 26px;
+    min-height: 300px;
+  }
+  .rf-resume-library .rf-library-start-actions {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .rf-resume-library .rf-library-start-actions > button {
+    flex: 1;
+  }
+  .rf-resume-library .rf-library-start h2 {
+    max-width: 18ch;
+    font-size: 27px;
+  }
+  .rf-resume-library .rf-library-start p {
+    font-size: 14px;
+  }
+  .rf-resume-library .rf-library-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .rf-resume-library .rf-library-filters .rf-library-sort {
+    justify-content: flex-end;
+  }
+  .rf-ai-dialog.rf-ai-dialog > div:first-child h2 {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rf-studio-prompt *,
+  .rf-validated-response * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+[data-reduced-motion="true"] :is(.rf-studio-prompt, .rf-validated-response) * {
+  animation: none !important;
+  transition: none !important;
+}
+@media print {
+  .rf-tools-workspace
+    :is(
+      .rf-editor-bar,
+      .rf-editor-rail,
+      .rf-editor-tool-panel,
+      .rf-local-draft-note
+    ) {
+    display: none !important;
+  }
+  .rf-tools-workspace .rf-tools-layout {
+    display: block !important;
+    padding: 0;
+  }
+  .rf-tools-workspace .rf-paper-stage {
+    padding: 0;
+  }
+  .rf-tools-workspace .rf-document-container {
+    box-shadow: none;
+  }
+}
+
+/* Public entry has no workspace navigation; verified sessions reveal it. */
+.rf-workspace.rf-workspace-entry {
+  grid-template-columns: minmax(0, 1fr);
+}
+.rf-workspace-entry .rf-main {
+  padding: 0;
+}
+.rf-workspace-entry .rf-auth {
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+}
+.rf-auth-header,
+.rf-auth-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted-foreground);
+}
+.rf-auth-header {
+  min-height: 72px;
+  padding: 14px clamp(20px, 6vw, 96px);
+  font-size: 13px;
+}
+.rf-auth-footer {
+  padding: 20px clamp(20px, 6vw, 96px);
+  font-size: 11px;
+}
+.rf-workspace-entry .rf-auth-content {
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 1640px;
+  padding: clamp(24px, 4dvh, 48px) clamp(20px, 6vw, 96px);
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.9fr);
+}
+.rf-workspace-entry .rf-auth-story {
+  padding-block: 0;
+}
+.rf-auth h1 {
+  font-size: clamp(56px, 6.5vw, 96px);
+  line-height: 1.04;
+  letter-spacing: -0.065em;
+  max-width: none;
+  color: var(--foreground);
+}
+.rf-auth-story > .rf-auth-tagline {
+  font-family: var(--font-heading);
+  font-size: clamp(22px, 2.4vw, 32px);
+  line-height: 1.3;
+  letter-spacing: -0.8px;
+  color: var(--primary);
+  margin-top: 22px;
+}
+.rf-auth .rf-ascii-spotlight {
+  mask-image: linear-gradient(110deg, transparent 8%, #000 65%);
+}
+.rf-auth .rf-ascii-spotlight > pre {
+  opacity: 0.3;
+  mask-image: none;
+}
+.rf-auth .pui-glass-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.rf-auth .rf-auth-icon {
+  margin-bottom: 40px;
+}
+.rf-route-view {
+  animation: rf-route-arrive 220ms ease-out;
+}
+@keyframes rf-route-arrive {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.rf-workspace:not(.rf-workspace-entry) .rf-sidebar {
+  animation: rf-route-arrive 220ms ease-out;
+}
+.rf-tools-workspace {
+  background: #f1f1f3;
+}
+[data-theme="dark"] .rf-tools-workspace {
+  background: #151418;
+}
+@media (max-width: 980px) {
+  .rf-workspace-entry .rf-auth-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .rf-workspace-entry .rf-auth .pui-glass-card {
+    width: 100%;
+    max-width: 560px;
+  }
+}
+@media (max-width: 760px) {
+  .rf-workspace-entry .rf-auth-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding-block: 24px 40px;
+  }
+  .rf-auth-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .rf-auth h1 {
+    font-size: clamp(44px, 10vw, 64px);
+  }
+  .rf-auth .rf-auth-icon {
+    margin-bottom: 26px;
+  }
+  .rf-auth-story {
+    padding-block: 0;
+  }
+  .rf-auth .pui-glass-card {
+    padding: 24px;
+  }
+  .rf-ai-action.rf-button.pui-btn {
+    font-size: 11px;
+    padding-inline: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rf-route-view,
+  .rf-workspace .rf-sidebar {
+    animation: none;
+  }
+}
+[data-reduced-motion="true"] :is(.rf-route-view, .rf-sidebar) {
+  animation: none;
+}
+
+/* Portals escape the editor's scrolling/painted panels and paper transforms. */
+.rf-modal-layer {
+  z-index: 1000;
+  overflow-y: auto;
+}
+.rf-modal-layer > [role="dialog"],
+.rf-modal-layer > [role="alertdialog"] {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* The AI symbol must retain contrast on a filled action in either theme. */
+.rf-ai-action.rf-button.pui-btn .pui-sparkle {
+  background: none;
+  background-clip: border-box;
+  color: inherit;
+  animation: none;
+  font-size: 18px;
+  line-height: 1;
+  order: -1;
+  flex-shrink: 0;
+}

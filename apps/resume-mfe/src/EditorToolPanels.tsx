@@ -1,5 +1,5 @@
 export { ReadinessPanel as AtsPanel } from "./ReadinessPanel";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -12,11 +12,10 @@ import {
   Palette,
   Gauge,
   Briefcase,
-  ArrowLeft,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Minimize2,
+  PanelRightOpen,
 } from "lucide-react";
-import { Button, Dialog } from "@resume-forge/shared";
+import { Button } from "@resume-forge/shared";
 import {
   SECTION_LABELS,
   type DraftTarget,
@@ -35,11 +34,14 @@ import {
   type TypeRole,
 } from "./editor-appearance";
 
+import { TemplateGallery } from "./templates/TemplateGallery";
+import { matchingTemplate, RESUME_TEMPLATES } from "./templates/registry";
+
 export const EDITOR_PANELS = {
-  content: { label: "Edit Content", icon: FileText },
-  design: { label: "Customize Template", icon: Palette },
-  ats: { label: "ATS Score", icon: Gauge },
-  jd: { label: "Optimize for JD", icon: Briefcase },
+  content: { label: "Content", icon: FileText },
+  design: { label: "Template", icon: Palette },
+  ats: { label: "ATS readiness", icon: Gauge },
+  jd: { label: "Tailor to job", icon: Briefcase },
 } as const;
 export type EditorPanel = keyof typeof EDITOR_PANELS;
 
@@ -47,54 +49,53 @@ export function EditorRail({
   active,
   open,
   onSelect,
-  onBack,
+  children,
   onToggle,
 }: {
   active: EditorPanel;
   open: boolean;
   onSelect: (panel: EditorPanel) => void;
-  onBack: () => void;
+  children?: ReactNode;
   onToggle: () => void;
 }) {
   return (
     <nav className="rf-editor-rail" aria-label="Resume editor tools">
-      <button className="rf-rail-back" type="button" onClick={onBack}>
-        <ArrowLeft size={20} aria-hidden="true" />
-        <span>Back to all resumes</span>
-      </button>
       <div className="rf-rail-tabs">
-        {(Object.keys(EDITOR_PANELS) as EditorPanel[]).map((key) => {
+        {(["content", "design", "ats"] as const).map((key) => {
           const { label, icon: Icon } = EDITOR_PANELS[key];
           return (
             <button
               key={key}
               type="button"
-              aria-pressed={active === key && open}
+              aria-pressed={
+                (active === key || (key === "ats" && active === "jd")) && open
+              }
               aria-controls="rf-editor-tool-panel"
               onClick={() => {
                 onSelect(key);
               }}
             >
               <Icon size={21} aria-hidden="true" />
-              <span>{label}</span>
+              <span>{key === "ats" ? "Review" : label}</span>
             </button>
           );
         })}
       </div>
+      {children}
       <button
         className="rf-panel-toggle"
         type="button"
-        aria-label={open ? "Collapse tool panel" : "Expand tool panel"}
+        aria-label={open ? "Focus on resume" : "Show tools"}
         aria-expanded={open}
         aria-controls="rf-editor-tool-panel"
         onClick={onToggle}
       >
         {open ? (
-          <PanelLeftClose size={19} aria-hidden="true" />
+          <Minimize2 size={19} aria-hidden="true" />
         ) : (
-          <PanelLeftOpen size={19} aria-hidden="true" />
+          <PanelRightOpen size={19} aria-hidden="true" />
         )}
-        <span>{open ? "Collapse" : "Expand"}</span>
+        <span>{open ? "Focus" : "Show tools"}</span>
       </button>
     </nav>
   );
@@ -339,6 +340,7 @@ export function DesignPanel({
   onChange: (value: EditorAppearance) => void;
 }) {
   const [gallery, setGallery] = useState(false);
+  const currentTemplate = matchingTemplate(appearance);
   const changeType = (
     role: TypeRole,
     patch: Partial<EditorAppearance["typography"][TypeRole]>,
@@ -350,8 +352,8 @@ export function DesignPanel({
   return (
     <div className="rf-design-tools">
       <p className="rf-tool-hint">
-        Save changes stores formatting with this resume. Zoom changes only the
-        view.
+        Choose a style, then adjust the details. Save changes stores formatting
+        with this resume.
       </p>
       <Button
         variant="outline"
@@ -364,8 +366,10 @@ export function DesignPanel({
       </Button>
       <details className="rf-tool-disclosure" open>
         <summary>Choose a template</summary>
-        <p>Forge Classic</p>
-        <span className="rf-tool-hint">One original layout is available.</span>
+        <p>{currentTemplate?.name ?? "Custom formatting"}</p>
+        <span className="rf-tool-hint">
+          {RESUME_TEMPLATES.length} original styles. All your content stays.
+        </span>
         <Button
           variant="outline"
           size="sm"
@@ -373,7 +377,7 @@ export function DesignPanel({
             setGallery(true);
           }}
         >
-          View template
+          Browse templates
         </Button>
       </details>
       <details className="rf-tool-disclosure">
@@ -489,36 +493,12 @@ export function DesignPanel({
           </fieldset>
         ))}
       </details>
-      <p className="rf-tool-hint">
-        More templates and PDF export are not available yet.
-      </p>
-      <Dialog
+      <TemplateGallery
         open={gallery}
         onOpenChange={setGallery}
-        title="Choose a template"
-        description="The current local editor has one original template. More layouts will be added later."
-      >
-        <div className="rf-template-card">
-          <div className="rf-template-mini" aria-hidden="true">
-            <strong>Alex Rivera</strong>
-            <i>Example professional headline</i>
-            {["Summary", "Experience", "Education", "Projects", "Skills"].map(
-              (name) => (
-                <div key={name}>
-                  <b>{name}</b>
-                  <span />
-                  <span />
-                </div>
-              ),
-            )}
-          </div>
-          <div>
-            <strong>Forge Classic</strong>
-            <p>Centered header, serif text and a single column.</p>
-            <span>Current template</span>
-          </div>
-        </div>
-      </Dialog>
+        appearance={appearance}
+        onSelect={onChange}
+      />
     </div>
   );
 }

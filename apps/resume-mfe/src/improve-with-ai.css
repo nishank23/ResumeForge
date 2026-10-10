@@ -7,26 +7,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #8b5cf6;
-  border-radius: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   isolation: isolate;
-}
-.rf-ai-dialog::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle, #8b5cf633 1.5px, transparent 1.5px);
-  background-size: 12px 12px;
-  mask-image: linear-gradient(
-    110deg,
-    #000,
-    transparent 28%,
-    transparent 76%,
-    #000
-  );
-  height: 128px;
 }
 .rf-ai-dialog > div:first-child {
   flex-shrink: 0;
@@ -243,7 +226,6 @@
     padding-inline: 12px;
   }
   .rf-ai-diff-key > span:last-child {
-    flex-basis: 100%;
     margin-left: 0;
   }
 }
@@ -275,4 +257,41 @@
   font-size: 14px;
   line-height: 1.7;
 }
-.rf-ai-original p + p { margin-top: 10px; }
+.rf-ai-original p + p {
+  margin-top: 10px;
+}
+
+/* A document review sheet; no competitor sparkle field or colored modal outline. */
+.rf-ai-dialog {
+  border-top: 4px solid var(--primary);
+  background: var(--surface);
+}
+.rf-ai-dialog > div:first-child h2::before {
+  display: none;
+}
+.rf-ai-dialog > div:first-child {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.rf-ai-original {
+  border-left: 3px solid var(--primary);
+  background: var(--surface-muted);
+}
+.rf-ai-dialog-body > h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  margin-bottom: 10px;
+}
+.rf-ai-dialog-body > p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 16px;
+  max-width: 75ch;
+}
+.rf-ai-change details[open] {
+  margin-top: 18px;
+}
+.rf-ai-change .rf-text-comparison {
+  margin-top: 12px;
+}

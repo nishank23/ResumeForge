@@ -1,3 +1,7 @@
+## Current user-authorized branch transition — 2026-10-10
+
+After the authorized ux-ui-update PR merges, all subsequent development uses **fixes** in the existing frontend worktree. This supersedes historical frontend/features/ux-ui-update branch names; preserve other checkouts and runtime ownership. See docs/parallel-development.md.
+
 # resume-forge — Agent Instructions
 
 ## Active worktree and UI branch — 2026-10-10

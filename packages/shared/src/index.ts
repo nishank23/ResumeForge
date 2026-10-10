@@ -171,3 +171,17 @@ export type {
 } from "@resume-forge/shared-types";
 export { useSession } from "./auth/use-session";
 export type { SessionState, SessionIdentity } from "./auth/session";
+
+export {
+  DocumentStatus,
+  RequestFeedback,
+  TextComparison,
+  EvidenceNote,
+} from "./components/ui/forge-feedback";
+
+export {
+  AsciiSpotlight,
+  AssessmentMeter,
+  StudioPrompt,
+  ValidatedResponse,
+} from "./components/ui/studio-widgets";
