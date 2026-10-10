@@ -5,7 +5,7 @@ import type {
 } from "@resume-forge/shared-types";
 import { editorDocumentSchema } from "@resume-forge/shared-types";
 import { AiUnavailable } from "./ai.js";
-import { REWRITE_GRAMMAR, canonicalRewriteWord } from "./rewrite-vocabulary.js";
+import { REWRITE_GRAMMAR, canonicalRewriteWord, canonicalRewriteText } from "./rewrite-vocabulary.js";
 type Rich = EditorDocument["sections"][number]["summary"];
 export function plain(node: {
   type: string;
@@ -100,7 +100,7 @@ export function assertContactFree(text: string, doc: EditorDocument) {
 }
 const grammar = new Set(REWRITE_GRAMMAR.split(" "));
 const words = (text: string) =>
-  (text.toLowerCase().match(/[\p{L}][\p{L}\p{N}+#.-]*/gu) ?? []).map((word) =>
+  (canonicalRewriteText(text).toLowerCase().match(/[\p{L}][\p{L}\p{N}+#.-]*/gu) ?? []).map((word) =>
     canonicalRewriteWord(word.replace(/[.-]+$/, "")),
   );
 const numbers = (text: string) =>

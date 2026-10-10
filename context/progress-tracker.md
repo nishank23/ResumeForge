@@ -1,5 +1,11 @@
 # Progress Tracker
 
+## Project rewrite shorthand rejection — 2026-10-10
+
+Reproduced the requested final-CV project failure on **features**. Live/provider diagnostics identified singular app/application and UI/user interface false rejections. Added the exact singular alias and whole-phrase normalization, and aligned the Gemini prompt while retaining separate singular/plural terms and factual/numeric/technical/contact/target safeguards. Temporary diagnostic instrumentation is removed; real input/output remains outside Git.
+
+**Actual checks:** 86 resume-service unit tests; service build and lint; whitespace check. Live Chrome reviews succeed for both projects with inline replacements. Both were canceled; reload shows saved version 1 and original descriptions. No model, schema, grants or persistence changes. Validated for the requested PR integration into main. [Manual checks](../README.md#project-rewrite-shorthand-fix--2026-10-10). Broader AI quality calibration remains pending.
+
 ## Release validation — 2026-10-10
 
 Validated the completed **features** changes for the user-requested publication to **origin/main**, including the existing saved-PDF/library commit and the pending ATS/JD, Gemini, private vector, parser and review slices. Fresh remote main is an ancestor of features, so integration can use a normal fast-forward push with no overwritten remote commits. Before publication: **153 unit tests**, **19 restricted editor database tests**, **12 runtime-role database checks**, affected dependency/MFE builds and six-package lint pass. Candidate-file/private-credential scans and whitespace checks pass; no private resume fixtures, environment secrets, local database data or build artifacts enter the release. Earlier uncommitted-status notes below describe their dated checkpoints. Hosted deployment and broader product acceptance remain separate.
