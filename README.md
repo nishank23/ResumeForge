@@ -1,5 +1,13 @@
 # resume-forge
 
+## Project rewrite shorthand fix — 2026-10-10
+
+Fixed on **features**. The supplied final CV reproduced two false rejections: singular `app` had no `application` equivalent, and `UI` could not expand to the complete phrase `user interface`. Prompt and validation now support both exact equivalents. Singular/plural application terms stay separate, and the words in `user interface` must remain adjacent. Invented factual vocabulary, removed source facts, changed numbers, negative wording, slash-separated technologies and cross-field edits still fail validation. No model, timeout, permission or persistence behavior changes.
+
+Verification: **86 resume-service unit tests**, the service build, lint and `git diff --check` pass. Synthetic regressions cover singular/plural preservation, complete phrase expansion, unsupported claims and selected-bullet Apply isolation. Live Chrome testing of both projects in the supplied final CV now reaches Suggested changes with inline removals/replacements. Both reviews were canceled; reload confirms **saved version 1** and both original project descriptions. Temporary diagnostic instrumentation was removed; no real resume fixture or credential is added to Git. This repair was verified locally before its requested PR integration.
+
+Manual check: reload `http://localhost:3000`, open the saved final CV, select the first project and click **Improve with AI**, then the same button in its dialog. Review the singular app/application replacement. Cancel, repeat for the second project, and review the UI/user interface replacement when suggested. Cancel preserves the version; use **Apply and save version** only after reviewing your facts. AI may return no changes when wording already satisfies the bounded rules.
+
 ## Release verification — 2026-10-10
 
 This release consolidates saved resume PDF/library actions, local readiness and JD scoring, scoped paid Gemini analysis and reviewed rewrites, private version-bound vector retrieval, alternate-layout PDF import fixes, and inline replacement reviews. Previous local/uncommitted notes below are retained as dated implementation history.
@@ -161,8 +169,8 @@ Verification commands, actual browser results and remaining test limits are in t
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-10T05:12:27.522Z",
-  "lastResult": "Release validated: 153 unit, 19 editor DB and 12 role checks; builds/lint pass. Changes prepared for commit and publication to origin/main."
+  "updatedAt": "2026-10-10T05:31:56.655Z",
+  "lastResult": "Project rewrite fix verified with 86 tests, build/lint and live reviews; prepared for requested PR integration and new ux-ui-update branch."
 }
 ```
 <!-- END:CURRENT_TASK -->

@@ -6,7 +6,13 @@ export const REWRITE_GRAMMAR =
 // Narrow equivalent spellings, not arbitrary synonyms or skill inference.
 export const REWRITE_ALIASES: Readonly<Record<string, string>> = {
   auth: "authentication",
+  app: "application",
   apps: "applications",
 };
 export const canonicalRewriteWord = (word: string): string =>
   REWRITE_ALIASES[word] ?? word;
+
+// Match the whole phrase, so its words cannot be scattered into unrelated claims.
+export const REWRITE_PHRASE_ALIASES = { ui: "user interface" } as const;
+export const canonicalRewriteText = (text: string): string =>
+  text.replace(/\buser\s+interface\b/giu, "ui");

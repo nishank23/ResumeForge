@@ -109,6 +109,37 @@ test("safe action inflections and explicit shorthand preserve facts without bloc
     assert.throws(()=>validateChanges(source,target,[{field:"description",proposed}]));
 });
 
+test("singular app expansion preserves project facts and rejects changed plurality", () => {
+  const source=structuredClone(doc);
+  source.sections[0].kind="projects";
+  source.sections[0].entries[0].description=rich("Built an inventory management app allowing teams to create and manage records.");
+  const proposed="Developed an inventory management application allowing teams to create and manage records.";
+  assert.equal(validateChanges(source,target,[{field:"description",proposed}]).length,1);
+  for(const unsafe of [proposed.replace("application", "applications"),proposed.replace("inventory", "financial"),proposed.replace("management application", "application"),proposed+" Serving 500 teams."])
+    assert.throws(()=>validateChanges(source,target,[{field:"description",proposed:unsafe}]));
+  source.sections[0].entries[0].description=rich("Built inventory management apps allowing teams to create and manage records.");
+  assert.equal(validateChanges(source,target,[{field:"description",proposed:"Developed inventory management applications allowing teams to create and manage records."}]).length,1);
+  assert.throws(()=>validateChanges(source,target,[{field:"description",proposed}]));
+});
+
+test("UI shorthand expands as one phrase without allowing unrelated words or project claims", () => {
+  const source=structuredClone(doc);
+  source.sections[0].kind="projects";
+  source.sections[0].entries[0].description=rich("");
+  source.sections[0].entries[0].bullets=[{id:"ui",hidden:false,text:"Designed a simple UI to display daily schedules."}];
+  const proposed="Designed a simple user interface to display daily schedules.";
+  const changes=validateChanges(source,target,[{field:"bullet:ui",proposed}]);
+  assert.equal(changes.length,1);
+  const next=applyRewrite(source,{target,changes});
+  assert.equal(next.sections[0].entries[0].bullets[0].text,proposed);
+  assert.deepEqual(next.sections[0].entries[1],source.sections[0].entries[1]);
+  assert.deepEqual(next.sampleContact,source.sampleContact);
+  for(const unsafe of ["Designed a simple interface to display daily user schedules.",proposed.replace("simple", "responsive"),proposed.replace("schedules", "payments")])
+    assert.throws(()=>validateChanges(source,target,[{field:"bullet:ui",proposed:unsafe}]));
+  source.sections[0].entries[0].bullets[0].text="Designed a simple layout to display daily schedules.";
+  assert.throws(()=>validateChanges(source,target,[{field:"bullet:ui",proposed}]));
+});
+
 test("Gemini prompt mirrors safe vocabulary, sends field IDs/text only, and bounds long rewrite output",async()=>{
   let sent;
   const p=createAiProviders({geminiKey:"TEST",paidGemini:true},async(url,options)=>{
@@ -118,6 +149,9 @@ test("Gemini prompt mirrors safe vocabulary, sends field IDs/text only, and boun
   await p.rewrite(rewriteFields(doc,target));
   assert.deepEqual(Object.keys(JSON.parse(sent.contents[0].parts[0].text).fields[0]),["field","original"]);
   assert.ok(sent.systemInstruction.parts[0].text.includes('"auth":"authentication"'));
+  assert.ok(sent.systemInstruction.parts[0].text.includes('"app":"application"'));
+  assert.ok(sent.systemInstruction.parts[0].text.includes('"ui":"user interface"'));
+  assert.ok(sent.systemInstruction.parts[0].text.includes("Preserve singular/plural meaning"));
   assert.ok(sent.systemInstruction.parts[0].text.includes("integrating"));
   assert.equal(sent.generationConfig.maxOutputTokens,8192);
 });
