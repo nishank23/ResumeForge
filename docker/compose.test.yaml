@@ -1,0 +1,31 @@
+# Always use -p forge-docker-test. This override publishes no host ports.
+services:
+  app:
+    ports: !reset []
+    environment:
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      GEMINI_API_KEY: ""
+      GEMINI_DATA_MODE: ""
+    restart: "no"
+  test:
+    # Exercise the same localhost URLs the browser uses, without publishing test ports.
+    network_mode: service:app
+    image: forge-studio-checks:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: checks
+    user: "0:0"
+    environment:
+      NODE_ENV: development
+      FORGE_DOCKER_TEST: "1"
+      RESUME_FORGE_RUNTIME: docker
+      RESUME_FORGE_LOCAL_ROOT: /app
+    command: ["node", "--test", "docker/integration.test.mjs"]
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - database-credentials:/run/forge-admin:ro
+      - runtime-credentials:/app/.local:ro

@@ -1,5 +1,9 @@
 # Architecture Context
 
+## Full local Docker app — 2026-10-11
+
+The user authorized a full local Compose setup on docker-setup. The app image contains the built four MFEs, four personal Hono services and audit-only recipient/worker. Separate PostgreSQL 18/pgvector and generated administrator/runtime credential volumes preserve the existing role allowlist and personal route gates. Health-gated bootstrap applies migrations and verifies all five runtime identities. Native startup and its managed loopback database remain separate. This is local/demo packaging; hosted production deployment remains deferred. See [Docker contract and verification](../docs/docker-setup.md).
+
 ## Current audit snapshot — 2026-10-11
 
 Actual stack: four React/Vite MFEs, Hono gateway/auth/profile/resume, safe audit-only workspace listener, PostgreSQL/Prisma/pgvector, access-policy and shared packages. React state/session clients and service-local Gemini REST adapters drive active flows. Trigger.dev, AI SDK, R2/storage service, hosted Neon/Pages and MCP remain target infrastructure. Shared business startup is unsafe to activate.

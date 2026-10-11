@@ -1,0 +1,94 @@
+name: forge-studio
+
+x-app-image: &app-image
+  image: forge-studio:local
+
+services:
+  credentials:
+    <<: *app-image
+    pull_policy: never
+    user: "0:0"
+    command: ["node", "docker/credentials.mjs"]
+    network_mode: none
+    volumes:
+      - database-credentials:/run/forge-admin
+      - runtime-credentials:/app/.local
+    restart: "no"
+
+  database:
+    image: pgvector/pgvector:0.8.7-pg18-bookworm@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+    environment:
+      POSTGRES_USER: resume_forge
+      POSTGRES_DB: resume_forge_dev
+      POSTGRES_PASSWORD_FILE: /run/forge-admin/postgres-password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    depends_on:
+      credentials:
+        condition: service_completed_successfully
+    volumes:
+      # PostgreSQL 18 stores data under its versioned subdirectory.
+      - database-data:/var/lib/postgresql
+      - database-credentials:/run/forge-admin:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U resume_forge -d resume_forge_dev",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  bootstrap:
+    <<: *app-image
+    pull_policy: never
+    user: "0:0"
+    command: ["node", "docker/bootstrap.mjs"]
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - database-credentials:/run/forge-admin:ro
+      - runtime-credentials:/app/.local:ro
+    restart: "no"
+
+  app:
+    <<: *app-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    init: true
+    environment:
+      # Only provider settings enter the server runtime, never the image build.
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_DATA_MODE: "${GEMINI_DATA_MODE:-}"
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    volumes:
+      - runtime-credentials:/app/.local:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3001"
+      - "127.0.0.1:3002:3002"
+      - "127.0.0.1:3003:3003"
+      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:4001:4001"
+    healthcheck:
+      test: ["CMD", "node", "docker/healthcheck.mjs"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+volumes:
+  database-data:
+  database-credentials:
+  runtime-credentials:

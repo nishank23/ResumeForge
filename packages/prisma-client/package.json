@@ -10,7 +10,8 @@
     "build": "prisma generate && tsc --build",
     "typecheck": "tsc --noEmit",
     "migrate": "prisma migrate deploy",
-    "test:db": "pnpm --filter @resume-forge/audit-contracts... build && pnpm build && node --test test/database.test.mjs"
+    "test:db": "pnpm --filter @resume-forge/audit-contracts... build && pnpm build && node --test test/database.test.mjs",
+    "test": "node --test test/runtime-config.test.mjs"
   },
   "dependencies": {
     "@resume-forge/audit-contracts": "workspace:*",

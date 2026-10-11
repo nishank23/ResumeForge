@@ -8,6 +8,10 @@
 
 The allowlist is [runtime-access.ts](../packages/prisma-client/src/runtime-access.ts); provisioning is [runtime-roles.mjs](../scripts/runtime-roles.mjs). These are service table/column boundaries. Most tables are not protected by per-user RLS: scoped application queries remain necessary. The vector cache additionally has actor/workspace/version RLS.
 
+## Docker setup
+
+Full local Docker mode automatically provisions and verifies the same five roles after migrations. Generated credentials live in separate named volumes; the app receives only the read-only runtime volume. Docker URLs permit only `database:5432/resume_forge_dev`; native URLs still permit only `127.0.0.1:55432/resume_forge_dev`. No grants or production guards are relaxed. See [Docker setup](docker-setup.md) and the [installation README](../README.md).
+
 ## Setup
 
 Run from the initialized primary checkout:

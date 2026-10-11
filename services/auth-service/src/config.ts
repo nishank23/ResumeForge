@@ -1,3 +1,4 @@
+import { managedRuntimeDatabaseUrl } from "@resume-forge/prisma-client";
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { resolve } from "node:path";
@@ -24,19 +25,10 @@ export function loadConfig() {
     const local = parseEnv(
       readFileSync(new URL(".local/runtime-database.env", localRoot), "utf8"),
     );
-    const url = new URL(local.AUTH_DATABASE_URL ?? "");
-    if (
-      url.protocol !== "postgresql:" ||
-      url.hostname !== "127.0.0.1" ||
-      url.port !== "55432" ||
-      url.pathname !== "/resume_forge_dev" ||
-      url.username !== "rf_local_auth" ||
-      !/^[0-9a-f]{64}$/.test(url.password) ||
-      url.search ||
-      url.hash
-    )
-      throw new Error();
-    databaseUrl = url.href;
+    databaseUrl = managedRuntimeDatabaseUrl(
+      local.AUTH_DATABASE_URL ?? "",
+      "auth",
+    );
   } catch {
     throw new Error(
       "Missing or invalid restricted auth database configuration. Run pnpm db:runtime:init.",

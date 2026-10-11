@@ -1,6 +1,6 @@
 # Planned Deployment
 
-**Hosted deployment is planned; no hosted environment was verified in this audit.** Local personal development is implemented. The context approval gate is cleared; production host, identity, backup/retention and shared release decisions remain.
+**Hosted deployment is planned; no hosted environment was verified in this audit.** Local personal development and the full local [Docker app](docker-setup.md) are implemented and tested. Docker packaging does not activate hosted production. The context approval gate is cleared; production host, identity, backup/retention and shared release decisions remain.
 
 ## Target topology
 
@@ -32,7 +32,7 @@ Public Vite configuration contains only public URLs/settings. Keep OAuth/AI/R2/d
 6. Verify auth redirects/session/CORS behavior at real environment domains.
 7. Check private object access, signed-link expiry, audit ingestion, and rollback paths before enabling users.
 
-Exact container manifests, CI jobs, package scripts, and CLI commands are future deliverables, not assumed to exist.
+Hosted container manifests and CI release jobs remain future deliverables. Root compose.yaml and Dockerfile package the current local personal app; use the README for its actual installation and test commands.
 
 ## Operations and release gates
 

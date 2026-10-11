@@ -9,8 +9,8 @@ Internal task ownership for scripts/development-task.mjs. Product setup belongs 
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-11T15:11:39.583Z",
-  "lastResult": "JD UI release candidate verified: workspace build 15/15, check 34/34, shared/resume tests 63/63; private paths and candidate scan pass. Ready for authorized fixes push and PR merge."
+  "updatedAt": "2026-10-11T18:53:57.686Z",
+  "lastResult": "Docker release ready: checks 34/34, workspace tests 279/279, helpers 9/9 and integration 8/8 pass. Candidate privacy/static checks pass; test volumes cleaned. Windows and live providers remain manual."
 }
 ```
 <!-- END:CURRENT_TASK -->

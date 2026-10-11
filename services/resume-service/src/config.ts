@@ -1,3 +1,4 @@
+import { managedRuntimeDatabaseUrl } from "@resume-forge/prisma-client";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { resolve } from "node:path";
@@ -16,20 +17,12 @@ export function loadResumeConfig() {
     const auth = parseEnv(
       readFileSync(new URL(".local/auth-transport.env", localRoot), "utf8"),
     );
-    const url = new URL(database.RESUME_DATABASE_URL ?? "");
-    if (
-      url.protocol !== "postgresql:" ||
-      url.hostname !== "127.0.0.1" ||
-      url.port !== "55432" ||
-      url.pathname !== "/resume_forge_dev" ||
-      url.username !== "rf_local_resume" ||
-      !/^[a-f0-9]{64}$/.test(url.password) ||
-      url.search ||
-      url.hash
-    )
-      throw new Error();
+    const databaseUrl = managedRuntimeDatabaseUrl(
+      database.RESUME_DATABASE_URL ?? "",
+      "resume",
+    );
     return {
-      databaseUrl: url.href,
+      databaseUrl,
       authKey: localProfileServiceKeySchema.parse(
         auth.LOCAL_PROFILE_SERVICE_KEY,
       ),

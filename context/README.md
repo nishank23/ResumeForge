@@ -27,7 +27,7 @@ Plans describe both existing and future scope. Their audit headers supersede old
 
 ## Runtime and integration
 
-- [Product setup](../README.md).
+- [Product setup](../README.md) and [full local Docker setup/verification](../docs/docker-setup.md).
 - [Current API boundaries](../docs/api-reference.md) and [frontend readiness](../docs/frontend-api-readiness.md).
 - [Google sign-in](../docs/google-login.md), [actor resolution](../docs/actor-resolution.md), [profile API](../docs/profile-api.md).
 - [Runtime database roles](../docs/runtime-database-roles.md), [ATS/AI workflow](../docs/ats-workflow.md), [private vector search](../docs/resume-vector-search.md).

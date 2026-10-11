@@ -8,6 +8,10 @@ This audit compares all 92 existing repository Markdown documents with source, m
 
 The running local app is the personal resume flow. `services/resume-service/src/index.ts` selects `personalEditorOnly: true`; its allowlist and the gateway expose only approved editor/scoring/rewrite/PDF routes. Legacy route factories, handoffs, Prisma tables and tests are not proof of live product availability.
 
+## Local Docker follow-up — 2026-10-11
+
+✅ Full local Compose packaging now runs the current personal app, PostgreSQL/pgvector, existing migrations/restricted roles and audit delivery. See [Docker verification](docker-setup.md) for executed tests and Windows/provider limits. The original 92-document audit below remains a dated baseline; this addition does not complete hosted production, shared-workspace or other feature gaps.
+
 ## Feature register
 
 | Feature | Status | Implemented evidence |
@@ -206,7 +210,7 @@ Seven tools are specified in documentation; no MCP server, SDK integration or re
 | Shared authorization / AI packages | Actual packages are access-policy and service-local ats adapters. Planned authorization/ai-provider package paths do not exist. |
 | Durable Trigger.dev jobs and Vercel AI SDK | Not started as integrations. TaskRun storage/legacy synchronous handlers exist; Gemini currently uses bounded server REST calls. |
 | Vector search | ✅ ResumeSearchChunk, gemini-embedding-001/768/professional-v1, RLS, scoped exact cosine retrieval and save/delete invalidation. Profile/JD 1536 and skill 384 columns are unbuilt proposals. HNSW exists but current bounded exact query does not use it. |
-| Cloudflare Pages/Neon/Node container deployment | Planned; no verified hosted deployment, CI release pipeline or production-ready local configuration. |
+| Cloudflare Pages/Neon/Node container deployment | ✅ Full local Docker app; hosted deployment, CI release pipeline and production configuration remain planned/unverified. |
 | R2/storage service/signed links | Not started. PDF is an authenticated ephemeral stream; upload bytes are discarded after parsing. |
 | Retention/backup/restore/rate and cost operations | Partial request/size/time/concurrency bounds; production quotas, retention/purge, alerting and operational restore procedures remain missing. |
 | Task bookkeeping | ✅ Moved from product README to context/development-status.md; lock/owner semantics remain in scripts/development-task.mjs. |
