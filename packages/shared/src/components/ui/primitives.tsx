@@ -61,6 +61,7 @@ export interface ButtonProps
     ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   readonly glow?: boolean;
+  readonly sparkle?: boolean;
   readonly loading?: boolean;
   readonly loadingText?: string;
 }
@@ -72,6 +73,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       glow = false,
+      sparkle = glow,
       loading = false,
       loadingText,
       disabled,
@@ -85,7 +87,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <PerformativeButton
         variant={glow ? "glow" : "solid"}
-        sparkle={glow}
+        sparkle={sparkle}
         data-variant={variant ?? "default"}
         data-size={size ?? "md"}
         size={size === "icon" || size == null ? "md" : size}

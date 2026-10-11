@@ -167,6 +167,7 @@ export function JdMatchPanel({
             disabled={busy}
             submitDisabled={blocked || text.trim().length < 50}
             submitLabel={semantic ? "Analyze with Gemini" : "Analyze match"}
+            submitSparkle={semantic}
             onSubmit={() => {
               if (services && !blocked && text.trim().length >= 50)
                 void mutate(() => services.run(text, semantic, semantic));

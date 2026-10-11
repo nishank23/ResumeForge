@@ -304,16 +304,6 @@
   gap: 10px;
   font-size: 12px;
 }
-.rf-jd-composer textarea {
-  width: 100%;
-  min-height: 200px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--background);
-  color: var(--foreground);
-  resize: vertical;
-}
 .rf-editor-tool-panel :is(select, textarea, input, summary):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
@@ -612,10 +602,6 @@
   padding-top: 4px;
   gap: 10px;
 }
-.rf-jd-match .rf-jd-composer textarea {
-  min-height: 112px;
-  max-height: 220px;
-}
 .rf-jd-match .rf-jd-evidence {
   padding: 8px 0;
 }
@@ -786,10 +772,6 @@
 }
 .rf-readiness-components > div:last-child {
   border-bottom: 0;
-}
-.rf-jd-composer textarea {
-  background: var(--surface);
-  border-radius: 6px;
 }
 .rf-jd-evidence .rf-evidence-note {
   margin-block: 8px;

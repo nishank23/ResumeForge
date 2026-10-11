@@ -235,6 +235,46 @@
   flex: 1;
 }
 
+/* Prompt 0.7 renders promptbox. Its form owns the field's single focus cue. */
+.rf-studio-prompt .pui-promptbox {
+  gap: 0;
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.rf-studio-prompt .pui-promptbox:focus-within {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+.rf-studio-prompt .pui-promptbox .pui-promptbox__textarea {
+  display: block;
+  min-height: 144px;
+  max-height: 240px;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  resize: vertical;
+}
+.rf-studio-prompt .pui-promptbox textarea:focus-visible {
+  outline: none;
+}
+.rf-studio-prompt .pui-promptbox__toolbar {
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.rf-studio-prompt .pui-promptbox__toolbar .rf-button {
+  max-width: 100%;
+  white-space: normal;
+}
+
 /* Search is a utility action. The AI glow belongs to contextual rewriting. */
 .rf-studio-search {
   display: grid;
@@ -909,7 +949,7 @@
   overscroll-behavior: contain;
 }
 /* The AI symbol must retain contrast on a filled action in either theme. */
-.rf-ai-action.rf-button.pui-btn .pui-sparkle {
+.rf-button.pui-btn .pui-sparkle {
   background: none;
   background-clip: border-box;
   color: inherit;
