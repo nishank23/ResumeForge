@@ -1,5 +1,11 @@
 # Error and Fix Log
 
+## Current audit snapshot — 2026-10-11
+
+Dated errors and test/dependency counts describe historical checkpoints. Current discrepancies and fresh validation belong in docs/implementation-audit.md; historical fixes do not establish full current release acceptance.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 **Last updated:** 2026-10-02
 
 **Purpose:** Canonical register of technical, build, type, and runtime errors encountered during `resume-forge` implementation, their root causes, exact fixes applied, and current verification status.

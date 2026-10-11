@@ -1,20 +1,29 @@
 # Phase 2 Build Plan — AI Pipeline
 
+## Audited phase status — 2026-10-11
+
+**Partial personal AI pipeline.**
+
+- [x] ✅ Saved manual builder, deterministic JD parsing/scoring, paid Gemini evidence/rewrite, private retrieval and reviewed versioned Apply work.
+- [ ] Full safe profile/JD generation, custom prompts, durable dispatch/status/cancel/retry, structured fact provenance and history remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 ## Scoped rewrite follow-up — 2026-10-10
 
-Reproduced and fixed safe-word rejection for the selected final-CV role. Shared prompt/validator vocabulary, word-level review and explicit action buttons replace consent checkboxes. Existing paid-mode, professional scope and immutable-version policy remain. Generation is bounded to 20 seconds; embeddings remain eight. This completes only the requested repair/UI slice, not durable tasks or full generation. [Verification](../../README.md#gemini-rewrite-repair-and-inline-review--2026-10-10).
+Reproduced and fixed safe-word rejection for the selected final-CV role. Shared prompt/validator vocabulary, word-level review and explicit action buttons replace consent checkboxes. Existing paid-mode, professional scope and immutable-version policy remain. Generation is bounded to 20 seconds; embeddings remain eight. This completes only the requested repair/UI slice, not durable tasks or full generation. [Verification](../../docs/archive/readme-history.md#gemini-rewrite-repair-and-inline-review--2026-10-10).
 
 ## Current Gemini migration — 2026-10-09
 
-Paid gemini-3.5-flash-lite now handles grounded JD correspondence and selected wording. OpenCode SDK/process/HTTP and unused Textkernel runtime are removed. Approved deterministic rubrics, private 768-dimensional embeddings, authorization, consent, reviewed immutable-version Apply and failure boundaries remain. ATS feedback groups into five expandable areas; JD editing/evidence collapse after a result. Model identity is checked at both assessment replay boundaries. Eight-second bounded provider calls remain a local slice; durable jobs/full generation/shared roles are incomplete. [Current workflow](../../docs/ats-workflow.md).
+Paid gemini-3.5-flash-lite now handles grounded JD correspondence and selected wording. OpenCode SDK/process/HTTP and unused Textkernel runtime are removed. Approved deterministic rubrics, private 768-dimensional embeddings, authorization, consent, reviewed immutable-version Apply and failure boundaries remain. ATS feedback groups into five expandable areas; JD editing/evidence collapse after a result. Model identity is checked at both assessment replay boundaries. Bounded synchronous provider calls remain a local slice; durable jobs/full generation/shared roles are incomplete. [Current workflow](../../docs/ats-workflow.md).
 
 ## Historical bounded JD/rewrite slice — 2026-10-09
 
 Approved JD rules, optional paid Gemini correspondence, exact-entry Fix and persisted reviewed MiMo apply are implemented in the personal runtime. Gemini never rewrites and MiMo never scores. Live free-model access is blocked by OpenCode own-client restriction. The requested current-version Gemini/pgvector retrieval and official OpenCode SDK adapter are implemented. SDK/CLI 1.18.35 are pinned; live SDK generation still returns 403 FreeTierError. Eight-second HTTP/embedding and 45-second SDK synchronous calls are a bounded local slice; they do not replace the planned durable Trigger.dev pipeline or complete Phase 2. Shared roles, durable jobs, broader parser/quality checks and full generation remain pending. Earlier pending-JD/provider notes are historical. [Current contract and evidence](../../docs/ats-workflow.md).
 
-**Current implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](../progress-tracker.md) and [verification](../../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
+**Historical implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](../progress-tracker.md) and [verification](../../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
 
-**Features:** F05–F08. **State:** Backend/AI not started; V01 and local E01–E05 canvas-first F08 editing verified 2026-10-03. **Goal:** Build a basic resume or tailor it to a JD, then review and apply grounded section-specific improvements.
+**Features:** F05–F08. **State:** Partial; personal saved builder, readiness/JD and scoped Gemini rewriting connected. **Goal:** Build a basic resume or tailor it to a JD, then review and apply grounded section-specific improvements.
 
 ## Entry conditions
 
@@ -46,14 +55,14 @@ Planned files: content mapper/generator, generate task, resume/version persisten
 
 ## Task P2.4 — Scoring (F07)
 
-Current 2026-10-09 status: approved deterministic general readiness is implemented separately. The user withdrew Textkernel after a corporate-email signup barrier; do not continue its account/indexing/live integration plan. Retain `jd-match-v1` result/adapter foundation; the existing vendor adapter remains disabled. Local JD scoring with optional Gemini analysis is recommended, not activated. Resolve the custom JD rubric and permitted real-data mode before dependent implementation. Odoo hosted free plans lack external API access. No live JD route, persisted evaluation or JD UI activation exists. P2.4/F07 remains partial. See [provider scope and manual verification](../../docs/ats-providers.md).
+Historical pre-JD-activation checkpoint: approved deterministic general readiness is implemented separately. The user withdrew Textkernel after a corporate-email signup barrier; do not continue its account/indexing/live integration plan. Retain `jd-match-v1` result/adapter foundation; the existing vendor adapter remains disabled. Local JD scoring with optional Gemini analysis is recommended, not activated. Resolve the custom JD rubric and permitted real-data mode before dependent implementation. Odoo hosted free plans lack external API access. No live JD route, persisted evaluation or JD UI activation exists. P2.4/F07 remains partial. See [provider scope and manual verification](../../docs/ats-providers.md).
 
 Planned files: scoring core/task, versioned breakdown persistence, ATS UI.
 
 - [ ] Implement the approved [F07](../feature-specs/07-ats-scoring.md) rubric and compatible semantic scoring.
-- [ ] Handle partial/unavailable/stale results explicitly; label scores as heuristics.
-- [ ] Verify arithmetic, evidence, and fixed-input examples independently of live model variability.
-- [ ] Deliver E08's Readiness Rating and Pending/Completed/Deleted tabs with Fix/View/Reason/Dismiss/Restore, exact-version evidence and truthful unavailable/stale states. D09 governs real ratings; [frontend editor plan](../../docs/frontend-editor-plan.md) defines the requested UI.
+- [x] ✅ Personal readiness/JD UI preserves partial/unavailable/stale evidence and labels heuristic limits; shared/durable lifecycle remains pending.
+- [x] ✅ Pure scorer synthetic tests cover weighted arithmetic and fixed evidence independently of providers; corpus calibration remains pending.
+- [x] ✅ Personal E08 rating/actions and Pending/Completed/Deleted states are connected to exact saved-version assessments. [Source](../../apps/resume-mfe/src/ManualResumeEditor.tsx).
 
 ## Task P2.5 — Preview and initial template (F08)
 

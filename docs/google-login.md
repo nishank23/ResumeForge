@@ -1,62 +1,32 @@
 # Local Google sign-in
 
-The Google sign-in slice uses Arctic 2.3.4's installed API, a real server-side authorization-code exchange with PKCE, and validated Google userinfo. See [Google's web-server flow](https://developers.google.com/identity/protocols/oauth2/web-server) and [Arctic's Google integration](https://arcticjs.dev/providers/google). No mock identities are accepted by the running server.
+## Implemented scope — 2026-10-11
 
-## Configuration
+- [x] ✅ Google PKCE callback, provider identity and personal Workspace bootstrap.
+- [x] ✅ Database refresh-session rotation/revocation and protected shell routing.
+- [x] ✅ Authenticated users land in My resumes; signed-out users see the full-screen Forge Studio sign-in without workspace sidebar.
+- [ ] LinkedIn login/linking and hosted identity/cookie/service configuration remain incomplete.
 
-In the repository-root `.env`, set `GOOGLE_CLIENT_ID` to the **client ID**, ending in `.apps.googleusercontent.com`, and `GOOGLE_CLIENT_SECRET` to its corresponding secret. They are different values. Never use the secret as the client ID: the ID is included in browser URLs. If that happened, rotate the secret in Google Cloud. The service rejects malformed client IDs before constructing authorization URLs. Do not prefix either field with `VITE_`.
+Implementation: [auth app](../services/auth-service/src/app.ts), [session controller](../packages/shared/src/index.ts) and [shell](../apps/shell/src/App.tsx).
 
-Use a Google OAuth **Web application** client. Register this exact authorized redirect URI:
+## Configuration and startup
+
+Use the [README's verified setup](../README.md#setup-and-installation). In the primary checkout's private .env, set nonempty GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. Omit unset variables instead of blank assignments. Register:
 
 ```text
 http://localhost:4001/api/v1/auth/google/callback
 ```
 
-The callback is now a GET handled by the auth service, replacing the unfinished frontend-to-POST callback proposal. Keep the app at `http://localhost:3000`; do not mix `localhost` and `127.0.0.1` in the browser. If the Google consent app is in testing mode, add your Google account as a test user. LinkedIn implementation is on hold by user request (2026-10-01), awaiting provider credentials; its button remains disabled.
+In Google consent testing mode, add the testing account. Initialize the local database, runtime roles and auth transport file in the documented order, then run `pnpm dev:personal` in the active worktree. It resolves the primary configuration automatically; RESUME_FORGE_LOCAL_ROOT is the explicit override.
 
-```bash
-pnpm db:local:start
-pnpm db:migrate
-pnpm db:runtime:init
-pnpm auth:local:init
-pnpm dev
-```
+Open http://localhost:3000. Using 127.0.0.1 changes the allowed browser origin. Sign-in does not require creating a profile. Use Preferences to sign out.
 
-Restart `pnpm dev` after editing `.env`. OAuth settings load from the root `.env` (existing process values take precedence). The database URL is read only from ignored `.local/runtime-database.env` as the restricted auth role; root/process `DATABASE_URL` cannot override it. The actual role/privileges are verified before the service starts; missing/unsafe configuration fails without an administrative fallback. See [runtime database roles](runtime-database-roles.md). Expected terminal message: `Auth service listening on http://localhost:4001`. An invalid client ID produces a configuration error without printing the value.
+## Manual verification
 
-Open `http://localhost:3000/sign-in`, select **Continue with Google**, and complete Google's consent flow yourself. Once the shell verifies the returned session, incomplete accounts go to **Set up your profile** and completed accounts go to their personal workspace. The setup entry explicitly says profile setup is being connected; **Explore sample workspace** opens the protected preview. Visit `/sign-in` to test **Sign out** and repeat sign-in. No persisted profile wizard is implemented yet.
+1. Signed out: /sign-in shows Google sign-in without sidebar.
+2. Complete Google sign-in: the owned resume library opens with sidebar.
+3. Reload and reopen the library: session resolution preserves authorized access.
+4. Open Preferences and sign out: protected routes return to sign-in.
+5. Use a second account: other users' resources must be denied.
 
-## Verification and boundaries
-
-`pnpm --filter @resume-forge/auth-service test:db` builds the service and tests synthetic Google responses against disposable local PostgreSQL databases. The main auth test app uses the restricted auth role. Coverage includes PKCE URL shape, malformed client IDs, missing configuration, cookie binding, expired/replayed callbacks, cancellation/provider failure, unique provider identity and workspace, no email merging, refresh rotation/replay, token expiration and logout. No Google credentials or personal accounts are used in these automated tests.
-
-Refresh credentials are random, hashed in PostgreSQL, and held in HttpOnly/SameSite=Lax cookies. Five-minute opaque access credentials remain in JavaScript memory; refresh expiry is absolute at 30 days. Origin checks protect POST endpoints. Each access request rechecks the persisted session. Pending OAuth attempts expire after ten minutes and are consumed before code exchange. Pending transactions/access tokens are process-local, so restarts require a retry/refresh. Concurrent refresh attempts intentionally invalidate a replayed family; the frontend deduplicates React StrictMode refresh requests. The shared shell/auth session controller now coordinates same-origin tabs through Web Locks and sends credential-free logout notifications through BroadcastChannel.
-
-This implementation is restricted to loopback development and explicitly refuses `NODE_ENV=production`. Secure cookies, deployed topology, gateway authentication, distributed transaction/token storage, persisted onboarding, explicit account linking and LinkedIn remain pending. Auth-owned local account/workspace provisioning is transactional; extraction to the workspace service remains pending. No master profile is fabricated from OAuth data. Audit capture/local delivery foundations exist; professional profile and bounded personal editor routes have private actor/ownership enforcement; wider route coverage remains pending.
-
-On 2026-10-01 the browser handoff reached Google, which returned `invalid_client`: the local client-ID field contained a secret-formatted value. No Google account login or consent was completed. Correct credentials and Google Console redirect configuration require user verification; secrets were not copied into documentation or test fixtures.
-
-Follow-up: the user updated the environment. The corrected ID format and live authorization endpoint were verified without printing credentials; the endpoint returned HTTP 200 with S256 PKCE and the documented callback. Google Console registration and successful consent remain manual checks.
-
-## Manual session checks
-
-The local server-to-server actor boundary is now available independently of browser session summaries. See [actor resolution](actor-resolution.md) for service credential initialization, internal denial checks and restricted database verification. It does not enable profile persistence or change OAuth scopes.
-
-Protected-routing checks (2026-10-02):
-
-1. In a signed-out/private browser window, open `/onboarding` or `/w/ws-personal-01/resumes`. Expect sign-in, with no workspace child content or guest-preview bypass.
-2. After sign-in, open `/`. Expect My resumes in the session's personal UUID workspace, with no Create profile gate. Create/save/reload a resume using the current README steps.
-3. Change the workspace segment in the URL, including back to `ws-personal-01`. Expect **This workspace isn’t available** without profile/editor content. Return through **Go to my workspace**.
-4. Stop the auth service, reload/refocus a protected page, and expect recovery without mounted workspace content. Restart and use **Retry session check**. Sign out from `/sign-in` and verify a protected URL redirects there again; test a second tab too.
-
-These guards use React Router 7.18.4's nested [Outlet](https://reactrouter.com/7.18.4/api/components/Outlet) and [Navigate](https://reactrouter.com/7.18.4/api/components/Navigate) APIs. Browser guards are not server authorization; persisted onboarding/private route enforcement remains separate.
-
-Restart `pnpm dev` after the shared package rebuild. Open the app at `http://localhost:3000` in two tabs of the same browser. Sign in with Google, reload both tabs, and check that the sidebar reflects the account while still saying Sample workspace. Sign out in one tab: both should clear the signed-in identity. Session recovery and logout are serialized across these tabs; different browser origins (such as the standalone auth MFE on port 3001) are not a supported shared-cookie workflow.
-
-Stop the auth service and refocus a tab: it should show Session unavailable after its check, clear identity, and offer Retry session check on the sign-in page. Restart the service and retry. A failed sign-out must display Retry sign out; retry after service recovery. No access/refresh credential is placed in localStorage, sessionStorage, or cross-tab messages. Browser tests requiring your real Google session remain manual.
-
-2026-10-01 shell-session verification: an existing authenticated browser session restored in two tabs. The signed-in account badge and disabled LinkedIn credential-waiting state were observed. Fresh Google consent, live cross-tab logout and outage/recovery remain manual checks; synthetic controller tests cover their session-state logic.
-
-## Current named-worktree startup — 2026-10-04
-
-Use `pnpm dev:personal` in the frontend worktree. It reads OAuth/runtime transport configuration from the primary checkout through `RESUME_FORGE_LOCAL_ROOT`. The prior local `28P01` auth/profile mismatch was repaired using existing managed credentials; both services pass restricted-role startup and the existing browser session restores. Every verified personal account now enters the owned resume library. Professional profile editing is optional; full sections/contacts remain pending. Fresh Google consent/Console settings remain manual. See [README](../README.md#resume-library-upload-and-database-saves--2026-10-04) for exact startup output, repair coordination and manual checks. No OAuth scope, provider credential or callback URL changed.
+These are current manual steps, not freshly executed OAuth tests in the documentation audit. Never paste keys/tokens in logs or docs. Previous local-password failures are historical configuration incidents; do not copy/reset role passwords between worktrees. [Runtime credential boundary](runtime-database-roles.md).

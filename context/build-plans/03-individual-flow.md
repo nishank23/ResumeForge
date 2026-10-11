@@ -1,5 +1,14 @@
 # Phase 3 Build Plan — Complete Individual Flow
 
+## Audited phase status — 2026-10-11
+
+**Partial individual flow.**
+
+- [x] ✅ Owned library/search of loaded rows/sort/pagination, rename/delete/undo, current owner PDF and basic profile form work. JD history backend exists.
+- [ ] R2/storage lifecycle, global search, clone/default/history/restore UI, optional profile sections and full release acceptance remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 **Features:** F09–F12. **State:** Not started. **Goal:** Manage, revise, revisit, and download saved work.
 
 ## Entry conditions
@@ -35,7 +44,7 @@ Planned files: history UI and resume-service list/detail/reuse paths.
 Planned files: profile editor and shared wizard controls; scoped section/contact updates; revision/embedding invalidation.
 
 - [ ] Implement [F12](../feature-specs/12-profile-editor.md), including save states and conflicts.
-- [ ] Keep historical resumes unchanged; make regeneration from new facts explicit.
+- [x] ✅ Master professional writes do not mutate immutable resume versions. Full regeneration/history UI remains unbuilt. [Profile source](../../services/profile-service/src/profile.ts).
 - [ ] Verify field-level input permissions, section deletion/reorder, and concurrent tabs.
 
 ## Task P3.5 — Individual release review

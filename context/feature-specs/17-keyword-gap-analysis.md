@@ -1,6 +1,16 @@
 # F17 — Keyword and Skill Gap Analysis
 
-**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Partially done; backend and active JD evidence.**
+
+- [x] ✅ Legacy gap service distinguishes matched, supported-but-omitted and unsupported requirements using profile facts and exact/synonym matching. Active JD panel supplies matched/missing resume evidence. [Source](../../services/resume-service/src/gap-analyzer.ts).
+
+**Remaining:** Legacy gap API is runtime/gateway gated. Connect a verified profile-versus-resume comparison UI, fresh-input/model caching and scoped gap-to-target actions; broader semantic calibration remains missing. Current JD matching does not imply the full F17 workflow.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Partially done; backend and active JD evidence (audited 2026-10-11)
 
 ## Goal and dependencies
 

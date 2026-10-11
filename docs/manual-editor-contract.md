@@ -1,12 +1,18 @@
 # Local manual editor completion contract — 2026-10-03
 
+## Current audit status — 2026-10-11
+
+The editor is saved and owner-scoped rather than synthetic-only. Upload review, PDF, readiness/JD matching, paid Gemini, private retrieval and three saved template styles are implemented bounded slices. Full generation/history/custom sections/shared privacy remain incomplete.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 ## A4 paper and scrolling correction — 2026-10-08
 
 Current presentation uses a fixed 794px-wide A4 sheet with a 1123px minimum height. Compact defaults apply only where saved appearance is absent; preset/explicit formatting still validates and uses existing Save/Cancel/history. Fit page is an overview zoom, Fit width follows the canvas width, and 100% uses actual CSS dimensions. Zoom does not mutate content or versions. Date/skill columns stay in document layout at every app breakpoint. Optional empty location/description/technology fields omit from the paper but stay editable through dialogs.
 
-Desktop selected-content actions now occupy the editor header, preserving target actions and focus return without 52px section gutters. Mobile keeps its action dock. Back, tool tabs and Collapse stick/scroll as one rail; sticky tool panels clear the measured header height. Overflow retains all text on an extended sheet with a notice/estimated page count. Full pagination, automated formatting-fit and PDF parity remain pending. [Actual checks and manual steps](../README.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier gutter and responsive paper-margin descriptions below are superseded.
+Desktop selected-content actions now occupy the editor header, preserving target actions and focus return without 52px section gutters. Mobile keeps its action dock. Back, tool tabs and Collapse stick/scroll as one rail; sticky tool panels clear the measured header height. Overflow retains all text on an extended sheet with a notice/estimated page count. Full pagination, automated formatting-fit and PDF parity remain pending. [Actual checks and manual steps](archive/readme-history.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier gutter and responsive paper-margin descriptions below are superseded.
 
-**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04).
+**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](archive/readme-history.md#resume-library-upload-and-database-saves--2026-10-04).
 
 ## Temporary AI dialog preview — 2026-10-04
 

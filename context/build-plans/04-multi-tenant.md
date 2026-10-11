@@ -1,5 +1,14 @@
 # Phase 4 Build Plan — Multi-Tenant Workspaces
 
+## Audited phase status — 2026-10-11
+
+**Partial backend; shared access inactive.**
+
+- [x] ✅ Workspace/member/grant factories, 27 permissions and atomic audit capture/relay/ledger/worker exist; audit-list handler exists.
+- [ ] Safe startup/gateway/shell, token-bound invite consent, exact roles and full shared privacy/viewer/retention remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 **Features:** F13–F15. **State:** Not started. **Goal:** Enable organizations/vendors with approved consent, isolation, privacy, and audit behavior.
 
 ## Entry conditions
@@ -12,7 +21,7 @@ Planned files: workspace/profile/grant/membership schemas, authorization mapping
 
 - [ ] Turn reviewed consent, grant/copy, role delegation, contact, revocation, and retention decisions into concrete contracts.
 - [ ] Review migrations and compatibility with existing individual profiles/resumes before applying them.
-- [ ] Preserve the exact 27 permission identifiers and inactive reserved capabilities until their own verified release (including F20 shared presets).
+- [x] ✅ Canonical 27 identifiers are preserved; cover-letter/shared-preset capabilities remain inactive. [Policy](../../packages/access-policy/src/index.ts).
 
 ## Task P4.2 — Membership service and UI (F13)
 

@@ -1,5 +1,11 @@
 # UI Context
 
+## Current audit snapshot — 2026-10-11
+
+Forge Studio charcoal/violet and light-violet themes are implemented. Full-screen public sign-in has no workspace chrome; verified sessions land in My resumes. Device theme, modal upload, normal search, scoped AI sparkle, Content/Template/Review and automatic fit width are active. Raw text UI and inert A4/zoom labels are hidden/removed.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Device theme follow-up — 2026-10-10
 
 The shell defaults to the device color scheme and follows changes while system mode is selected. Preferences provides device/light/dark options; manual header/editor toggles save a browser-local override. Device mode clears that override. The shell passes only resolved light/dark values to existing remotes, keeping the public federation contract and white printable paper unchanged.
@@ -24,7 +30,7 @@ Browser-only formatting supports one original template preview, spacing presets,
 
 **Latest frontend correction — 2026-10-04:** Languages are a compact row within Skills, distinct from Programming Languages. Click or Enter/Space opens a category/tag dialog; Skills has no floating AI/action bar or direct inline editing. Extra paragraph/bullet/skill-row spacing is removed while typed line breaks remain. Save/Cancel/history remain local. [Current verification](../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) supersedes historical separate-Languages/per-skill toolbar descriptions below; mobile verification is pending.
 
-**Current implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](progress-tracker.md) and [verification](../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
+**Historical implementation — 2026-10-03:** V01 and local E01–E05 canvas-first manual editing are complete. Direct paper fields, Summary/description Tiptap, validated section/entry dialogs, grouped Skills/Languages, contextual move/edit/hide/delete, empty-only fictional sample autofill and full-draft local history are verified. The duplicated Edit Content sidebar is removed; keyboard/click selection reveals actions and mobile uses the same paper. [Tracker](progress-tracker.md) and [verification](../docs/manual-editor-verification.md) distinguish this synthetic, in-memory UI from pending real contacts/D12, durable blank/profile versions, grounded AI, ATS and PDF. Earlier slice descriptions below are dated history.
 
 **V01 document design — 2026-10-03:** The authorized paper redesign is verified: centered synthetic name/headline/contact line, Georgia serif text, thin uppercase section rules, aligned desktop dates, consistent bullets and compact Skills groups, covering Summary, Experience, Education, Projects, Skills and Languages. Editor controls stay outside the paper, which grows with long content and stacks dates on narrow screens. Working Summary/history/authentication are preserved. All fixture details are explicitly synthetic; real contacts, other forms, durable saves, AI, ATS and PDF remain pending. See [design plan](../docs/frontend-editor-plan.md#v01--resume-document-design) and [results/screenshots](../docs/manual-editor-verification.md#v01-verification--2026-10-03). E01 is next.
 
@@ -107,7 +113,7 @@ Routes are proposed contracts, not existing pages. Resolve workspace type and me
 
 ## Accessibility and responsive review
 
-Proposed motion: subtle hover/press feedback, short page/panel transitions, smooth onboarding step changes, section reordering, and a settled reveal after generation completes. Stage indicators must follow real task events. Respect reduced-motion settings and keep reading/editing immediately available. Detailed timing and interactions are in [the motion proposal](phase-1-decision-review.md#proposed-motion-language). Performative UI is selected but not installed; extra animation dependencies remain an implementation choice under D13. Background effects are permitted in suitable app regions, with calm reading/editing surfaces and static print output.
+Proposed motion: subtle hover/press feedback, short page/panel transitions, smooth onboarding step changes, section reordering, and a settled reveal after generation completes. Stage indicators must follow real task events. Respect reduced-motion settings and keep reading/editing immediately available. Detailed timing and interactions are in [the motion proposal](phase-1-decision-review.md#proposed-motion-language). Performative UI is installed; extra animation dependencies remain an implementation choice under D13. Background effects are permitted in suitable app regions, with calm reading/editing surfaces and static print output.
 
 Keyboard access, labeled form controls, logical focus order, dialog focus restoration, announced errors, and status text must work throughout. Scores/statuses require text labels in addition to color. Respect reduced motion; use scalable text and responsive controls. Verify desktop, narrow mobile, zoomed layouts, long names/JDs, keyboard-only flows, and screen-reader announcements during implementation.
 
@@ -115,4 +121,4 @@ PDF layout has its own verification: readable fonts, sensible page breaks, text 
 
 ## U06 expanded flows
 
-[Coverage](resume-capability-coverage.md) maps blank/profile creation, typed section editing, actionable issues, list search/sorting, rename/clone and active-resume preference. Proposed Phase 6 adds reviewed upload plus template gallery, density presets, margins, spacing, typography/color, reset and bounded fit-to-page. Keep controls disabled/absent until their backing feature exists. Distinguish app decoration from document appearance: Performative UI accents do not become resume page backgrounds. Visual concept work is still paused.
+[Coverage](resume-capability-coverage.md) maps blank/profile creation, typed section editing, actionable issues, list search/sorting, rename/clone and active-resume preference. Proposed Phase 6 adds reviewed upload plus template gallery, density presets, margins, spacing, typography/color, reset and bounded fit-to-page. Keep controls disabled/absent until their backing feature exists. Distinguish app decoration from document appearance: Performative UI accents do not become resume page backgrounds. Forge Studio is implemented; further design work requires a requested slice.

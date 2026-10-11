@@ -1,6 +1,16 @@
 # F01 — Design System
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Complete (P1.2 verified 2026-09-29)
+## Audited status — 2026-10-11
+
+**Done for foundation scope.**
+
+- [x] ✅ Shared tokens, shadcn-style controls, Performative adapters, React federation, responsive shell, device/light/dark theme and static/reduced-motion fallbacks. [Source](../../packages/shared/src/index.ts).
+
+**Remaining:** Full assistive-technology and sustained low-end rendering audits are release checks, not established by historical broad checkboxes.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Done for foundation scope (audited 2026-10-11)
 
 ## Goal and dependencies
 

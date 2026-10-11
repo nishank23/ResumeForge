@@ -742,7 +742,7 @@ export function ManualResumeEditor({
             <aside
               key={panel}
               id="rf-editor-tool-panel"
-              className="rf-editor-tool-panel"
+              className={`rf-editor-tool-panel${panel === "ats" || panel === "jd" ? " rf-review-panel" : ""}`}
               aria-labelledby="rf-tool-panel-heading"
             >
               <div className="rf-inspector-heading">

@@ -1,5 +1,11 @@
 # Phase 1 Decision Review
 
+## Current audit snapshot — 2026-10-11
+
+Historical recommendation record. Overall review, UI compatibility and local persistence/session/audit foundations have progressed; no new overall confirmation is needed. Shared consent/roles, retention and hosting remain dependent decisions. Current selections are in decisions.md.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 Prepared: 2026-09-28. Updated: 2026-09-29. **Recommendations for discussion; no development authorized and no open decision approved by this document.**
 
 The user’s confirmed requirements now include Performative UI and section-context resume prompts. Visual concept work is paused; no Studio/Focus selection is requested now. Layout, theme, colors and animation intensity remain open. See [current frontend integration](frontend-integration.md) and [editing contract](resume-editing-contract.md).

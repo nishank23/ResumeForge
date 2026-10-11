@@ -6,6 +6,7 @@ import {
   RequestFeedback,
   type ShellFederationContext,
 } from "@resume-forge/shared";
+import { RESUME_UI_FEATURES } from "./ui-features";
 import { ManualResumeEditor } from "./ManualResumeEditor";
 import type { createResumeApi } from "./resume-api";
 import type { ResumeDraft } from "./editor-draft";
@@ -88,21 +89,23 @@ export function ResumeImportDialog({
       >
         {staged ? (
           <>
-            <details className="rf-import-source">
-              <summary>
-                <FileCheck2 size={16} aria-hidden="true" /> Review extracted
-                text
-              </summary>
-              <textarea
-                aria-label="Extracted resume text"
-                readOnly
-                value={staged.text}
-              />
-              <p>
-                Original layout is not preserved. Correct the fields below, then
-                confirm and save.
-              </p>
-            </details>
+            {RESUME_UI_FEATURES.showExtractedText ? (
+              <details className="rf-import-source">
+                <summary>
+                  <FileCheck2 size={16} aria-hidden="true" /> Review extracted
+                  text
+                </summary>
+                <textarea
+                  aria-label="Extracted resume text"
+                  readOnly
+                  value={staged.text}
+                />
+                <p>
+                  Original layout is not preserved. Correct the fields below,
+                  then confirm and save.
+                </p>
+              </details>
+            ) : null}
             <ManualResumeEditor
               context={{
                 ...context,
@@ -138,8 +141,8 @@ export function ResumeImportDialog({
             </div>
             <h3>A fresh start for your resume</h3>
             <p>
-              Choose a file. We’ll extract the text so you can review and edit
-              it before anything is saved.
+              Choose a file. Review and edit the imported fields before anything
+              is saved.
             </p>
             <label className="rf-import-file">
               <span>Choose resume file</span>

@@ -1,5 +1,11 @@
 # Planned MCP Integration
 
+## Current audit status — 2026-10-11
+
+Not started: the seven-tool contract below has no MCP server/SDK/registered tools. Future adapters must reuse authorized use cases; this specification is not an active service.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 **Phase 5 design; no MCP server/tools are implemented.** Use [F18](../context/feature-specs/18-mcp-integration.md) as the feature checklist and [authorization-model.md](../context/authorization-model.md) as policy authority.
 
 ## Adapter boundary

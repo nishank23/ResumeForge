@@ -1,5 +1,11 @@
 # Data Model
 
+## Current audit snapshot — 2026-10-11
+
+The schema includes identity/sessions, workspace/organization/vendor/membership/grants, profiles/contacts/sections, JDs, resumes/versions/tasks, audit/outbox and ResumeSearchChunk. Current resume vectors are gemini-embedding-001/768/professional-v1. Artifact/preset/fact-provenance/invitation-token/default-preference models remain proposed. Table presence does not activate legacy routes.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Readiness-v2 JSON compatibility — 2026-10-09
 
 Private `Resume.atsBreakdown.readiness` history now accepts `readiness-v1` and `readiness-v2`. Checks may carry `scored: false` for additional advice and a header target for owner-only contact-presence guidance. Numeric components retain the approved weights/rules; advice never changes their totals. No table migration or role/grant change is required. Assessment identity binds immutable version, professional projection, derived contact-presence boolean and rubric. Raw contact values are absent from assessment JSON/core/AI; old snapshots remain untouched. [Workflow](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
@@ -14,7 +20,7 @@ The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and
 
 ResumeSearchChunk now stores 768-dimensional gemini-embedding-001 entry embeddings with owner/workspace/resume/immutable version, stable target, projection/model/hash and generation metadata. RLS and exact scoped SQL restrict retrieval; save/delete invalidates derived cache without changing source history. Proposed profile/JD 1536 and Skill 384 spaces remain separate, unimplemented decisions. [Current contract](../docs/resume-vector-search.md).
 
-## ## Local JD and rewrite metadata — 2026-10-09
+## Local JD and rewrite metadata — 2026-10-09
 
 Existing private Resume.atsBreakdown now has jdMatching evaluations/dismissed and rewrites proposal arrays alongside readiness. Each assessment/proposal binds an immutable ResumeVersion and input hash. Stored proposals include exact target, original/proposed fields, model, expiry basis and applied version; apply creates one immutable content version and audit atomically. Bound each array at 100 and combined serialized metadata at 2,000,000 characters; fail rather than silently erase history. No schema/grant/profile/contact change. [Exact contract and persistence limits](../docs/ats-workflow.md).
 
@@ -30,7 +36,7 @@ Current Prisma Resume/ResumeVersion records support the bounded personal editor.
 
 ## Status and ownership
 
-This is the logical schema specification. The initial identity/workspace/profile/contact/grant subset is implemented in `packages/prisma-client/prisma/schema.prisma`; remaining entities are planned. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
+This is the logical schema specification. The schema includes identity, workspace, sections, resume/JD/task and audit/cache entities; proposed supporting models remain future scope. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
 
 Use opaque stable IDs, UTC timestamps, explicit foreign keys, and server-derived ownership. Every tenant-owned object resolves to exactly one workspace. No child ID is sufficient authority to read or modify its parent resource.
 

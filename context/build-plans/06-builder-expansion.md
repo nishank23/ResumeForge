@@ -1,5 +1,14 @@
 # Phase 6 Build Plan — Resume Builder Expansion
 
+## Audited phase status — 2026-10-11
+
+**Partial personal expansion.**
+
+- [x] ✅ Bounded modal import/review/confirmed save and three original templates with validated saved appearance work.
+- [ ] OCR/legacy DOC, confidence/provenance/source lifecycle, alternate layouts, render identity, presets, readable fit and full PDF parity remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 ## Local appearance brought forward — 2026-10-04
 
 The user explicitly requested editor tool panels. One bounded browser-only formatting preview was authorized and implemented alongside F08: the existing original layout, spacing/type controls and local checkpoints/history. [Evidence](../../docs/editor-panels-verification.md). Full Phase 6 allocation, additional template inventory, saved settings, shared presets, fit-to-page and preview/PDF rendering remain behind the entry gate below; no dependency is marked complete from local UI evidence.
@@ -30,7 +39,7 @@ Planned areas: template registry/render DTOs, shared renderers, gallery/format c
 ## Integration and exit gate
 
 - [ ] An imported and reviewed resume can be edited, scored against a supplied JD, cloned, customized and exported under current policy.
-- [ ] Each row in [capability coverage](../resume-capability-coverage.md) has implementation evidence or an explicit unresolved decision; an observed competitor control alone never counts as a passed test.
+- [x] ✅ Coverage rows now have source-linked implemented/partial/unbuilt audit dispositions; competitor observations remain historical evidence. [Audit](../../docs/implementation-audit.md).
 - [ ] F19/F20 acceptance passes and the tracker records actual commands/results/limitations.
 
 Cover letters, billing, jobs and hiring workflows are not introduced. MCP stays at seven tools; imports and formatting are REST/UI operations unless separately scoped. Visual concepts remain paused until the user resumes them.

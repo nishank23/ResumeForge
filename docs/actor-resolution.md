@@ -1,5 +1,11 @@
 # Local authenticated actor resolution
 
+## Current audit status — 2026-10-11
+
+Local session-authenticated personal actor resolution is implemented and consumed by profile/resume. Hosted/distributed identity and consented shared access remain incomplete.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 Phase 1 provides the identity boundary for private profile APIs. Auth-service verifies the actor's current access grant and persisted session; consumers use `createLocalActorResolver` from the server-only `@resume-forge/access-policy/server` entrypoint. The subsequent [professional profile API](profile-api.md) consumes this boundary; wizard save remains pending.
 
 ## Start and check

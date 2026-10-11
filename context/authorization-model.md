@@ -1,5 +1,11 @@
 # Authorization and Privacy Model
 
+## Current audit snapshot — 2026-10-11
+
+Canonical 27 permissions and owned personal checks exist. Contact handlers still use broad profile permissions/profile events; the shared role resolver grants resume editing to common roles unlike the proposed read-only viewer bundle. These are repair blockers. Shared version/PDF/task/MCP privacy remains incomplete.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Enforcement contract
 
 Phase 1's local actor verification is implemented through the server-only [actor resolution boundary](../docs/actor-resolution.md). It verifies the caller service and live user session and returns only user/personal-workspace IDs plus expiry. This identity context grants no action, sharing or contact permission; consumer use cases still perform the remaining checks below. Shared-role proposals remain inactive. The local [professional profile API](../docs/profile-api.md) permits only owned `profile.read`/`profile.update` after scope/resource checks; contact and other actions remain inactive at that boundary.

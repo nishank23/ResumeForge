@@ -1,5 +1,15 @@
 # F07 — ATS Scoring and Breakdown
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Deterministic readiness-v2 (25/25/20/15/15), JD rules (30/25/20/15/10), optional paid Gemini evidence with vector candidates, persisted versioned assessments/preferences, exact-entry Fix/View/Reason and score-neutral Dismiss/Restore. [Source](../../packages/resume-core/src/jd-scoring.ts).
+
+**Remaining:** Calibrated cross-domain corpus, PDF extraction/layout scoring, long-term assessment history, durable jobs and shared access are missing. These are internal heuristics; competitor weights and employer ATS algorithms are unknown.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Current no-JD rule cards — 2026-10-09
 
 The user requests guidance like the supplied no-JD CareerZenith screenshots. General readiness now presents 13 compact rule families for populated documents, preserving every exact entry action and per-check preference. Completed requires all instances to pass; mixed pending/dismissed entries remain independently restorable. New advice covers bullet volume, technologies, education, supported skill count, rich-text bold and essential contact presence. It is score-neutral; existing weights and weighted math are unchanged.
@@ -31,15 +41,15 @@ This is not live JD scoring or full F07 completion. The adapter accepts internal
 
 ## Implemented general readiness slice — 2026-10-09
 
-The user approved no-JD readiness first on 2026-10-08: structure 25%, experience detail 25%, skills presentation 20%, achievement clarity 15%, date consistency 15%. `packages/resume-core/src/readiness.ts` implements `readiness-v1` as deterministic checks over visible professional fields. There is no AI call or JD requirement. The JD rubric below is now approved and its personal slice is connected; full F07 is incomplete.
+The user approved no-JD readiness first on 2026-10-08: structure 25%, experience detail 25%, skills presentation 20%, achievement clarity 15%, date consistency 15%. `packages/resume-core/src/readiness.ts` implements `readiness-v2` as deterministic checks over visible professional fields. There is no AI call or JD requirement. The JD rubric below is now approved and its personal slice is connected; full F07 is incomplete.
 
 Authenticated personal read/run/preference endpoints bind assessments to the current immutable saved resume version, retain prior evidence, reject stale writes and require sanitized transactional audit. Header/contacts, hidden fields, layout and extraction source are excluded by the service projection. Existing `ats.view`/`ats.run` policy names are used without new grants. Organization/vendor activation is not enabled.
 
 The panel shows real component math and reasons, saved identity, stale status, Pending/Completed/Deleted feedback, manual Fix/View and persisted Dismiss/Restore. Dismiss never raises the score. Completed contains all satisfied checks, including initial passes; removing a target does not claim resolution. This supersedes the historical Completed-to-resolved mapping below. The saved editor opens ATS Score and automatically checks missing/outdated assessments. Manual edit candidates/local edits show an explicitly unsaved preview through the shared pure projection/scorer; no preview writes evidence. Fix includes live issue guidance and Go to field. Successful content saves trigger a version-bound check while the panel is visible (otherwise on reopening); failures preserve stale evidence and allow Retry. Scoring does not apply an edit or create a content version. Empty professional input yields 0; absent assessment remains Not evaluated. No external ATS rating, parsing guarantee, hiring prediction or grading threshold is supplied.
 
-Checks and limits, including 100 feedback checks, 100 retained assessments, 2,000,000 metadata characters and current-version-only scoring, are documented in the [README](../../README.md#general-resume-readiness--2026-10-09). General math/privacy/auth/version acceptance is covered by synthetic core/client/service/database tests. JD keywords/relevance, vectors/providers, actual PDF checks, shared roles, durable jobs and historical assessment browsing remain pending. The historical sections below describe prior planned or placeholder stages.
+Checks and limits, including 100 feedback checks, 100 retained assessments, 2,000,000 metadata characters and current-version-only scoring, are documented in the [README](../../docs/archive/readme-history.md#general-resume-readiness--2026-10-09). General math/privacy/auth/version acceptance is covered by synthetic core/client/service/database tests. JD keywords/relevance, vectors/providers, actual PDF checks, shared roles, durable jobs and historical assessment browsing remain pending. The historical sections below describe prior planned or placeholder stages.
 
-**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Personal readiness/JD scoring connected; paid Gemini scoped wording connected; full F07 partial
+**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 
@@ -104,4 +114,4 @@ UI fixtures may be explicitly synthetic; actual readiness/scoring and issue pers
 
 ## Frontend meter implementation — 2026-10-08
 
-The ATS tool panel now shows an original calibrated 0–100 scale with an unavailable score, Not evaluated status, disabled Run ATS check and honest action-filter empty states. This implements presentation only, without adding rating thresholds, rubric weights, counts, issue lifecycle or scoring calls. F07 acceptance remains incomplete until authenticated/version-bound evaluation and freshness handling are connected. [Frontend verification](../../README.md#editor-sidebar-ats-meter-and-section-actions--2026-10-08).
+The ATS tool panel now shows an original calibrated 0–100 scale with an unavailable score, Not evaluated status, disabled Run ATS check and honest action-filter empty states. This implements presentation only, without adding rating thresholds, rubric weights, counts, issue lifecycle or scoring calls. F07 acceptance remains incomplete until authenticated/version-bound evaluation and freshness handling are connected. [Frontend verification](../../docs/archive/readme-history.md#editor-sidebar-ats-meter-and-section-actions--2026-10-08).

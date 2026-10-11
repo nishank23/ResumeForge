@@ -1,6 +1,16 @@
 # F05 — Job Description Parser
 
-**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Bounded deterministic parser with known skills/aliases, requirements/responsibilities/title/company handling. Active JD matching calls it; separate parse/history handlers also exist. [Source](../../services/resume-service/src/jd-parser.ts).
+
+**Remaining:** Full provider-backed/pure-core parser contract, broad domain coverage and durable parsing/idempotent history workflow are missing. Standalone JD routes are blocked by the personal runtime allowlist and absent from the gateway.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

@@ -168,3 +168,67 @@ test("Gemini generation survives eight seconds but aborts at its twenty-second d
   t.mock.timers.tick(GEMINI_GENERATION_TIMEOUT_MS-8_000);assert.equal(signal.aborted,true);
   await pending;
 });
+
+
+test("rewrite rejects invented responsibility and impact while retaining supported claims", () => {
+  const source = structuredClone(doc);
+  source.sections[0].entries[0].description = rich("Built Python APIs to support operations.");
+  for (const proposed of [
+    "Led Python APIs to support operations.",
+    "Automated Python APIs to support operations.",
+    "Optimized Python APIs to support operations.",
+    "Built Python APIs to improve operations.",
+    "Built Python APIs to reduce operations.",
+    "Built Python APIs to increase operations.",
+  ]) {
+    assert.throws(() => validateChanges(source, target, [{ field: "description", proposed }]), /unsupported facts/);
+  }
+  source.sections[0].entries[0].description = rich("Built SQL reports in order to support operations, reducing processing time by 25%.");
+  assert.equal(validateChanges(source, target, [{ field: "description", proposed: "Built SQL reports to support operations, reducing processing time by 25%." }]).length, 1);
+  assert.throws(() => validateChanges(source, target, [{ field: "description", proposed: "Built SQL reports to support operations, increasing processing time by 25%." }]));
+  assert.throws(() => validateChanges(source, target, [{ field: "description", proposed: "Built SQL reports to support operations, processing time by 25%." }]));
+});
+
+test("multiline project edits retain each line's facts, numeric claims and order", () => {
+  const source = structuredClone(doc);
+  source.sections[0].kind = "projects";
+  source.sections[0].entries[0].description = rich("Built a Python app for 20 teams.\nDesigned a React UI for 50 users.");
+  const safe = "Built a Python application for 20 teams.\nDesigned a React user interface for 50 users.";
+  assert.equal(validateChanges(source, target, [{ field: "description", proposed: safe }]).length, 1);
+  for (const proposed of [
+    safe.replace("20 teams", "50 teams").replace("50 users", "20 users"),
+    safe.replace("Python", "React").replace("React user", "Python user"),
+    safe.split("\n").reverse().join("\n"),
+    safe.replace("\n", " "),
+  ]) {
+    assert.throws(() => validateChanges(source, target, [{ field: "description", proposed }]));
+  }
+});
+
+test("identity and whitespace-only suggestions yield no changes without a save", () => {
+  const original = doc.sections[0].entries[0].description.content[0].content[0].text;
+  assert.deepEqual(validateChanges(doc, target, [{ field: "description", proposed: original }]), []);
+  assert.deepEqual(validateChanges(doc, target, [{ field: "description", proposed: `  ${original.replaceAll(" ", "  ")}  ` }]), []);
+});
+
+test("quality examples demonstrate a useful edit, shorthand expansion and an already-strong no-change result", async () => {
+  let instruction;
+  const p = createAiProviders({ geminiKey: "TEST", paidGemini: true }, async (_url, options) => {
+    instruction = JSON.parse(options.body).systemInstruction.parts[0].text;
+    return new Response(JSON.stringify({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: '{"changes":[]}' }] } }] }));
+  });
+  await p.rewrite(rewriteFields(doc, target));
+  const examples = JSON.parse(instruction.split("Examples (fictional, independent inputs): ")[1].split("\n\n")[0]);
+  for (const example of examples) {
+    const source = structuredClone(doc);
+    const field = example.input.fields[0];
+    source.sections[0].entries[0].description = rich(field.original);
+    if (field.field.startsWith("bullet:")) {
+      source.sections[0].entries[0].description = rich("");
+      source.sections[0].entries[0].bullets = [{ id: field.field.slice(7), text: field.original, hidden: false }];
+    }
+    assert.equal(validateChanges(source, target, example.output.changes).length, example.output.changes.length);
+  }
+  assert.ok(examples.some(example => example.output.changes.some(change => change.proposed.length < example.input.fields[0].original.length)));
+  assert.ok(examples.some(example => !example.output.changes.length));
+});

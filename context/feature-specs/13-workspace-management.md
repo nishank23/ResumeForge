@@ -1,6 +1,16 @@
 # F13 — Organization and Vendor Workspaces
 
-**Phase:** 4 — Multi-Tenant · **Priority:** High · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Partially done; backend only.**
+
+- [x] ✅ Workspace/member/grant use cases and route factory with creation, details/settings, invitations as membership records, role/removal and last-owner checks. [Source](../../services/workspace-service/src/workspace.ts).
+
+**Remaining:** Dedicated safe startup/runtime identity, gateway and shell integration, complete token-bound invite accept/revoke/resend/delivery, consent enforcement across resources and race-proof shared E2E release are missing. The audit-only launcher does not enable these routes.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 4 — Multi-Tenant · **Priority:** High · **Implementation:** Partially done; backend only (audited 2026-10-11)
 
 ## Goal and dependencies
 

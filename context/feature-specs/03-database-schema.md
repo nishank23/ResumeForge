@@ -1,10 +1,20 @@
 # F03 — Database Schema and Prisma
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Prisma models/migrations for identity, workspace, profile/contact/sections, JDs, resumes/immutable versions, tasks, audit/outbox and a private vector cache; five restricted runtime roles and role verification. [Source](../../packages/prisma-client/prisma/schema.prisma).
+
+**Remaining:** Hosted provisioning, operational backup/restore, retention/purge, durable artifact/provenance/preset models and other embedding spaces remain unbuilt. Schema presence alone does not activate their APIs.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Current bounded resume vector slice — 2026-10-09
 
 D07 is resolved for resume-entry retrieval: gemini-embedding-001, 768 dimensions, professional-v1. The additive cache migration, scoped RLS, exact prefiltered cosine retrieval, HNSW infrastructure and runtime function allowlist are implemented locally. Disposable editor tests verify cache replay, wrong-owner/version denial, save/delete invalidation, late-response conflict and source-preserving rollback/rebuild. Hosted provisioning, larger-corpus indexing/benchmarking and proposed profile/JD/Skill spaces remain pending. F03 is not fully complete. [Contract and local setup](../../docs/resume-vector-search.md).
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — initial local identity migration verified
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

@@ -14,6 +14,6 @@ OpenCode SDK/native session/HTTP adapters and dependency are removed after the u
 
 ## Setup and checks
 
-Configure `GEMINI_API_KEY` in the original ignored `.env` and `GEMINI_DATA_MODE=paid` in ignored `.local/ai-provider.env`. Do not expose keys through browser environment values. Real professional text requires the approved paid data mode and per-request consent. No OpenCode/Textkernel credentials are needed by the application.
+Configure GEMINI_API_KEY and GEMINI_DATA_MODE=paid in the initialized primary checkout’s private .env. Existing .local/ai-provider.env overrides are also read; process environment wins. Do not expose keys through browser environment values. Real professional text requires the approved paid data mode and per-request consent. No OpenCode/Textkernel credentials are needed by the application.
 
-Use [README manual checks](../README.md#setup-and-manual-checks) for ATS areas, JD analysis, targeted Fix and Gemini review/Apply/reload. [Tracker](../context/progress-tracker.md) records actual tests and remaining limits. Broader parser vocabulary, calibrated cross-domain evaluation, durable jobs and production cost controls remain incomplete.
+Use [README manual checks](archive/readme-history.md#setup-and-manual-checks) for ATS areas, JD analysis, targeted Fix and Gemini review/Apply/reload. [Tracker](../context/progress-tracker.md) records actual tests and remaining limits. Broader parser vocabulary, calibrated cross-domain evaluation, durable jobs and production cost controls remain incomplete.

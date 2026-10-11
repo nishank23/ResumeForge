@@ -1,5 +1,9 @@
 # Backend Handoff: Resume Editing, Versioning, Download and Multi-Resume Isolation
 
+## Audit disposition — 2026-10-11
+
+This is a historical backend handoff. Its source was integrated, but its original completion/test counts are not fresh audit results or proof of live gateway exposure. [Current feature status and safety findings](../implementation-audit.md) supersede activation claims here. Profile section handlers exist without connected browser forms; JD-history/generator/gap/clone/version handlers remain personal-runtime gated; shared workspace APIs remain disconnected.
+
 - **Task**: Implement resume updating, optimistic concurrency, version history, format downloads (JSON, Markdown, Plaintext, HTML), cloning, deletion, and strict multi-resume isolation.
 - **Branch**: `codex/backend`
 - **Date**: 2026-10-04

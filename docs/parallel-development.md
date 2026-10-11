@@ -1,16 +1,18 @@
 # Frontend and backend development lanes
 
-## Release branch transition — 2026-10-10
+## Current checkout — 2026-10-11
 
-The user authorized committing all pending ux-ui-update work, creating and merging its PR into main, retiring local/remote features and ux-ui-update after integration, then creating and checking out **fixes** from merged main. Subsequent work uses **fixes** in the existing frontend worktree. This supersedes earlier active-branch names below. Preserve the detached primary runtime checkout and backend worktree. Branch retirement occurs only after confirming all their commits are included in main.
+Task ownership is in [context/development-status.md](../context/development-status.md); root README contains product setup only. Historical checkouts/commit IDs below do not direct current work.
 
-## Current UI branch workflow — 2026-10-10
+The release transition is complete. Live Git inspection for this audit confirms **fixes** in /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2. Subsequent work uses **fixes** in the existing frontend worktree. This supersedes earlier active-branch names below. Preserve the detached primary runtime checkout and backend worktree. Branch retirement occurs only after confirming all their commits are included in main.
+
+## Historical UI branch workflow — 2026-10-10
 
 The user requested PR integration of the completed fixes, then a new branch named **ux-ui-update**. PR [#4](https://github.com/resuming-v2/ResumeForge/pull/4) is merged into main at `c713cf43426dd67b10b96ef563baa6d21d7ba03d`. The new branch was created from that commit, pushed to origin and checked out in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. Future work and scheduled checks use **ux-ui-update**, superseding the active features requirement below.
 
 The original detached checkout, authoritative private runtime files and separate backend checkout remain intact. Existing ownership, task locks, contract and integration rules apply. [Original Performative UI design direction](ux-ui-update-plan.md) is planning for the new branch, not completed visual work.
 
-## Current branch workflow — 2026-10-08
+## Historical branch workflow — 2026-10-08
 
 The user requests one integration PR into `main`, deletion of the old remote frontend/backend branches after the merge, and a new `features` branch created from the merged main commit. Subsequent work uses `features` in `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`; the directory name does not prescribe a branch prefix. Push `features` with an upstream to `origin/features`. Do not recreate the retired remote branches.
 
@@ -21,7 +23,7 @@ Existing ownership, policy and review boundaries remain. Scheduled frontend work
 ## Historical two-lane setup — 2026-10-04
 
 
-**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](../README.md#resume-library-upload-and-database-saves--2026-10-04).
+**Current integration — 2026-10-04:** The latest user request removes required Create profile onboarding and replaces the sample resume with an owned library/upload/review/version-save flow. Work runs in the named frontend worktree; port 4003 now belongs to the restricted personal resume service. Dialog Save changes the working draft; editor Save changes persists a version. Professional profile editing remains optional. Earlier sample/reset/profile-first or stopped-resume statements below are historical. [Current changes, startup and manual checks](archive/readme-history.md#resume-library-upload-and-database-saves--2026-10-04).
 
 The user selected a committed baseline, two branches and separate checkouts on 2026-10-04. Branches alone do not isolate simultaneous edits when agents share one working folder.
 
@@ -42,13 +44,13 @@ Created the named `frontend` worktree from pushed frontend commit `0dc79ec`, the
 
 - Codex frontend: `apps/shell`, `apps/profile-mfe`, `apps/resume-mfe`, shared UI components and styles in `packages/shared`. Preserve authentication and completed canvas editing; choose only tracker-approved slices.
 - Backend agent's first task: owned Education list/add in `services/profile-service`, its tests and `docs/handoffs/backend-education.md`. Read the F04 specification and existing Experience contract before choosing fields or behavior. This assignment does not authorize deletion/reorder, other sections, contacts, durable resumes or completion.
-- Codex coordinator only: public API/domain contracts, the canonical tracker, root README outside the local task marker, AGENTS, dependencies/lockfile, Prisma schema/migrations, access-policy/resume-core and other shared packages. The backend agent reports required changes here as proposals before implementing dependent behavior. Existing service-local validation can be changed within the agreed task.
+- Codex coordinator only: public API/domain contracts, the canonical tracker, root product README and separate context/development-status.md, AGENTS, dependencies/lockfile, Prisma schema/migrations, access-policy/resume-core and other shared packages. The backend agent reports required changes here as proposals before implementing dependent behavior. Existing service-local validation can be changed within the agreed task.
 
 Do not edit outside the assigned paths, reformat the whole repository, switch the other checkout's branch, reset another agent's work, commit credentials or overwrite approved gates. File ownership reduces conflicts but cannot guarantee zero integration fixes.
 
 ## Coordination and verification
 
-1. Each agent checks its own README marker and `pnpm task:status`, then claims one bounded task using the existing helper. Locks do not expire and are local to each checkout. Finish with the returned owner token. Never copy `.local` locks or database directories between checkouts.
+1. Each agent checks its own development-status marker and `pnpm task:status`, then claims one bounded task using the existing helper. Locks do not expire and are local to each checkout. Finish with the returned owner token. Never copy `.local` locks or database directories between checkouts.
 2. Codex owns the canonical progress tracker. The backend agent records files changed, API proposal, exact checks/results, limitations, manual checks and required shared changes in its handoff document. Task marker changes are runtime bookkeeping and should not be included in the backend feature patch.
 3. Existing frontend heartbeat follows branch ownership in [scheduled development](scheduled-development.md). It cannot take backend work when frontend work is blocked. Gemini is run manually in its own checkout; this setup does not provide automatic Gemini orchestration.
 4. Keep one frontend stack on ports 3000–3003, now running from the named frontend worktree, and preserve the original checkout's managed local PostgreSQL and backend configuration. The gateway is restored; auth/profile startup is currently blocked by a local runtime-password mismatch documented in the tracker. Do not start a second stack on the same ports, initialize another dev cluster, migrate shared development data or change hosted settings. Backend tests must use disposable local databases and synthetic fixtures. Missing dependencies/local test configuration must be resolved without copying credentials into chat or Git.
@@ -76,7 +78,7 @@ dependency or public-contract changes in the handoff before proceeding.
 Do not edit frontend, shared packages, canonical tracker or other docs.
 Do not merge, push, deploy or modify main. Return a feature-only diff,
 exact test results, manual checks and blockers. Finish your own task token;
-exclude README task bookkeeping from the feature patch. Codex handles
+exclude development-status task bookkeeping from the feature patch. Codex handles
 review, integration and canonical tracker updates.
 ```
 
@@ -88,4 +90,4 @@ In the fresh backend worktree, `pnpm task:status` attempted dependency setup and
 
 ## Personal runtime repair and worktree startup — 2026-10-04
 
-The latest user request authorizes sign-in repair. Existing primary-checkout runtime passwords/grants were reapplied; auth/profile now pass startup and the browser session restores. All active personal service code now runs from the named frontend worktree with `pnpm dev:personal`. Only the original checkout's ignored `.env`/`.local` files and existing PostgreSQL cluster remain authoritative. The launcher resolves that primary checkout or an explicit `RESUME_FORGE_LOCAL_ROOT`, without copying credentials. Do not run an independent role initializer against a competing worktree credential file: it overwrites cluster-global passwords. Future shared-role repair requires coordination and service restart; normal startup never repairs roles automatically. Resume/workspace business startup remains gated by the readiness report. The external backend checkout was not changed. [README](../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) has current commands and manual checks; older startup/password-block notes above are historical.
+The latest user request authorizes sign-in repair. Existing primary-checkout runtime passwords/grants were reapplied; auth/profile now pass startup and the browser session restores. All active personal service code now runs from the named frontend worktree with `pnpm dev:personal`. Only the original checkout's ignored `.env`/`.local` files and existing PostgreSQL cluster remain authoritative. The launcher resolves that primary checkout or an explicit `RESUME_FORGE_LOCAL_ROOT`, without copying credentials. Do not run an independent role initializer against a competing worktree credential file: it overwrites cluster-global passwords. Future shared-role repair requires coordination and service restart; normal startup never repairs roles automatically. Resume/workspace business startup remains gated by the readiness report. The external backend checkout was not changed. [README](profile-api.md#current-audit-status--2026-10-11) has current commands and manual checks; older startup/password-block notes above are historical.

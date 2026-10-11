@@ -1,5 +1,11 @@
 # Architecture Context
 
+## Current audit snapshot — 2026-10-11
+
+Actual stack: four React/Vite MFEs, Hono gateway/auth/profile/resume, safe audit-only workspace listener, PostgreSQL/Prisma/pgvector, access-policy and shared packages. React state/session clients and service-local Gemini REST adapters drive active flows. Trigger.dev, AI SDK, R2/storage service, hosted Neon/Pages and MCP remain target infrastructure. Shared business startup is unsafe to activate.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Gemini validation and action boundary — 2026-10-10
 
 Prompt/validator share bounded grammar and exact shorthand aliases so harmless wording is not misclassified as a new fact. Provider receives field IDs/text only for scoped rewriting. UI checkboxes are removed; labeled actions supply the existing processing-intent flag. Contact exclusion, paid configuration, auditing, authorization and version/hash rechecks remain. Generation deadlines are 20 seconds; embeddings remain eight. No provider, schema, grants or scoring changes. [Contract](../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).

@@ -1,5 +1,11 @@
 # Forge Studio UX/UI design
 
+## Current audit status — 2026-10-11
+
+The bounded Performative UI redesign, full-screen sign-in, device themes, normal library search, AI button contrast and template gallery fixes are implemented. The active branch is fixes. Full accessibility/performance/render release gates remain verification work.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 ## Approved direction — 2026-10-10
 
 The user approved implementing Forge Studio on **ux-ui-update** after rejecting the ocean/teal redesign. CareerZenith remains a capability reference. The new identity uses charcoal/violet surfaces, a distinctive ASCII intake spotlight and a quieter document studio. Existing backend/authentication/scoring/save and AI contracts stay intact. This is presentation work on the existing whole-app slice, not a new service or product workflow.

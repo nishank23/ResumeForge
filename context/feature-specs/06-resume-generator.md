@@ -1,5 +1,17 @@
 # F06 — Resume Generator, Suggestions and Durable Pipeline
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Blank/reviewed-import version creation; paid Gemini saved Summary/experience/project description rewriting; validated stored proposals, word diff, reviewed exact-target atomic Apply, stale-version/hash checks and idempotent replay. [Source](../../services/resume-service/src/ats/use-cases.ts).
+
+- [x] ✅ Scoped rewrite quality calibration: concise-edit/no-change examples, per-line grounding, supported impact/leadership verb groups and whitespace-only suppression; eight synthetic live checks and focused regressions. [Workflow and manual checks](../../docs/ats-workflow.md#rewrite-quality--2026-10-11).
+
+**Remaining:** Full profile-copy/JD generation, freeform action prompts, durable dispatch/status/cancel/retry, retained suggestion-history UI and structured fact provenance are missing. Legacy generator/suggest/apply handlers exist but remain gated and unsafe to activate as-is.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Scoped rewrite repair — 2026-10-10
 
 The requested AI checkbox removal is implemented through explicit action buttons with scope copy. Server processing intent and contact exclusion remain. Live harmless-word validation failure is fixed by shared grammar/action vocabulary and narrow shorthand equivalents; arbitrary factual vocabulary/numbers/technical terms remain guarded. Review uses bounded word-level red deletions/green replacements plus full-text disclosure. Apply remains scoped, reviewed, versioned and idempotent. Generation allows 20 seconds and rewrite output 8,192 tokens without automatic provider retries. [Current workflow and verification](../../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
@@ -12,7 +24,7 @@ The user replaces MiMo with paid Gemini gemini-3.5-flash-lite. Selected saved de
 
 Selected saved Summary/experience/project descriptions and achievements have a separate consented MiMo proposal/review/apply flow. Server-stored base version/hash/target and atomic immutable-version apply preserve contacts, other entries and master profile. Source-vocabulary/numeric checks are conservative guards, not proof of factual equivalence; user review is required. The official SDK/CLI 1.18.35 pair now supplies isolated, tool-denied generation with no fallback. Live MiMo generation was retested after `/connect` and still returns 403 FreeTierError; mocked-provider database apply passes. Full generation, durable tasks and shared roles remain incomplete. [Current contract](../../docs/ats-workflow.md).
 
-**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partial: personal scoped wording/review/apply; full generation and durable tasks pending
+**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

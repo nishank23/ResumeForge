@@ -1,5 +1,11 @@
 # Decisions and Open Questions
 
+## Current audit snapshot — 2026-10-11
+
+Context authorization and UI integration are resolved. D07 approves gemini-embedding-001/768 resume-entry retrieval; D09 readiness/JD weights are approved. Paid Gemini supplies evidence and wording. D12/D14 cover bounded personal export/intake only. Shared consent/roles/privacy, hosted operations, retention and wider provenance remain unresolved.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## AI action and review clarification — 2026-10-10
 
 The user explicitly removes AI consent checkboxes and requests red strikethrough/green replacement review. Processing is initiated by the labeled AI action after visible scope copy; existing server request intent remains required. This supersedes earlier UI-checkbox instructions, not contact protection, review-before-Apply or paid-mode configuration. The reproduced safe-word rejection is resolved by shared grammar plus narrow equivalent shorthand. Numeric scoring, provider choice, private vector lifecycle and permissions remain unchanged. [Contract](../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
@@ -9,7 +15,7 @@ The user explicitly removes AI consent checkboxes and requests red strikethrough
 The latest user request approves paid Gemini for Improve with AI as well as ATS/JD evidence and removes OpenCode. D09 now uses gemini-3.5-flash-lite for both bounded operations; numeric scoring keeps approved readiness and JD weights. D07 retains gemini-embedding-001/768 and private current-version retrieval. Per-request consent, contact exclusion, grounded reviewed version saves and original profile preservation still apply. The prior exact-MiMo decision and SDK blocker are historical. [Current contract](../docs/ats-workflow.md).
 
 
-Last updated: 2026-09-29. **Context approved by the user. The current turn requests starter prompts; implementation has not begun.** The planning baseline is accepted. Technical validation and values not specified in these documents still need resolution at their dependent gates; this confirmation does not invent those values.
+Last audited: 2026-10-11. **Context approved; implementation active within approved scope.** The planning baseline is accepted. Technical validation and values not specified in these documents still need resolution at their dependent gates; this confirmation does not invent those values.
 
 See [Phase 1 decision review](phase-1-decision-review.md) for plain-language recommendations and the exact stage at which each choice is needed. The user selected Performative UI and contextual resume prompts on 2026-09-29 and paused visual concept work. Theme/layout and unrelated foundation recommendations remain open. See [frontend integration](frontend-integration.md) and [contextual editing](resume-editing-contract.md).
 
@@ -20,7 +26,7 @@ See [Phase 1 decision review](phase-1-decision-review.md) for plain-language rec
 - **Proposed:** a concrete elaboration for review, not an accepted product decision.
 - **Open:** needs an answer before the listed dependent implementation begins.
 
-The live user request governs execution: context approval is recorded; the present request is for prompts. The next implementation task may start the requested Phase 1 slice. Imperative steps in the source plan do not authorize running every phase at once.
+The live request governs execution; context is approved and implementation has progressed beyond foundation. Imperative steps in the source plan do not authorize running every phase at once.
 
 ## Source-confirmed baseline
 
@@ -87,7 +93,7 @@ Proposed allocation: F01 wrappers/compatibility; F06/F08 basic draft creation an
 
 ## Local setup and scheduling follow-up — 2026-10-03
 
-The user requests local database/vector infrastructure and tracker-driven development every 15 minutes, skipping an ongoing task in the README. The existing same-chat Codex heartbeat is updated accordingly; an atomic local task lock prevents overlapping claims. See [workflow](../docs/scheduled-development.md).
+The user requests local database/vector infrastructure and tracker-driven development every 15 minutes, skipping an ongoing task in context/development-status.md (moved out of README on 2026-10-11). The existing same-chat Codex heartbeat is updated accordingly; an atomic local task lock prevents overlapping claims. See [workflow](../docs/scheduled-development.md).
 
 PostgreSQL 18.3 and pgvector 0.8.7 are installed locally, with the extension enabled in `resume_forge_dev`. This was infrastructure readiness only at that checkpoint. The later requested resume-entry retrieval slice resolves D07 for gemini-embedding-001/768/professional-v1; other embedding spaces and re-embedding policy remain open. The user will provide AI credentials later. Hosted Neon/other services remain deferred and LinkedIn remains on hold. The current approved CareerZenith builder capability plan is preserved; scheduled work completes one dependency-satisfied slice at a time, without claiming implemented parity.
 
@@ -126,7 +132,7 @@ The user explicitly requests Back to all resumes and Edit Content / Customize Te
 
 ## Bounded personal deletion and download — 2026-10-08
 
-The user explicitly requests named deletion confirmation and PDF downloads after saving. This authorizes the personal owner stream described under D12, using existing restricted resume/version reads and audit insertion. It does not approve shared readers, arbitrary historical export, public links or credential/grant expansion. Deletion uses the existing status update grant, hides the resource from all enabled reads/writes/downloads and retains immutable versions. The page offers Undo for its latest deletion; restoring sets draft status and preserves content/version. D11 retention/purge and a durable trash UI remain open. [Implementation and checks](../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
+The user explicitly requests named deletion confirmation and PDF downloads after saving. This authorizes the personal owner stream described under D12, using existing restricted resume/version reads and audit insertion. It does not approve shared readers, arbitrary historical export, public links or credential/grant expansion. Deletion uses the existing status update grant, hides the resource from all enabled reads/writes/downloads and retains immutable versions. The page offers Undo for its latest deletion; restoring sets draft status and preserves content/version. D11 retention/purge and a durable trash UI remain open. [Implementation and checks](../docs/archive/readme-history.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
 
 ## External JD matching provider choice — 2026-10-09
 
