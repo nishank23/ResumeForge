@@ -1,5 +1,26 @@
 # Forge Studio verification — 2026-10-10
 
+## JD composer focus and action — 2026-10-11
+
+**Gemini sparkle follow-up:** JD analysis now uses the exact Performative `Sparkle` (`✦`) rendered by the shared Button for **Improve with AI**. The optional `sparkle` prop defaults to the existing `glow` behavior, so current rewrite buttons retain their appearance; StudioPrompt requests the icon separately without adding glow. Shared icon styling keeps it white, leading the label, decorative (`aria-hidden`) and non-animated in both themes. Local rules has zero sparkles; Gemini has exactly one. Shared declaration/production build, affected lint/TypeScript and whitespace checks pass. Live browser checks cover both themes and requested 320/390 widths; the button has no horizontal overflow. Screenshots: `/private/tmp/forge-gemini-performative-{light,dark}.jpg`. Dark appearance and viewport were restored. JD text was not edited; no AI request or resume save was performed.
+
+The installed Performative UI 0.7 Prompt renders `pui-promptbox`, not the earlier adapter's `pui-prompt` selector. Its glow combined with form and textarea focus outlines, while resume-MFE rules added another textarea border. The shared adapter now gives the writing field one outer focus border, a transparent unbordered textarea and a compact divided action footer. A labeled native submit button replaces the disconnected label and icon-only Send control. The existing capture guard, controlled value, 12,000-character bound, busy/disabled state and Cmd/Ctrl+Enter behavior remain.
+
+Design retains the approved Forge palette: Carbon #111014, Glass #1B1921, Ink #F8F6FD and Violet #B89AFF in dark mode; Paper #FFFFFF and Violet #6631C2 in light mode. DM Sans remains the left-aligned form font. The writing surface stays quiet; violet identifies focus and the real analysis action. Library search uses the unchanged single-line branch. No provider, scoring, persistence or resume-paper changes.
+
+Actual checks passed:
+
+- `pnpm --filter @resume-forge/shared build`, `lint` and `typecheck`.
+- `pnpm --filter @resume-forge/resume-mfe build`, `lint` and `typecheck`.
+- `pnpm --filter @resume-forge/resume-mfe test`: **50/50** existing regression tests.
+- `git diff --check`.
+
+Live in-app browser verification used the existing signed-in session. Requested viewport sizes were 1440×960, 390×844 and 320×740; the browser's existing zoom yielded effective CSS widths of 1309, 354 and 291. Both themes show a borderless textarea with no separate outline and one form focus shadow. At both narrow widths, composer scrollWidth equals clientWidth and document width equals viewport width. Tab reaches the labeled action with a visible outline. Only one method is pressed. Empty and 49-character input disable submission; Ctrl+Enter with short text starts no analysis. Valid input enables the matching action; plain Enter adds a newline. A 2,370-character synthetic JD scrolls inside the bounded field. The submit button has no continuous animation.
+
+Screenshots contain synthetic JD text: `/private/tmp/forge-jd-composer-dark.jpg` and `/private/tmp/forge-jd-composer-light.jpg`. Test text was replaced with the original saved JD; dark appearance and the temporary viewport were restored. No AI request or resume save was triggered. Live provider submission, Apply and PDF export were not repeated for this presentation fix.
+
+Manual check: open a saved resume, choose **Review → Tailor to job**, and expand the JD editor. Paste a JD, check that only one border highlights while typing, switch analysis methods, and Tab to the labeled action. Try light and dark modes and a narrow window. Existing saved-version and analysis rules still apply.
+
 ## Historical evidence notice — 2026-10-11
 
 This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.

@@ -1,5 +1,12 @@
 # Progress Tracker
 
+## JD composer focus and action — 2026-10-11
+
+- [x] Release candidate validated for the requested **fixes → main** PR: workspace build **15/15** (11 cached), lint/typecheck **34/34** (23 cached), shared tests **13/13** and resume-MFE tests **50/50**. An initial build/check overlap collided on generated shared declarations; sequential build passes. Candidate whitespace and credential/contact-pattern scans pass, and `check_resumes` stays ignored/untracked. Remote main has the same baseline tree; no product-code conflict or additional backend/AI/database change is included.
+- [x] **Analyze with Gemini** now uses the same decorative Performative `✦` as **Improve with AI**. The shared Button exposes sparkle independently from glow, and StudioPrompt selects it only in Gemini mode. The icon inherits button text color, leads the label and has no animation; local analysis stays icon-free. Shared build and affected lint/TypeScript checks pass; browser checks cover light/dark and 320/390 widths. No AI submission, input change or save.
+- [x] Corrected the resume builder's multiline Performative Prompt adapter on **fixes**. The installed component renders `pui-promptbox`; earlier adapter selectors missed it, leaving the library glow and nested textarea border active. The form now owns one restrained focus cue, with an unbordered text field, divided footer and one labeled submit button. Removed conflicting JD textarea rules. Existing methods, input limits, request guards and backend/scoring behavior are preserved.
+- [x] Verified shared/resume-MFE builds, lint and TypeScript; resume-MFE regression tests **50/50**; whitespace check. Browser checks cover both themes, desktop and narrow screens, single method selection, keyboard focus, empty/49-character blocking, valid-text enablement, Enter/newlines and long-text scrolling. No AI request or resume save was performed. [Evidence and manual checks](../docs/ux-ui-update-verification.md#jd-composer-focus-and-action--2026-10-11).
+
 ## Release checks — 2026-10-11
 
 Validated the accumulated **fixes** changes for the user's requested push and PR merge into **main**. This includes the four focused UI fixes, setup-only README/context audit, task-state relocation and grounded Gemini rewrite quality changes. The fetched main and fixes baseline agree; no unrelated remote commits need reconciliation.

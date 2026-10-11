@@ -138,6 +138,7 @@ export function StudioPrompt({
   quietSearch = false,
   placeholder,
   submitLabel,
+  submitSparkle = false,
 }: {
   label: string;
   value: string;
@@ -150,6 +151,7 @@ export function StudioPrompt({
   quietSearch?: boolean;
   placeholder?: string;
   submitLabel: string;
+  submitSparkle?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -225,7 +227,17 @@ export function StudioPrompt({
           hideAddContext
           hideVoice
           hideModel
-          toolbarExtras={<span>{submitLabel}</span>}
+          hideSend
+          toolbarExtras={
+            <Button
+              type="submit"
+              sparkle={submitSparkle}
+              size="sm"
+              disabled={disabled || submitDisabled}
+            >
+              {submitLabel}
+            </Button>
+          }
         />
       )}
     </div>
