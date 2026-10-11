@@ -16,7 +16,15 @@ import { taskStatus, startTask, finishTask } from "../development-task.mjs";
 const initial = `# Preserved project\n\n<!-- BEGIN:CURRENT_TASK -->\n\`\`\`json\n${JSON.stringify({ status: "idle", task: null, owner: null, lastResult: "Earlier work preserved" })}\n\`\`\`\n<!-- END:CURRENT_TASK -->\n\nUser documentation stays here.\n`;
 function fixture(t) {
   const directory = mkdtempSync(path.join(tmpdir(), "rf-development-task-"));
-  writeFileSync(path.join(directory, "README.md"), initial);
+  mkdirSync(path.join(directory, "context"));
+  writeFileSync(
+    path.join(directory, "README.md"),
+    "# Product setup stays unchanged\n",
+  );
+  writeFileSync(
+    path.join(directory, "context", "development-status.md"),
+    initial,
+  );
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   return directory;
 }
@@ -32,14 +40,21 @@ test("claim, competing claim and owner-only completion preserve surrounding docu
   finishTask(owner, "Verified synthetic task", directory);
   assert.equal(taskStatus(directory).status, "idle");
   assert.equal(taskStatus(directory).lastResult, "Verified synthetic task");
-  const document = readFileSync(path.join(directory, "README.md"), "utf8");
+  const document = readFileSync(
+    path.join(directory, "context", "development-status.md"),
+    "utf8",
+  );
   assert.ok(document.startsWith("# Preserved project\n\n"));
   assert.ok(document.endsWith("\n\nUser documentation stays here.\n"));
+  assert.equal(
+    readFileSync(path.join(directory, "README.md"), "utf8"),
+    "# Product setup stays unchanged\n",
+  );
   assert.throws(() => finishTask(owner, "Duplicate completion", directory));
   assert.ok(startTask("Next task", directory));
 });
 
-test("an orphaned lock blocks new work without overwriting README", (t) => {
+test("an orphaned lock blocks new work without overwriting task state", (t) => {
   const directory = fixture(t);
   mkdirSync(path.join(directory, ".local/development-task.lock"), {
     recursive: true,
@@ -47,15 +62,18 @@ test("an orphaned lock blocks new work without overwriting README", (t) => {
   assert.equal(taskStatus(directory).status, "ongoing");
   assert.equal(startTask("Must wait", directory), null);
   assert.equal(
-    readFileSync(path.join(directory, "README.md"), "utf8"),
+    readFileSync(
+      path.join(directory, "context", "development-status.md"),
+      "utf8",
+    ),
     initial,
   );
 });
 
-test("ongoing README remains busy even if its lock is missing", (t) => {
+test("ongoing task document remains busy even if its lock is missing", (t) => {
   const directory = fixture(t);
   writeFileSync(
-    path.join(directory, "README.md"),
+    path.join(directory, "context", "development-status.md"),
     initial
       .replace('"idle"', '"ongoing"')
       .replace('"task":null', '"task":"Prior task"')
@@ -73,10 +91,16 @@ test("missing, malformed or ambiguous task markers fail closed", (t) => {
     initial + "<!-- BEGIN:CURRENT_TASK -->",
     initial + "<!-- END:CURRENT_TASK -->",
   ]) {
-    writeFileSync(path.join(directory, "README.md"), document);
+    writeFileSync(
+      path.join(directory, "context", "development-status.md"),
+      document,
+    );
     assert.throws(() => startTask("Must not start", directory));
     assert.equal(
-      readFileSync(path.join(directory, "README.md"), "utf8"),
+      readFileSync(
+        path.join(directory, "context", "development-status.md"),
+        "utf8",
+      ),
       document,
     );
   }

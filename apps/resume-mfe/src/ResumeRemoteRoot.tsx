@@ -11,6 +11,7 @@ import {
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
+import { RESUME_UI_FEATURES } from "./ui-features";
 import { ManualResumeEditor } from "./ManualResumeEditor";
 import { ResumeLibrary } from "./ResumeLibrary";
 import {
@@ -188,22 +189,24 @@ export function ResumeRemoteRoot({
       );
     return (
       <>
-        {typeof saved.content.rawText === "string" && saved.content.rawText && (
-          <div className="rf-import-review">
-            <details>
-              <summary>View saved extracted text</summary>
-              <textarea
-                aria-label="Saved extracted resume text"
-                readOnly
-                value={saved.content.rawText}
-              />
-              <p>
-                This is the original text reference. Your saved edits appear in
-                the document below.
-              </p>
-            </details>
-          </div>
-        )}
+        {RESUME_UI_FEATURES.showExtractedText &&
+          typeof saved.content.rawText === "string" &&
+          saved.content.rawText && (
+            <div className="rf-import-review">
+              <details>
+                <summary>View saved extracted text</summary>
+                <textarea
+                  aria-label="Saved extracted resume text"
+                  readOnly
+                  value={saved.content.rawText}
+                />
+                <p>
+                  This is the original text reference. Your saved edits appear
+                  in the document below.
+                </p>
+              </details>
+            </div>
+          )}
         <ManualResumeEditor
           key={saved.id}
           context={context}

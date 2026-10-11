@@ -1,6 +1,16 @@
 # F16 — LinkedIn Data Import
 
-**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Not started.**
+
+- [ ] No archive import/review/merge implementation. The unused OAuth provider helper is not archive import.
+
+**Remaining:** Archive format/limits, safe unpacking, provenance/conflict review, permissioned atomic master merge and temporary-artifact cleanup all need building.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Not started (audited 2026-10-11)
 
 ## Goal and dependencies
 

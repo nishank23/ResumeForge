@@ -1,8 +1,14 @@
 # Validation Strategy
 
+## Current audit snapshot — 2026-10-11
+
+Source and application tests exist. Fresh audit checks are separate from dated provider/browser/database evidence. Full shared privacy, corpus quality, all-layout PDF fidelity, durable fault recovery and production operations remain release work. Routes/schema/compilation alone do not complete features.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Current evidence boundary
 
-This delivery contains Markdown specifications only. Documentation structure/content checks can be completed now. No application build, automated application test, provider connection, database migration, or deployment can be claimed to pass before implementation exists.
+Code, builds, unit and disposable database tests exist. Record freshly executed checks separately from historical evidence; hosted deployment and full acceptance remain unverified.
 
 ## Context verification
 
@@ -68,4 +74,4 @@ Verify background/surface components with reduced motion, opaque fallbacks, long
 
 ## U06 coverage verification
 
-Verify [capability coverage](resume-capability-coverage.md) against feature specs and phase plans; distinguish observed UI, untested reference behavior, requested extension and actual implementation evidence. Add meaningful future cases for blank/structured editing and undo, ATS dismissal versus resolution, query-bound pagination, same-workspace clone and actor-scoped active preference. F19 requires synthetic malformed/ambiguous/contact-bearing files, bounded parser failure, idempotent confirm and revocation/cleanup tests. F20 requires template/settings preview-to-PDF parity, text extraction, readable fit limits, history reproducibility and scoped preset management. None of these application checks has been run at the documentation stage.
+Verify [capability coverage](resume-capability-coverage.md) against feature specs and phase plans; distinguish observed UI, untested reference behavior, requested extension and actual implementation evidence. Add meaningful future cases for blank/structured editing and undo, ATS dismissal versus resolution, query-bound pagination, same-workspace clone and actor-scoped active preference. F19 requires synthetic malformed/ambiguous/contact-bearing files, bounded parser failure, idempotent confirm and revocation/cleanup tests. F20 requires template/settings preview-to-PDF parity, text extraction, readable fit limits, history reproducibility and scoped preset management. The documentation-stage statement is historical; audit/tracker record implemented slices and actual evidence.

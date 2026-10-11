@@ -1,5 +1,9 @@
 # UI refinement — 2026-09-29
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 ## Slice and rationale
 
 The live request prioritizes inspecting and improving the confusing interface. P1.2 was marked complete, but browser inspection showed unfinished F01 usability: developer controls in the header, creation and editing on one screen, internal IDs in labels, simulated persistence claims, and missing app utility styles. This slice repairs that foundation before P1.3. P1.3 still depends on D03/D04/D08/D11 and a development database; those choices are not inferred from a request for visual improvement.

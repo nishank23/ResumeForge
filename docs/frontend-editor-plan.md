@@ -1,5 +1,11 @@
 # Frontend editor completion plan — 2026-10-03
 
+## Current audit status — 2026-10-11
+
+Core manual fields/dialogs, saved library/import, scoring actions, paid Gemini review/Apply and current-version PDF are connected. Full generation/version-history/custom-section/shared release scope remains incomplete. Do not repeat the original initial-foundation prompts.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 ## Editor tool panels — 2026-10-04
 
 The latest user request explicitly adds Back to all resumes and Edit Content / Customize Template / ATS Score / Optimize for JD tools beside the paper. This supersedes the earlier no-sidebar instruction for navigation and section shortcuts only: direct paper editing and the existing target dialogs remain authoritative; there is no duplicate text editor.

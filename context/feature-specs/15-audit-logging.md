@@ -1,6 +1,16 @@
 # F15 — Audit Logging and Viewer
 
-**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Phase 1 intent validation, atomic capture and local personal retry/ingestion implemented; authenticated local HTTP transport implemented; local scheduling implemented; production identity/viewer pending
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Content-free validation, atomic capture, persisted outbox claims/backoff/leases, authenticated loopback ingestion, append-only runtime ledger and foreground delivery worker. Workspace audit-list handler exists. [Source](../../packages/prisma-client/src/audit-delivery.ts).
+
+**Remaining:** Connected audit viewer, complete per-action/denial/contact event coverage, shared transport, production identities/supervision, retention/deletion and remediation UI are missing. A query API is not a delivered viewer.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 4 — Multi-Tenant · **Priority:** Medium · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

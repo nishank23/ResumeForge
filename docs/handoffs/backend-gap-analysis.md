@@ -1,5 +1,9 @@
 # Backend Handoff: Keyword & Skill Gap Analysis (F17) and JD History Deletion (F11)
 
+## Audit disposition — 2026-10-11
+
+This is a historical backend handoff. Its source was integrated, but its original completion/test counts are not fresh audit results or proof of live gateway exposure. [Current feature status and safety findings](../implementation-audit.md) supersede activation claims here. Profile section handlers exist without connected browser forms; JD-history/generator/gap/clone/version handlers remain personal-runtime gated; shared workspace APIs remain disconnected.
+
 - **Task**: Keyword & Skill Gap Analysis and JD History Deletion under F11/F17.
 - **Branch**: `codex/backend`
 - **Date**: 2026-10-04

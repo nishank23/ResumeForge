@@ -1,5 +1,9 @@
 # CareerZenith ATS workflow comparison
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 ## Supplied no-JD screenshots and new rule cards — 2026-10-09
 
 The latest user-supplied screenshots show one pending bullet-volume rule and initially passing rule families for bold restraint, entry technologies/context, education detail, supported skill count, contacts and section presence. No new reference login/upload was performed for this comparison. These images establish visible capabilities only; they do not reveal score weights or rating thresholds.

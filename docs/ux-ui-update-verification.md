@@ -1,5 +1,9 @@
 # Forge Studio verification — 2026-10-10
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 ## Full-screen ASCII sign-in
 
 Latest signed-out entry is edge to edge: no outer hero border, radius or padding. Header/theme control, branding, Google card and both footer messages are children of the same ASCII scene. Desktop uses two columns; <=980px stacks content; short/narrow displays allow normal vertical scrolling. The optional full-screen static fallback belongs only to auth, without enlarging the library field or changing existing canvas activity guards.
@@ -14,13 +18,13 @@ Actual commands passed:
 
 Chrome dark-mode hero measures x=0, y=0, width=1440, height=638 at a 1440×638 viewport, with 0px border/radius. Header/footer are inside auth. At 320px and 390px, document width equals viewport width; 900px tablet stacks the card. Final 390×844 view uses a full-height static ASCII field, 97 lines and zero canvas. Temporary viewport settings were reset. Screenshots: `/private/tmp/forge-fullscreen-ascii-dark.png` and `/private/tmp/forge-fullscreen-ascii-mobile.png`.
 
-The existing palette, Google/session/recovery handlers, shell theme callback and authenticated library handoff are preserved in source. This slice does not add provider/backend/save/AI/PDF proof; live light-theme preview and OAuth were not repeated. Existing earlier evidence below retains its dated limits. No credentials, resume data or OS appearance were changed. [Manual steps](../README.md#full-screen-ascii-sign-in--2026-10-10).
+The existing palette, Google/session/recovery handlers, shell theme callback and authenticated library handoff are preserved in source. This slice does not add provider/backend/save/AI/PDF proof; live light-theme preview and OAuth were not repeated. Existing earlier evidence below retains its dated limits. No credentials, resume data or OS appearance were changed. [Manual steps](archive/readme-history.md#full-screen-ascii-sign-in--2026-10-10).
 
 ## Device theme default
 
 The shell passes **15 tests**, including five new theme cases, plus its production build/TypeScript check, lint and `git diff --check`. Logs: `/private/tmp/forge-device-theme-{tests,lint,build}.log`. Tests cover initial device appearance, live media changes, stable manual overrides, reset, reload persistence, invalid/blocked storage and subscription cleanup/remount.
 
-Chrome reports `prefers-color-scheme: dark = true` and first-visit device mode renders a dark root. Preferences → Light immediately changes the root to light and retains the selected mode after reload. The header toggle selects/persists Dark. Choosing Use device theme returns to system mode, dark on this device, and survives reload. Screenshot: `/private/tmp/forge-device-theme.png`; no OS setting or resume data was changed. Actual OS appearance changes and standalone remote entrypoints were not exercised; media-change behavior has unit evidence. Existing backend/AI/document behavior was not retested for this shell-only refinement. [Manual steps](../README.md#device-theme-default--2026-10-10).
+Chrome reports `prefers-color-scheme: dark = true` and first-visit device mode renders a dark root. Preferences → Light immediately changes the root to light and retains the selected mode after reload. The header toggle selects/persists Dark. Choosing Use device theme returns to system mode, dark on this device, and survives reload. Screenshot: `/private/tmp/forge-device-theme.png`; no OS setting or resume data was changed. Actual OS appearance changes and standalone remote entrypoints were not exercised; media-change behavior has unit evidence. Existing backend/AI/document behavior was not retested for this shell-only refinement. [Manual steps](archive/readme-history.md#device-theme-default--2026-10-10).
 
 ## Upload, AI action and template refinements
 
@@ -36,7 +40,7 @@ Actual Chrome verification:
 
 Desktop screenshots: `/private/tmp/forge-template-gallery-final-dark.png`, `/private/tmp/forge-template-gallery-final-light.png`, `/private/tmp/forge-upload-modal-light.png`. Screenshots and synthetic files remain outside Git. Chrome's extension lacked file-URL access; native picker tests succeeded without enabling broader permissions. PDF automation timed out because a native Save dialog awaited confirmation; completing that dialog produced the verified artifact.
 
-Templates are three single-column formatting styles, not new layouts or an independent MFE. APIs/parser/PDF renderer, immutable versions, provider grounding and contacts policy are reused. This slice does not prove all file-format/layout cases, broad screen-reader accessibility, every template's long-resume PDF pagination or new Gemini quality. Full F19/F20 acceptance remains partial. [Manual steps](../README.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10).
+Templates are three single-column formatting styles, not new layouts or an independent MFE. APIs/parser/PDF renderer, immutable versions, provider grounding and contacts policy are reused. This slice does not prove all file-format/layout cases, broad screen-reader accessibility, every template's long-resume PDF pagination or new Gemini quality. Full F19/F20 acceptance remains partial. [Manual steps](archive/readme-history.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10).
 
 ## Latest entry and editor refinement evidence
 
@@ -94,4 +98,4 @@ Chrome used the existing authenticated personal stack at localhost:3000. Screens
 
 Sign-out, a newly uploaded browser file and completed PDF file contents were not reverified. Normal Google sign-in recovery was verified. The earlier UI pass showed saved-version PDF download-start feedback, but the extension returned no downloaded artifact. The earlier upload attempt was blocked by the extension's Allow access to file URLs permission; its current permission state was not changed. No security bypass is used. Broad accessibility, long-resume performance, deployment and full F07/F19/F20 acceptance remain separate work.
 
-Use the [README checklist](../README.md#check-forge-studio) to test your own resume: save/reload, Content/Template/Review, ATS Fix target, Tailor to job, one scoped AI review, Cancel/Apply, theme and reduced motion. Local screenshots `/private/tmp/forge-studio-library.png`, `/private/tmp/forge-studio-editor.png` and `/private/tmp/forge-studio-ai-review.png` are review artifacts outside Git. No real contact fixture, secret or runtime/generated build file is added.
+Use the [README checklist](archive/readme-history.md#check-forge-studio) to test your own resume: save/reload, Content/Template/Review, ATS Fix target, Tailor to job, one scoped AI review, Cancel/Apply, theme and reduced motion. Local screenshots `/private/tmp/forge-studio-library.png`, `/private/tmp/forge-studio-editor.png` and `/private/tmp/forge-studio-ai-review.png` are review artifacts outside Git. No real contact fixture, secret or runtime/generated build file is added.

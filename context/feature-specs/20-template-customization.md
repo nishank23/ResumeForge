@@ -1,21 +1,31 @@
 # F20 — Template Library and Formatting Customization
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Classic/Modern/Editorial registry/gallery, strict appearance bounds, density/margins/fonts/colors, reset/undo/cancel and exact appearance snapshots in immutable saves and PDF rendering. [Source](../../apps/resume-mfe/src/templates/registry.ts).
+
+**Remaining:** Alternate layouts, durable template/font/renderer identity, personal/shared reusable presets, readable fit-to-one-page proposal and full browser/PDF parity remain missing. Three styles share one single-column layout.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Original style gallery — 2026-10-10
 
-The latest user request authorizes two additional templates and extensible ownership. Classic, Modern and Editorial are original single-column formatting templates in the resume MFE's `templates/registry.ts`; the gallery consumes metadata/defaults automatically. Selection updates only allowlisted appearance, preserves content and joins existing undo/cancel/save/version behavior. Exact settings are persisted, rather than a live dependency on registry defaults, and the existing PDF renderer consumes them. Root modal portals correct layering behind the paper. [Scope, actual checks and manual guide](../../README.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10).
+The latest user request authorizes two additional templates and extensible ownership. Classic, Modern and Editorial are original single-column formatting templates in the resume MFE's `templates/registry.ts`; the gallery consumes metadata/defaults automatically. Selection updates only allowlisted appearance, preserves content and joins existing undo/cancel/save/version behavior. Exact settings are persisted, rather than a live dependency on registry defaults, and the existing PDF renderer consumes them. Root modal portals correct layering behind the paper. [Scope, actual checks and manual guide](../../docs/archive/readme-history.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10).
 
 This advances the earlier one-template preview slice but remains partial F20: alternate column/page layouts, durable template identity/version metadata, shared/personal presets, automated fit-to-page and comprehensive preview/PDF parity remain pending. Registry metadata identifies a preset definition; the saved document stores its exact appearance snapshot. No new permission or MFE deployment is added.
 
 ## Current bounded page presentation — 2026-10-08
 
-Existing appearance now accompanies fixed A4 paper and view-only Fit page/Fit width/100%. Compact bounded defaults apply when saved appearance is absent; explicit settings remain authoritative. Overflow keeps all facts in an extended sheet and explains that it exceeds one A4 page. This is a presentation correction, not the proposed automated formatting-fit transaction, complete template gallery, full multi-page renderer or PDF parity. [Actual checks and manual steps](../../README.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier browser-only persistence wording is superseded by the owned version-save integration; full F20 remains partial.
+Existing appearance now accompanies fixed A4 paper and view-only Fit page/Fit width/100%. Compact bounded defaults apply when saved appearance is absent; explicit settings remain authoritative. Overflow keeps all facts in an extended sheet and explains that it exceeds one A4 page. This is a presentation correction, not the proposed automated formatting-fit transaction, complete template gallery, full multi-page renderer or PDF parity. [Actual checks and manual steps](../../docs/archive/readme-history.md#a4-resume-page-and-scroll-controls--2026-10-08). Earlier browser-only persistence wording is superseded by the owned version-save integration; full F20 remains partial.
 
 ## Explicit local preview slice — 2026-10-04
 
 The user's new tool-panel request brings forward only browser-only preview controls: one original Forge Classic template preview, three density presets, bounded margins/spacing and four system-font typography roles, reset and whole-draft local history. This is partial presentation work under F08, not full Phase 6 implementation, a durable template inventory or preview/PDF parity. Readable local bounds and exact limitations are in the [local contract](../../docs/manual-editor-contract.md#editor-rail-and-local-formatting--2026-10-04); [verification](../../docs/editor-panels-verification.md) records actual evidence. Remaining acceptance criteria below are still unchecked.
 
 
-**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partial — three-style gallery and saved appearance; full feature pending
+**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

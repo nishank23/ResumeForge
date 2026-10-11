@@ -1,5 +1,14 @@
 # Phase 5 Build Plan — Advanced Features and MCP
 
+## Audited phase status — 2026-10-11
+
+**Partial gap backend; LinkedIn import and MCP not started.**
+
+- [x] ✅ Source-grounded gap analyzer and gated backend handlers exist; active JD panel shows matched/missing resume evidence.
+- [ ] LinkedIn archive import, connected profile-versus-resume gap flow, semantic calibration and MCP server/seven tools remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 **Features:** F16–F18. **State:** Not started. **Goal:** Add safe profile import, grounded gap insights, and reusable secured integrations.
 
 ## Entry conditions

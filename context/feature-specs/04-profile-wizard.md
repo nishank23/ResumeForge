@@ -1,10 +1,20 @@
 # F04 — Individual Profile Wizard
 
+## Audited status — 2026-10-11
+
+**Partially done; entry scope changed.**
+
+- [x] ✅ Owned professional create/read/update/draft APIs, revision conflicts, section CRUD, completion endpoint, and a browser name/location/summary form. [Source](../../services/profile-service/src/profile.ts).
+
+**Remaining:** Full section/contact browser forms, reorder and reviewed completion are missing. The originally required wizard is superseded: resume creation and upload do not require a completed profile.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Resume-first entry correction — 2026-10-04
 
 The user removed mandatory Create profile onboarding. Google account identity is shown directly and the shell opens My resumes. LinkedIn awaits credentials. Missing professional data does not block blank creation or file review. A required database FK uses an empty internal anchor only; existing master fields remain unchanged. Optional professional field editing is connected. Resume extraction supplies reviewable resume-local facts; deriving a master profile requires a separate confirmation flow. The former required wizard below is historical/planned professional enrichment, not an entry gate. Full section/contact/completion UI remains pending.
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — professional draft and Experience list/add/update APIs verified; browser wizard pending
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Partially done; entry scope changed (audited 2026-10-11)
 
 ## Goal and dependencies
 
@@ -58,4 +68,4 @@ References: [frontend integration](../frontend-integration.md), [contextual edit
 
 ## Professional browser slice — 2026-10-04
 
-The frontend now explicitly creates/loads/saves professional full name, nullable location and nullable summary using existing personal APIs and the shared session. Incomplete setup uses changed-field revisioned drafts; completed accounts use full updates. Failed input remains mounted, stale saves require explicit reload, and save does not mark onboarding complete. The shell's onboarding entry uses this same form. Contacts and section/completion UI are pending. [README](../../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) records actual tests, runtime repair and manual checks. This is a bounded partial slice, not full F04/F12 acceptance.
+The frontend now explicitly creates/loads/saves professional full name, nullable location and nullable summary using existing personal APIs and the shared session. Incomplete setup uses changed-field revisioned drafts; completed accounts use full updates. Failed input remains mounted, stale saves require explicit reload, and save does not mark onboarding complete. The shell's onboarding entry uses this same form. Contacts and section/completion UI are pending. [README](../../docs/profile-api.md#current-audit-status--2026-10-11) records actual tests, runtime repair and manual checks. This is a bounded partial slice, not full F04/F12 acceptance.

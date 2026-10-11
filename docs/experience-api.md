@@ -1,5 +1,11 @@
 # Local Work Experience API
 
+## Current audit status — 2026-10-11
+
+Experience CRUD source exists with revision and personal ownership boundaries. Related Education/Skills/Projects/Certification APIs also exist. Gateway and browser expose only basic profile routes; master-section forms remain incomplete.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 Verified bounded F04 prerequisites — 2026-10-04. GET/POST `/api/v1/profile/experience` and PUT `/api/v1/profile/experience/:id` use the existing verified actor, personal ownership, master revision and transactional audit. These slices do not connect the editor or implement deletion/reordering, other sections or onboarding completion.
 
 ## Contract

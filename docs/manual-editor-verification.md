@@ -1,5 +1,9 @@
 # Local manual editor — canvas-first editing
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 **Latest verification — 2026-10-04:** [Editor tool rail/panels and local formatting](editor-panels-verification.md) are implemented and verified; direct paper editing is preserved. Browser checks at 390px/320px now verify the grouped Skills dialog. Earlier mobile limitations below remain historical observations.
 
 Implemented 2026-10-03 under the user's frontend priority and live canvas-first correction. Local E01–E05 are complete; F08 remains partial. [Tracker](../context/progress-tracker.md), [field/action plan](frontend-editor-plan.md) and [local transaction contract](manual-editor-contract.md) define the boundary.

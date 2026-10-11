@@ -1,5 +1,11 @@
 # Backend Handoff: Multi-Tenant Workspaces (F13), RBAC & Privacy (F14), and Audit Event Viewer (F15)
 
+## Audit disposition — 2026-10-11
+
+This is a historical backend handoff. Its source was integrated, but its original completion/test counts are not fresh audit results or proof of live gateway exposure. [Current feature status and safety findings](../implementation-audit.md) supersede activation claims here. Profile section handlers exist without connected browser forms; JD-history/generator/gap/clone/version handlers remain personal-runtime gated; shared workspace APIs remain disconnected.
+
+Shared release is incomplete: contact permissions/events, viewer grants, safe startup and invite/consent integration must be repaired. Do not treat this handoff as complete Phase 4 acceptance.
+
 - **Task**: Multi-tenant workspace management (F13), RBAC (F14), and audit viewing (F15)
 - **Branch**: `codex/backend`
 - **Date**: 2026-10-04

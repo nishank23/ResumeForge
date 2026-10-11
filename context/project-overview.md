@@ -1,12 +1,18 @@
 # Project Overview
 
+## Current audit snapshot — 2026-10-11
+
+The local personal app provides Google sign-in, resume-first library, blank creation/modal upload review, immutable saves, readiness/JD evidence, paid Gemini scoped rewriting, three styles and saved owner PDFs. Basic master-profile editing is optional. Shared workspaces are not connected; LinkedIn archive import and MCP are not built.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Purpose
 
 resume-forge is a multi-tenant AI resume and professional-profile management platform. Individuals maintain a master profile and generate JD-tailored resumes. Organizations and vendors help authorized workspace members manage profiles and resumes under role-based permissions and field-level privacy.
 
 The platform uses microservices and microfrontends, with reusable REST and MCP interfaces for possible future integrations. This does not expand the product into recruitment software.
 
-**Status:** specification draft for user review; no resume-forge features are implemented. A working copy of the supplied plan, with its folder layout normalized to this project, is in [source-plan.md](../docs/source-plan.md). Confirmed decisions and draft elaborations are separated in [decisions.md](decisions.md).
+**Status:** Local personal app implemented; wider roadmap partially complete. A working copy of the supplied plan, with its folder layout normalized to this project, is in [source-plan.md](../docs/source-plan.md). Confirmed decisions and draft elaborations are separated in [decisions.md](decisions.md).
 
 ## Users and workspaces
 
@@ -20,8 +26,8 @@ Every user has one personal workspace and can also hold memberships in multiple 
 
 ## Main individual journey
 
-1. Sign in using Google or LinkedIn.
-2. Complete the profile wizard: identity, contact, education, experience, skills, projects, and certifications.
+1. Sign in using Google; LinkedIn is disabled.
+2. Enter My resumes directly; optional master-profile editing is separate.
 3. Review the master profile, which remains the source of truth.
 4. Choose a basic draft from profile facts or supply a JD for tailoring; use the initial resume template.
 5. For tailoring, parse the JD and generate supported content asynchronously; a basic draft does not require AI or JD scoring.
@@ -65,7 +71,7 @@ See [build-plan.md](build-plan.md) for execution order and [validation-strategy.
 
 ## Frontend and resume capability update
 
-The user selected Performative UI and section-context prompts; [frontend integration](frontend-integration.md) maps the frontend request to the baseline features; [capability coverage](resume-capability-coverage.md) adds the later comprehensive mapping. CareerZenith informs resume capabilities only; the product retains its own design and terminology. The basic JD-optional builder and review/apply interaction are proposed details in [editing contract](resume-editing-contract.md). File intake is now F19 under D14, separate from F16; F20 adds templates/format controls. Both are proposed Phase 6 additions. Visual concept work is paused and development remains stopped.
+The user selected Performative UI and section-context prompts; [frontend integration](frontend-integration.md) maps the frontend request to the baseline features; [capability coverage](resume-capability-coverage.md) adds the later comprehensive mapping. CareerZenith informs resume capabilities only; the product retains its own design and terminology. The basic JD-optional builder and review/apply interaction are proposed details in [editing contract](resume-editing-contract.md). File intake is now F19 under D14, separate from F16; F20 adds templates/format controls. Both are proposed Phase 6 additions. Forge Studio is implemented; wider scope remains in the feature register.
 
 ## Comprehensive builder scope — U06
 

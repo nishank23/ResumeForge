@@ -17,7 +17,10 @@ const lockPath = (directory) =>
   path.join(directory, ".local/development-task.lock");
 
 function readState(directory) {
-  const document = readFileSync(path.join(directory, "README.md"), "utf8");
+  const document = readFileSync(
+    path.join(directory, "context", "development-status.md"),
+    "utf8",
+  );
   const start = document.indexOf(begin);
   const stop = document.indexOf(end);
   if (
@@ -26,7 +29,9 @@ function readState(directory) {
     document.indexOf(begin, start + 1) >= 0 ||
     document.indexOf(end, stop + 1) >= 0
   )
-    throw new Error("README current-task marker is missing or ambiguous.");
+    throw new Error(
+      "Development-status current-task marker is missing or ambiguous.",
+    );
   const block = document.slice(start + begin.length, stop).trim();
   const match = /^```json\n([\s\S]+)\n```$/.exec(block);
   const state = match && JSON.parse(match[1]);
@@ -42,19 +47,26 @@ function readState(directory) {
         !state.task))
   )
     throw new Error(
-      "README current-task status is invalid; do not start work.",
+      "Development-status current-task status is invalid; do not start work.",
     );
   return { document, start, stop, state };
 }
 
 function writeState(directory, state) {
-  // Read immediately before the atomic replace; preserve all other README content.
+  // Read immediately before the atomic replace; preserve all other task-document content.
   const { document, start, stop } = readState(directory);
   const updated = `${document.slice(0, start)}${begin}\n\`\`\`json\n${JSON.stringify(state, null, 2)}\n\`\`\`\n${document.slice(stop)}`;
-  const temporary = path.join(directory, `.readme-task-${randomUUID()}.tmp`);
+  const temporary = path.join(
+    directory,
+    "context",
+    `.development-task-${randomUUID()}.tmp`,
+  );
   try {
     writeFileSync(temporary, updated, { flag: "wx", mode: 0o644 });
-    renameSync(temporary, path.join(directory, "README.md"));
+    renameSync(
+      temporary,
+      path.join(directory, "context", "development-status.md"),
+    );
   } finally {
     rmSync(temporary, { force: true });
   }
@@ -73,7 +85,7 @@ function safeNote(value) {
 
 export function taskStatus(directory = root) {
   const { state } = readState(directory);
-  // A lock may exist before the README update, or after a crash. Fail closed.
+  // A lock may exist before the task-document update, or after a crash. Fail closed.
   return {
     ...state,
     status: existsSync(lockPath(directory)) ? "ongoing" : state.status,
@@ -170,7 +182,7 @@ if (
     } else if (action === "finish" && args.length === 2) {
       finishTask(args[0], args[1]);
       console.log(
-        "Task finished; README is idle for the next scheduled check.",
+        "Task finished; development status is idle for the next scheduled check.",
       );
     } else
       throw new Error(

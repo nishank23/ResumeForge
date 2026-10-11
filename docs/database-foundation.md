@@ -1,5 +1,11 @@
 # Local database foundation
 
+## Current audit status — 2026-10-11
+
+Five runtime roles and private ResumeSearchChunk vector migrations now exist. Personal editor save/import/scoring/rewrite/PDF is connected. The older four-role/no-vector/profile-not-created checkpoints below are historical; hosted deployment, retention and full shared acceptance remain.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 Implemented 2026-09-30: Prisma CLI/client/adapter-pg pinned together at 7.10.0, pg 8.16.3, PostgreSQL 18.3, Node 22.18.0. Prisma 7 uses a driver adapter and a separate CLI configuration; see [official Prisma 7 documentation](https://www.prisma.io/docs/orm/v7). Hosting remains deferred.
 
 ## UTC application connections — 2026-10-04

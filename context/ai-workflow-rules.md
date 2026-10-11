@@ -1,10 +1,16 @@
 # Development Workflow
 
+## Current audit snapshot — 2026-10-11
+
+Development is authorized on fixes in the existing frontend worktree. Task state belongs in context/development-status.md. Preserve primary-checkout private configuration and avoid competing runtime credentials. Current audit status overrides obsolete next-slice and paused-design instructions.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
 ## Current scope
 
 The context-review gate was cleared by the user on 2026-09-29. Development is authorized within the approved scope and current tracker; earlier planning-stage pauses do not reopen that gate. Follow dependencies and resolve open decisions at the slice that requires them.
 
-The source plan is a working planning baseline. Current context documents resolve its ambiguities and define the intended implementation. Commands in planning documents describe future work; execute them only within the user's authorized scope. The 2026-10-03 request authorizes tracker-driven scheduled development and local PostgreSQL/pgvector setup, with AI credentials forthcoming. Follow the [README current-task marker](../README.md#current-development-task) and [scheduled development procedure](../docs/scheduled-development.md) to claim/release one slice and skip ongoing work.
+The source plan is a working planning baseline. Current context documents resolve its ambiguities and define the intended implementation. Commands in planning documents describe future work; execute them only within the user's authorized scope. The 2026-10-03 request authorizes tracker-driven scheduled development and local PostgreSQL/pgvector setup, with AI credentials forthcoming. Follow the [internal task marker](development-status.md) and [scheduled development procedure](../docs/scheduled-development.md) to claim/release one slice and skip ongoing work.
 
 ## Before a feature
 
@@ -45,6 +51,6 @@ Update [progress-tracker.md](progress-tracker.md) with changed files/slices, che
 
 ## Current frontend requirement
 
-The 2026-09-29 request selects Performative UI, requests section-context resume prompts, and pauses visual concepts. Read [frontend integration](frontend-integration.md) and [editing contract](resume-editing-contract.md) before F01/F06/F08 work. These are planning inputs; no installation or development is authorized. Distinguish directly observed reference behavior from public advertising and inaccessible editor behavior. Do not add reference-platform features outside resume scope or treat new documentation as approval of open decisions.
+The 2026-09-29 request selects Performative UI, requests section-context resume prompts, and originally paused concepts; later requests approved Forge Studio. Read [frontend integration](frontend-integration.md) and [editing contract](resume-editing-contract.md) before F01/F06/F08 work. These are approved direction inputs; implement only the authorized slice. Distinguish directly observed reference behavior from public advertising and inaccessible editor behavior. Do not add reference-platform features outside resume scope or treat new documentation as approval of open decisions.
 
 The later U06 [capability register](resume-capability-coverage.md) records comprehensive observed resume scope. F19/F20 and Phase 6 are proposed allocations. Review them explicitly before dependent implementation; do not interpret a complete matrix as tested parity, approved technical decisions or authorization to start development.

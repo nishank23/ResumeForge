@@ -1,6 +1,16 @@
 # F02 — Google and LinkedIn OAuth
 
-**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** In progress — local Google/session slice; real provider verification pending
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Google PKCE callback, provider-subject identity, transactional personal workspace bootstrap, revocable/rotating database refresh sessions, in-memory access grants, shell protection and direct library landing. [Source](../../services/auth-service/src/app.ts).
+
+**Remaining:** LinkedIn has an unused provider module and disabled UI; callback/linking flow, hosted/distributed access and production cookie/identity configuration are missing. Mandatory profile onboarding was removed.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 1 — Foundation · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 **LinkedIn status (2026-10-01): On hold by user request — awaiting OAuth client credentials and provider configuration.** Continue independent Google/session work; do not mark the two-provider acceptance complete.
 
@@ -69,4 +79,4 @@ The current shell sends every authenticated `/sign-in` visit to the personal res
 
 ## Full-screen auth presentation — 2026-10-10
 
-Signed-out shell entry now uses one edge-to-edge ASCII scene containing its header/theme control, wordmark, Google card and footer. Desktop/mobile layouts and extended static fallback preserve readable controls. Existing provider/session/retry handlers and verified library handoff remain unchanged; this is not additional OAuth acceptance evidence. [Checks and manual steps](../../README.md#full-screen-ascii-sign-in--2026-10-10).
+Signed-out shell entry now uses one edge-to-edge ASCII scene containing its header/theme control, wordmark, Google card and footer. Desktop/mobile layouts and extended static fallback preserve readable controls. Existing provider/session/retry handlers and verified library handoff remain unchanged; this is not additional OAuth acceptance evidence. [Checks and manual steps](../../docs/archive/readme-history.md#full-screen-ascii-sign-in--2026-10-10).

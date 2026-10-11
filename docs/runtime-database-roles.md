@@ -1,45 +1,48 @@
 # Local runtime database roles
 
-The local development database now separates migration/test administration from service access. The [PostgreSQL 18 GRANT contract](https://www.postgresql.org/docs/18/sql-grant.html) distinguishes table/column grants from ownership; application roles own no objects and receive no grant options or administrative attributes. The versioned allowlist is `packages/prisma-client/src/runtime-access.ts`; the operator transaction is `scripts/runtime-roles.mjs`.
+## Implemented boundary — 2026-10-11
 
-## Setup and verification
+- [x] ✅ Five distinct restricted runtime roles, generated private credentials, transactional privilege provisioning and startup verification.
+- [x] ✅ Atomic sanitized audit capture; separate outbox delivery and append-only ingestion.
+- [ ] Hosted provisioning, credential rotation, supervision and retention/purge are not implemented.
 
-From the repository root:
+The allowlist is [runtime-access.ts](../packages/prisma-client/src/runtime-access.ts); provisioning is [runtime-roles.mjs](../scripts/runtime-roles.mjs). These are service table/column boundaries. Most tables are not protected by per-user RLS: scoped application queries remain necessary. The vector cache additionally has actor/workspace/version RLS.
+
+## Setup
+
+Run from the initialized primary checkout:
 
 ```sh
 pnpm db:local:start
 pnpm db:migrate
 pnpm db:runtime:init
+pnpm auth:local:init
+pnpm audit:local:init
 pnpm db:test:roles
 ```
 
-Expect `Restricted local database roles ready` from setup, and 12 passes with zero failures from the role tests. Setup generates four distinct passwords into ignored `.local/runtime-database.env`, mode 0600, before applying grants. A failed setup transaction can be retried with the same saved credentials. Repeating setup preserves passwords and reapplies only the allowlisted privileges. No password or URL is printed. It reads only the managed local admin configuration on 127.0.0.1:55432/resume_forge_dev and refuses production mode. Hosted provisioning is not implemented.
+Setup saves five passwords in ignored .local/runtime-database.env, mode 0600, and reuses them on subsequent runs. It refuses unmanaged role collisions, production mode and non-managed local database destinations. It does not rotate credentials. Do not initialize competing credentials in a worktree: PostgreSQL role passwords are cluster-wide.
 
-Restart `pnpm dev` after setup. OAuth settings still come from the root `.env`; auth database access now comes exclusively from the ignored runtime file. Root/process `DATABASE_URL` values cannot provide an administrative fallback to the running auth or audit services. Prisma migrations and disposable database tests continue using `.local/database.env` (or their explicit test URL); do not replace the migration credential with a runtime URL.
+Restart the personal stack with `pnpm dev:personal`. The launcher loads the primary checkout's private runtime and transport files. Administrator DATABASE_URL is for migrations/disposable database tests and is not a runtime fallback.
 
-## Service grants
+## Grant summary
 
-| Service / database role            | Allowed access                                                                                                                                                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth / `rf_local_auth`             | SELECT/INSERT identity, OAuthAccount and Session rows; UPDATE only Session.revokedAt/replacedById; SELECT/INSERT Workspace for existing personal bootstrap; SELECT only UserProfile.id/userId/onboardingCompletedAt |
-| Profile / `rf_local_profile`       | SELECT/INSERT/UPDATE professional profile, separate contact and section tables; SELECT Workspace scope columns; INSERT AuditOutbox only                                                                             |
-| Relay / `rf_local_audit_relay`     | SELECT AuditOutbox and UPDATE only delivery state/attempt/backoff/lease/acknowledgement fields; cannot change event ID or payload, insert/delete intents or access domain data                                      |
-| Ingestor / `rf_local_audit_ingest` | SELECT Workspace scope columns; INSERT AuditEvent and SELECT only its id/payloadHash for idempotency; no outbox/domain access                                                                                       |
+| Role | Allowed boundary |
+| --- | --- |
+| rf_local_auth | Identity/OAuth/session reads and inserts; limited session revocation/replacement updates; personal Workspace bootstrap; selected profile onboarding columns. |
+| rf_local_profile | Profile and separate contact reads/inserts/updates; Education, Experience, Skill, UserProject and Certification CRUD; scoped Workspace reads; AuditOutbox insert. |
+| rf_local_resume | Resume/version reads/inserts, allowlisted Resume updates; empty UserProfile FK anchor and selected ownership columns; scoped Workspace reads; ResumeSearchChunk read/insert/delete; AuditOutbox insert. |
+| rf_local_audit_relay | Outbox read and limited delivery/lease/backoff/acknowledgement updates; no event-payload mutation or domain access. |
+| rf_local_audit_ingest | Scoped Workspace reads; AuditEvent insert and id/payloadHash reads for idempotency; no domain/outbox access. |
 
-No runtime role has DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN, schema/database CREATE, TEMP, replication, role/database creation, superuser or RLS bypass rights. Roles have no memberships, object ownership or inherited administrative access. No runtime role can UPDATE/DELETE/TRUNCATE AuditEvent history. The admin/migration operator can still alter history; the separate retention process and its authorization remain pending.
+Section and vector-cache DELETE grants are intentional. Resume deletion is a tombstone update; immutable versions remain. No runtime role can update/delete/truncate audit history or obtain object ownership, grant options, administrative attributes, memberships, schema creation or general DDL. Migration administration can still alter data.
 
-The auth service's `/auth/me` query now selects only onboarding completion from the profile relation. Profile capture uses a non-returning batch INSERT so the producer does not need SELECT on the outbox. The existing capture transaction, duplicate-event rollback and fail-closed contact-read semantics are retained. The subsequent [professional profile API](profile-api.md) uses this role for scoped GET/PUT and owned-workspace denial capture; profile creation and the wizard remain pending. Auth-owned personal workspace bootstrap is an existing local exception; future extraction to workspace-service remains pending.
+Startup assertions check effective table/column grants and deny administrative credentials, excessive privileges and ownership. Database identity does not authenticate an HTTP caller. Authenticated actors and separate internal HTTP keys remain required.
 
-Each running auth/profile/audit entry point checks the actual database role and effective table AND column privileges before serving or delivering. Administrative credentials, missing/extra grants, membership, ownership, audit modification rights and executable public functions fail startup. Error messages omit credentials and database internals. The internal audit HTTP identity remains a separate check; a database role does not authenticate an HTTP caller.
+## Delivery and schema changes
 
-## New migrations and recovery
+Run `pnpm audit:serve:local` and `pnpm audit:worker:local` in separate primary-checkout terminals. The recipient is audit-only on 4005; it does not activate workspace APIs. One delivery pass is `pnpm audit:deliver:local`.
 
-New objects receive no automatic runtime grants. Public table/schema privileges and [default function privileges](https://www.postgresql.org/docs/18/sql-alterdefaultprivileges.html) are revoked for the migration owner. Changes to the allowlist need review and verification; rerun `pnpm db:runtime:init` after migrations before restarting services. Existing separately granted column ACLs are also removed before the approved matrix is reapplied. Unmanaged role-name collisions or roles with unexpected ownership/memberships abort the transaction rather than modifying unrelated roles.
+New objects have no automatic runtime grant. Review the allowlist and rerun initialization after a grant-affecting migration. Provisioning failure rolls back SQL; preserve the saved credential file for retry.
 
-Keep the ignored runtime credential file. Do not delete it as a reset procedure. Automated credential rotation, deployed credential management and hosted role provisioning are not implemented. Setup reuses credentials; it does not rotate them. Database changes are transactional; a failure rolls back partial password/grant changes. Any unrelated grants to PUBLIC in this dedicated development database are intentionally removed as part of the deny-by-default policy.
-
-To check the audit service manually, keep `pnpm audit:serve:local` running in a second terminal after `pnpm audit:local:init`. In another terminal run `pnpm audit:deliver:local`; an empty queue reports all zero counts. A credential-free POST to `/internal/audit/events` must still return HTTP 401. `pnpm db:test:roles` proves nonempty profile capture → restricted relay → authenticated HTTP → restricted ledger ingestion and duplicate-safe retry. It also checks forbidden SQL, DDL, newly created objects, column-grant drift and provisioning rollback using disposable synthetic databases and temporary roles, removed afterward. Existing checks are `pnpm db:test`, `pnpm db:test:audit` and `pnpm --filter @resume-forge/auth-service test:db`.
-
-These are service table boundaries, not per-user row-level security. Profile service queries need authenticated actor, action, workspace and resource authorization; scoped professional GET/PUT now enforce those checks, but raw service SQL can access rows in its permitted tables. Shared role bundles, broader denied-action capture, contacts/sections, hosted relay supervision, hosted identity/network policy and audit retention remain pending. F03/F15 are not complete.
-
-Automatic local delivery is available with `pnpm audit:worker:local`; it uses the restricted relay connection and checks access before every pass. See [worker verification](database-foundation.md#automatic-local-audit-worker--2026-10-02). Role tests now include scheduled restart/lease recovery and SQL timeout cancellation (12 passes).
+Current role tests use disposable synthetic databases/temporary roles. Contact permission/event coverage and shared RBAC do not yet satisfy the full planned policy; see [audit findings](implementation-audit.md#priority-findings-in-existing-source). Do not infer F14/F15 completion from database isolation alone.

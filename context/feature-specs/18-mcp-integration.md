@@ -1,6 +1,16 @@
 # F18 — Workspace-Aware MCP Integration
 
-**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Not started.**
+
+- [ ] Seven tools are specified in documentation; no MCP server, SDK integration or registered tools exist.
+
+**Remaining:** Transport/auth, adapters using existing authorized use cases, run handles, client configuration and REST/MCP parity tests all need building. Cover-letter and arbitrary storage tools stay excluded.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 5 — Advanced · **Priority:** Medium · **Implementation:** Not started (audited 2026-10-11)
 
 ## Goal and dependencies
 

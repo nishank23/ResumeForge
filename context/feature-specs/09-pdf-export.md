@@ -1,6 +1,16 @@
 # F09 — PDF Export and R2 Storage
 
-**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Partial — personal saved-version stream implemented; durable R2/shared pipeline pending
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Authenticated current-saved-version PDF stream in library/editor, worker time/concurrency limits, hidden/source/UI exclusion, ownership/version/expiry rechecks and download audit. [Source](../../services/resume-service/src/pdf.ts).
+
+**Remaining:** R2/storage service, durable export/cache/checksum identity, historical/contact-free/shared variants, orphan cleanup and comprehensive multi-template Unicode/page-break parity are missing. HTML preview and React PDF are separate renderers.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 
@@ -51,6 +61,6 @@ The user explicitly requests **Export PDF** in the compact Editor/Preview toolba
 
 ## Personal saved-version stream — 2026-10-08
 
-The explicit owner-download request enables an authenticated PDF stream for the latest saved immutable editor version. Both library and editor use the same route; unsaved edits must be saved first. Server rendering checks personal workspace ownership, resume.download scope, version and expiry before and after rendering, with sanitized successful retrieval audit. Hidden content, source text, empty placeholders and app controls are excluded. A4 text pagination preserves supported facts; glyph errors fail visibly. Renderer and HTML preview are separate, so wrapping can differ. Local worker limits and font fallbacks are documented in the [README](../../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
+The explicit owner-download request enables an authenticated PDF stream for the latest saved immutable editor version. Both library and editor use the same route; unsaved edits must be saved first. Server rendering checks personal workspace ownership, resume.download scope, version and expiry before and after rendering, with sanitized successful retrieval audit. Hidden content, source text, empty placeholders and app controls are excluded. A4 text pagination preserves supported facts; glyph errors fail visibly. Renderer and HTML preview are separate, so wrapping can differ. Local worker limits and font fallbacks are documented in the [README](../../docs/archive/readme-history.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
 
 No PDF is stored, cached or published to R2. Export is owner-only and current-version-only; shared/contact-free variants, durable jobs, checksums/object identity, retained artifact history and purge remain unimplemented. Full F09 acceptance above stays open. D12 explicitly records this bounded personal export decision.

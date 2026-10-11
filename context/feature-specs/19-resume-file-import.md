@@ -1,14 +1,24 @@
 # F19 — Existing Resume File Import
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Local bounded PDF.js/Mammoth/TXT/MD workers, two-column parsing corrections, library upload modal, editable staging, explicit idempotent Confirm and save, private source-text persistence without master/contact writes. Raw text UI is reversibly disabled. [Source](../../services/resume-service/src/upload.ts).
+
+**Remaining:** OCR/legacy DOC, arbitrary-layout coverage, field confidence/provenance, private upload staging/expiry, source retention/purge and shared contact separation remain missing. Reviewed imports are bounded, not universal extraction.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Library modal intake — 2026-10-10
 
-Upload selection, bounded parsing/error recovery and editable review now happen in a dialog over My resumes. Legacy upload URLs share the same component. Nested field editing retains review; discarding does not create a resume. Explicit Confirm and save uses the existing idempotent owned create/version API and navigates to the saved editor. Original parser formats/limits and privacy policy remain unchanged. [Actual checks and manual guide](../../README.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10). Full F19 provenance/OCR/shared-scope acceptance remains pending.
+Upload selection, bounded parsing/error recovery and editable review now happen in a dialog over My resumes. Legacy upload URLs share the same component. Nested field editing retains review; discarding does not create a resume. Explicit Confirm and save uses the existing idempotent owned create/version API and navigates to the saved editor. Original parser formats/limits and privacy policy remain unchanged. [Actual checks and manual guide](../../docs/archive/readme-history.md#upload-dialog-ai-actions-and-template-gallery--2026-10-10). Full F19 provenance/OCR/shared-scope acceptance remains pending.
 
 ## Alternate two-column layout fix — 2026-10-09
 
 The supplied final CV exposed row-by-row cross-column interleaving, missed Personal Profile, company-first role metadata and unspaced PDF bullet markers. The local PDF worker now separates independent narrative columns only when a persistent empty gutter and sufficient long text on both sides support that interpretation; right-aligned dates remain in the original row. The parser additionally preserves numeric months, date/location metadata, inline CGPA, standalone skill categories/parenthesized qualifiers, and separate language/proficiency fields.
 
-The private file's six sections, three jobs, two projects, one education, 14 work/project bullets, 12 skills, four language pairs and both links survive parsing and the strict editor save-envelope round-trip. The older single-column sample still parses. Synthetic regressions cover the layout; no real file is committed or sent to a provider. Fresh uploads use the fix; confirmed existing versions are not overwritten. Local reviewed intake remains bounded by D14. Font emphasis/layout/rating dots, arbitrary columns, OCR and full provenance remain pending. [Evidence, Chrome automation limitation and manual steps](../../README.md#alternate-layout-import-and-no-jd-rule-cards--2026-10-09).
+The private file's six sections, three jobs, two projects, one education, 14 work/project bullets, 12 skills, four language pairs and both links survive parsing and the strict editor save-envelope round-trip. The older single-column sample still parses. Synthetic regressions cover the layout; no real file is committed or sent to a provider. Fresh uploads use the fix; confirmed existing versions are not overwritten. Local reviewed intake remains bounded by D14. Font emphasis/layout/rating dots, arbitrary columns, OCR and full provenance remain pending. [Evidence, Chrome automation limitation and manual steps](../../docs/archive/readme-history.md#alternate-layout-import-and-no-jd-rule-cards--2026-10-09).
 
 
 ## Bounded personal intake — 2026-10-04
@@ -17,11 +27,11 @@ The latest user request authorizes a local personal slice before full Phase 6. A
 
 Extracted fields and source text form an editable unpersisted review. Explicit Confirm and save creates a private owned resume/immutable version/audit atomically; parse/cancel creates none. Original bytes are discarded. Confirmed text and structured content remain private local database version data. No master professional or UserContact update occurs; an empty FK anchor can be created when absent. Contact-bearing data is restricted to its authenticated personal owner; no shared/AI/export path is activated. This narrow boundary does not complete shared contact separation or D12 variants.
 
-D14 is resolved only for these bounded local choices. Field-level provenance/confidence, private R2 staging, full retention/deletion controls, master merge, OCR and legacy DOC remain pending. Existing proposed routes/permissions below describe that wider future design. [Actual checks and manual steps](../../README.md#resume-library-upload-and-database-saves--2026-10-04).
+D14 is resolved only for these bounded local choices. Field-level provenance/confidence, private R2 staging, full retention/deletion controls, master merge, OCR and legacy DOC remain pending. Existing proposed routes/permissions below describe that wider future design. [Actual checks and manual steps](../../docs/archive/readme-history.md#resume-library-upload-and-database-saves--2026-10-04).
 
-**Mapping correction — 2026-10-08:** Bounded PDF extraction reconstructs visual rows/columns and adjacent glyphs; passive HTTP/HTTPS annotation destinations are included without network access. Plural headings, wrapped achievement text and entry/date/type/location/degree/project/technology metadata are preserved by the deterministic parser. Header links and actual imported language values survive the strict editor adapter/versioned saves. Fresh uploads use the fix; existing edited drafts are never silently reparsed. Real-sample upload/save/reload and synthetic regression results are recorded in [README](../../README.md#uploaded-resume-field-correction--2026-10-08). Review remains mandatory; this does not establish arbitrary-layout coverage or complete F19.
+**Mapping correction — 2026-10-08:** Bounded PDF extraction reconstructs visual rows/columns and adjacent glyphs; passive HTTP/HTTPS annotation destinations are included without network access. Plural headings, wrapped achievement text and entry/date/type/location/degree/project/technology metadata are preserved by the deterministic parser. Header links and actual imported language values survive the strict editor adapter/versioned saves. Fresh uploads use the fix; existing edited drafts are never silently reparsed. Real-sample upload/save/reload and synthetic regression results are recorded in [README](../../docs/archive/readme-history.md#uploaded-resume-field-correction--2026-10-08). Review remains mandatory; this does not establish arbitrary-layout coverage or complete F19.
 
-**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partial — bounded personal slice above implemented; full acceptance pending
+**Phase:** 6 — Resume Builder Expansion (proposed allocation) · **Priority:** High · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

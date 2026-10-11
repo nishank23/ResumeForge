@@ -1,4 +1,36 @@
-# Planned API Reference
+# API reference
+
+## Current route availability — 2026-10-11
+
+All external paths below use the /api/v1 prefix. Current source: [gateway](../services/gateway/src/app.ts), [personal allowlist](../services/resume-service/src/app.ts), [auth](../services/auth-service/src/app.ts), [profile](../services/profile-service/src/app.ts). The resume entry point enables personalEditorOnly.
+
+| Transport / methods | Current routes |
+| --- | --- |
+| Auth service, direct browser transport on 4001 | Google start/callback, refresh/me/logout and internal actor resolution. LinkedIn is unavailable. |
+| Gateway GET/POST/PUT | /profile |
+| Gateway PUT | /profile/draft |
+| Gateway GET/POST | /resume |
+| Gateway POST | /resume/parse |
+| Gateway GET/PUT/DELETE | /resume/:id |
+| Gateway POST | /resume/:id/restore — undo tombstone; not saved-version restoration. |
+| Gateway GET | /resume/:id/pdf — current saved version stream. |
+| Gateway GET/POST, PUT preferences | /resume/:id/readiness and /resume/:id/readiness/preferences |
+| Gateway GET/POST, PUT preferences | /resume/:id/jd-match and /resume/:id/jd-match/preferences |
+| Gateway POST | /resume/:id/ai-rewrite and /resume/:id/ai-rewrite/apply |
+| Profile service only, absent from gateway/UI | /profile/contact, /profile/complete and section CRUD for experience/education/skills/projects/certifications. |
+| Backend resume handlers, personal allowlist denies them | /jd and history/parse aliases; /resume/import, /resume/generate, /resume/:id/versions, clone, tailor, gap-analysis, suggest, apply-suggestion, download; /task-run/:id. |
+| Workspace business handlers, not connected | Workspace/member/grant/audit-list routes; safe local audit launcher exposes ingestion only on 4005. |
+| Planned | Storage service/R2, durable task transport and MCP. |
+
+- [x] ✅ Owner-only saved editor, local readiness-v2/JD rules, optional paid Gemini and reviewed versioned Apply are connected.
+- [ ] Contact actions/events, complete shared privacy/roles and legacy generator safety need repair before broader exposure.
+- [ ] Schema/handler presence does not imply gateway availability.
+
+Current rubric identifiers: readiness-v2, jd-local-v1. Public JD result version jd-match-v1 is a schema identifier, not a third-party scoring provider. Current AI uses Gemini REST; OpenCode and Textkernel runtime integrations are removed. Current dialogs authorize sending selected visible professional text by explicit action rather than a mandatory consent checkbox. [ATS contract](ats-workflow.md), [audit findings](implementation-audit.md#priority-findings-in-existing-source).
+
+## Earlier API contracts and checkpoints
+
+The remaining sections retain planned contracts and dated checkpoints. Their “implemented” labels describe the stated historical slice; this availability table governs what the current personal app exposes.
 
 ## AI processing actions — 2026-10-10
 
@@ -9,7 +41,7 @@ The UI's explicit Improve with AI / Gemini Analyze action supplies the existing 
 Existing readiness read/run/preference endpoints keep their actor/workspace/version contract. Responses accept v1/v2 history; new results use `readiness-v2`, with optional `scored: false` advice and private owner header targets. A run refreshes an older rubric on the same content version; replay also checks rubric identity. Preferences reject stale rubric/evaluation identity. Contact guidance contains only pass/fail and generic text, never raw values. JD scoring/feedback retains its existing rubric. [Current contract](ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
 
 
-## ## Personal JD and scoped AI routes — 2026-10-09
+## Personal JD and scoped AI routes — 2026-10-09
 
 Authenticated GET/POST /api/v1/resume/:id/jd-match, PUT /:id/jd-match/preferences, POST /:id/ai-rewrite and POST /:id/ai-rewrite/apply are connected. Every mutation validates the expected saved version and existing owner/action scope. Rewrite apply receives only the stored proposal ID, never client-supplied replacement text. The optional JD assessment `retrieval` field adds model, dimensions (768), indexed/reused chunk counts and requirement/section/item/similarity candidates. Older responses remain valid. No public search endpoint is added. [Private retrieval contract](resume-vector-search.md). These routes do not activate legacy generation/tailoring or Textkernel. [Schemas, permissions, consent and limits](ats-workflow.md).
 
@@ -23,9 +55,9 @@ These are private owner-only personal editor routes, not the legacy JD scoring/g
 | POST | `/resume/:id/readiness` | Strict `{ expectedVersion }`. Scores only the current immutable saved editor snapshot. Same version/input replays the same result. |
 | PUT | `/resume/:id/readiness/preferences` | Strict `{ expectedVersion, evaluationId, issueId, dismissed }`. Dismiss/restore only a failed check from the current evaluation. No score change. |
 
-The normal `{ data, requestId }` envelope contains `{ currentVersion, evaluation, previous, dismissed }`. An evaluation includes UUID identity/resume/version IDs, positive resumeVersion, SHA-256 contact-free inputHash, evaluatedAt, mode `general`, rubricVersion `readiness-v1`, bounded integer score, five weighted component counts and up to 100 generic checks with stable optional section/entry targets. `truncated` reports feedback truncation; all checks contribute to math.
+The normal `{ data, requestId }` envelope contains `{ currentVersion, evaluation, previous, dismissed }`. An evaluation includes UUID identity/resume/version IDs, positive resumeVersion, SHA-256 contact-free inputHash, evaluatedAt, mode `general`, rubricVersion `readiness-v2`, bounded integer score, five weighted component counts and up to 100 generic checks with stable optional section/entry targets. `truncated` reports feedback truncation; all checks contribute to math.
 
-Strict validation rejects client-supplied scores/extra fields (422), stale versions/evaluation identities fail 409, missing/deleted/foreign resources fail 404, denied workspace fails 403, missing/expired actor fails 401 and infrastructure failure returns an unavailable error. Mutations share the resume advisory transaction lock with manual save/delete and require atomic sanitized audit. Responses are private/no-store. Existing role grants and schema remain unchanged. History/metadata limits fail visibly without deleting evidence. See [F07](../context/feature-specs/07-ats-scoring.md) and [README](../README.md#general-resume-readiness--2026-10-09).
+Strict validation rejects client-supplied scores/extra fields (422), stale versions/evaluation identities fail 409, missing/deleted/foreign resources fail 404, denied workspace fails 403, missing/expired actor fails 401 and infrastructure failure returns an unavailable error. Mutations share the resume advisory transaction lock with manual save/delete and require atomic sanitized audit. Responses are private/no-store. Existing role grants and schema remain unchanged. History/metadata limits fail visibly without deleting evidence. See [F07](../context/feature-specs/07-ats-scoring.md) and [README](archive/readme-history.md#general-resume-readiness--2026-10-09).
 
 **Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, bounded personal editor routes described below, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
 
@@ -108,7 +140,7 @@ Document bodies are bounded to 2,000,000 bytes. Parse transport allows 15,000,00
 
 Current local gateway routes are `/api/v1/resume/:id` DELETE with strict `{ expectedVersion: positiveInteger }`, `/api/v1/resume/:id/restore` POST with that same body, and `/api/v1/resume/:id/pdf?version=N` GET with exactly one positive bounded version query. Each requires authenticated personal workspace ownership; the workspace header is only a selector. DELETE tombstones the row and invalidates its artifact key; POST restores draft status with unchanged immutable content/version. Wrong owner/deleted reads return 404, stale versions 409, malformed input 422, unavailable rendering/audit 503. Deleted resources cannot save, download or be recreated by retrying creation. No physical purge is enabled.
 
-PDF GET accepts only the current saved editor version, rechecks actor/resource/version after rendering, and captures a sanitized `resume.downloaded` event with the immutable version ID. It returns `application/pdf`, attachment filename, `X-Resume-Version`, `nosniff`, and `Cache-Control: no-store`. Errors remain JSON. The gateway exposes only those necessary attachment/version headers to the shell, strips upstream cookies, and preserves no-store. PDF transport timeout is 30 seconds; renderer timeout is 25 seconds. D12 authorizes resume-local contacts for this personal-owner stream; shared/contact-free variants stay unavailable. The older `/download` formats and broader planned table below are not enabled in the personal gateway. [Current export limits](../README.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
+PDF GET accepts only the current saved editor version, rechecks actor/resource/version after rendering, and captures a sanitized `resume.downloaded` event with the immutable version ID. It returns `application/pdf`, attachment filename, `X-Resume-Version`, `nosniff`, and `Cache-Control: no-store`. Errors remain JSON. The gateway exposes only those necessary attachment/version headers to the shell, strips upstream cookies, and preserves no-store. PDF transport timeout is 30 seconds; renderer timeout is 25 seconds. D12 authorizes resume-local contacts for this personal-owner stream; shared/contact-free variants stay unavailable. The older `/download` formats and broader planned table below are not enabled in the personal gateway. [Current export limits](archive/readme-history.md#delete-resumes-and-download-saved-pdfs--2026-10-08).
 
 
 | Method | Path                   | Contract / permission                                                                                               |
@@ -210,4 +242,4 @@ Committed success: HTTP 200 `{ data: { eventId, duplicate } }`. Equivalent retri
 
 ## Local professional browser transport — 2026-10-04
 
-The local gateway on loopback port 4000 now forwards GET/POST/PUT `/api/v1/profile` and PUT `/api/v1/profile/draft` to loopback profile-service port 4002. Browser requests originate at `http://localhost:3000` and carry the existing opaque Bearer plus personal workspace selector. Profile-service independently resolves/authorizes every actor/resource; the gateway supplies no identity authority. Cookies and arbitrary actor headers are dropped, upstream error/request IDs are preserved, and responses are no-store. Contacts, sections, completion, internal auth and resume routes remain unavailable through this gateway. This transport is refused in production; hosted topology remains D10. [README](../README.md#personal-profile-integration-and-sign-in-repair--2026-10-04) records current scope/manual checks.
+The local gateway on loopback port 4000 now forwards GET/POST/PUT `/api/v1/profile` and PUT `/api/v1/profile/draft` to loopback profile-service port 4002. Browser requests originate at `http://localhost:3000` and carry the existing opaque Bearer plus personal workspace selector. Profile-service independently resolves/authorizes every actor/resource; the gateway supplies no identity authority. Cookies and arbitrary actor headers are dropped, upstream error/request IDs are preserved, and responses are no-store. Contacts, sections, completion, internal auth and resume routes remain unavailable through this gateway. This transport is refused in production; hosted topology remains D10. [README](profile-api.md#current-audit-status--2026-10-11) records current scope/manual checks.

@@ -1,6 +1,16 @@
 # F11 — JD History
 
-**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ JDHistory model plus parse/save/list/detail/delete use cases and route handlers; current JD input/result is retained in private assessment metadata. [Source](../../services/resume-service/src/resume.ts).
+
+**Remaining:** No connected JD history/reuse/timeline screen, history routes through gateway, authorized restore-as-new-version flow or durable provenance timeline. The sidebar route is a placeholder, not a working history feature.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 3 — Complete Individual Flow · **Priority:** High · **Implementation:** Partially done (audited 2026-10-11)
 
 ## Goal and dependencies
 

@@ -1,12 +1,22 @@
 # F08 — Resume Builder, Preview and Initial Template
 
+## Audited status — 2026-10-11
+
+**Partially done.**
+
+- [x] ✅ Strict EditorDocument with stable targets, manual fields/Tiptap, target dialogs, add/reorder/hide/delete, local history, save/reload/conflict handling, fit-width A4 stage, preview, score integration and owner PDF controls. [Source](../../apps/resume-mfe/src/ManualResumeEditor.tsx).
+
+**Remaining:** Profile-copy creation UI, additional validated section kinds such as certifications/volunteering/custom sections, true paginated preview, saved-version restoration UI and full privacy/render parity remain incomplete. Resume-local contact editing does not update UserContact.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
 ## Current A4 page correction — 2026-10-08
 
-The user's bounded frontend request now provides fixed A4 geometry, compact defaults, view-only Fit page/Fit width/100%, and scroll-safe rail/panels. Selected desktop actions sit in the editor header; empty optional fields and editing gutters no longer lengthen the paper. The supplied one-page import measures 794×1123 with all 69 checked populated fields preserved across desktop/tablet/phone. Long content remains intact with an overflow notice and estimated page count. This does not complete multi-page rendering, automated formatting-fit or PDF parity. [Changes and manual checks](../../README.md#a4-resume-page-and-scroll-controls--2026-10-08) supersede prior canvas/gutter presentation notes; F08 remains partial.
+The user's bounded frontend request now provides fixed A4 geometry, compact defaults, view-only Fit page/Fit width/100%, and scroll-safe rail/panels. Selected desktop actions sit in the editor header; empty optional fields and editing gutters no longer lengthen the paper. The supplied one-page import measures 794×1123 with all 69 checked populated fields preserved across desktop/tablet/phone. Long content remains intact with an overflow notice and estimated page count. This does not complete multi-page rendering, automated formatting-fit or PDF parity. [Changes and manual checks](../../docs/archive/readme-history.md#a4-resume-page-and-scroll-controls--2026-10-08) supersede prior canvas/gutter presentation notes; F08 remains partial.
 
 ## Owned manual resume integration — 2026-10-04
 
-Blank creation, uploaded-file review, owned load and explicit expected-version Save changes are connected to the restricted personal service/database. Strict editor JSON preserves rich text, stable IDs, dates, visibility, languages and appearance through immutable versions. Sample resume/autofill is removed from the normal account flow. Temporary AI Accept still edits the working draft and needs Save changes; no real AI, ATS or PDF export is enabled. Earlier local-only appearance/checkpoint descriptions below are history. [Current checks and limits](../../README.md#resume-library-upload-and-database-saves--2026-10-04). Full F08/E06 privacy, renderer and service acceptance remains partial.
+Blank creation, uploaded-file review, owned load and explicit expected-version Save changes are connected to the restricted personal service/database. Strict editor JSON preserves rich text, stable IDs, dates, visibility, languages and appearance through immutable versions. Sample resume/autofill is removed from the normal account flow. Temporary AI Accept still edits the working draft and needs Save changes; no real AI, ATS or PDF export is enabled. Earlier local-only appearance/checkpoint descriptions below are history. [Current checks and limits](../../docs/archive/readme-history.md#resume-library-upload-and-database-saves--2026-10-04). Full F08/E06 privacy, renderer and service acceptance remains partial.
 
 ## Temporary frontend AI dialogs — 2026-10-04
 
@@ -18,7 +28,7 @@ Implemented the user's explicit rail/panel request: Back to all resumes with loc
 
 **Latest local UI correction — 2026-10-04:** Languages render/edit inside Skills while remaining distinct from Programming Languages; clicking or keyboard-activating Skills opens the category/tag dialog with no floating AI/action bar. Custom categories and tag management share local Save/Cancel/history; extra new-line margins are removed. [Contract](../../docs/manual-editor-contract.md#skills-grouping-correction--2026-10-04) and [actual verification](../../docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) supersede earlier separate-Languages/per-skill toolbar wording. This is frontend-only; mobile checks and all durable/service acceptance remain pending.
 
-**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partial — V01 and local E01–E05 canvas-first manual editor verified 2026-10-03; full saved-resume/AI/renderer acceptance pending.
+**Phase:** 2 — AI Pipeline · **Priority:** Critical · **Implementation:** Partially done (audited 2026-10-11)
 
 The user authorized these bounded frontend slices before remaining backend dependencies. See [scope and verification](../../docs/manual-editor-verification.md). The local sample uses synchronized Tiptap Summary, local history/checkpoints and continuous preview. V01 adds a professional serif document with centered synthetic header/contacts and Summary, Experience, Education, Projects, grouped Skills and Languages. Local field forms, direct paper editing, contextual actions, target-only dialogs, sample autofill and shared history are implemented. Controls stay outside the paper; durable/service integration remains pending. The fixture includes only explicitly fictional contact details and is not a persisted or server contact contract. Full F01/F06/D12 dependencies below still govern real persisted resumes.
 

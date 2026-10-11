@@ -1,5 +1,9 @@
 # Editor navigation and tool panels — 2026-10-04
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 Implemented one bounded local UI slice from the user's twelve reference screenshots, preserving the existing canvas/dialogs, separate synthetic contacts, authentication and scoped backend foundations. CareerZenith informed navigation and hierarchy only; no reference account data, URLs, template assets or screenshot binaries were copied into the repository.
 
 ## Delivered

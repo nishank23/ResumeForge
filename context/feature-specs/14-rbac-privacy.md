@@ -1,6 +1,16 @@
 # F14 — Workspace RBAC and Field Privacy
 
-**Phase:** 4 — Multi-Tenant · **Priority:** High · **Implementation:** Not started
+## Audited status — 2026-10-11
+
+**Partially done; shared activation blocked.**
+
+- [x] ✅ Canonical 27 permissions, personal actor/ownership/action checks, contact-free scoring/AI projections and a workspace role resolver with unit coverage. [Source](../../packages/access-policy/src/index.ts).
+
+**Remaining:** Complete agreed role matrix and cross-service output/history/PDF/task/MCP privacy enforcement are missing. Contact handlers use broad professional permissions; shared viewer grants differ from the documented read-only bundle. Do not activate shared access before repairs.
+
+This snapshot supersedes dated implementation/pending statements below. Full acceptance stays unchecked where integration or verification is missing. [Complete audit](../../docs/implementation-audit.md).
+
+**Phase:** 4 — Multi-Tenant · **Priority:** High · **Implementation:** Partially done; shared activation blocked (audited 2026-10-11)
 
 ## Goal and dependencies
 

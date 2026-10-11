@@ -1,5 +1,14 @@
 # Phase 1 Build Plan — Foundation
 
+## Audited phase status — 2026-10-11
+
+**Partial foundation.**
+
+- [x] ✅ Scaffold, shared UI, Google/session flow, schema, restricted roles, audit delivery, section CRUD and resume-entry vectors exist.
+- [ ] LinkedIn/linking, full optional profile UI, contact policy and hosted foundations remain.
+
+The [audit](../../docs/implementation-audit.md) gives exact feature/module evidence. Original task IDs and exit gates below remain the broader release plan; dated checkpoints do not override current status.
+
 **Features:** F01–F04. **State:** In progress (P1.1 and P1.2 complete). **Goal:** Sign in, enter a private personal workspace, and save a master profile.
 
 ## Entry conditions

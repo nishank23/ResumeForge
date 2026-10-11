@@ -16,3 +16,13 @@ export const canonicalRewriteWord = (word: string): string =>
 export const REWRITE_PHRASE_ALIASES = { ui: "user interface" } as const;
 export const canonicalRewriteText = (text: string): string =>
   text.replace(/\buser\s+interface\b/giu, "ui");
+
+// These verbs assert responsibility or outcomes; grammar permission alone is insufficient.
+export const REWRITE_PROTECTED_CLAIMS = [
+  ["lead", "led", "leading"],
+  ["automate", "automated", "automating"],
+  ["optimize", "optimized", "optimizing"],
+  ["reduce", "reduced", "reducing"],
+  ["increase", "increased", "increasing"],
+  ["improve", "improved", "improving"],
+] as const;

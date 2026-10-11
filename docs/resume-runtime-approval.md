@@ -1,5 +1,11 @@
 # Approved local resume runtime access
 
+## Current audit status — 2026-10-11
+
+The approved restricted personal resume role is implemented. Current allowlist also supports private vector cache reads/inserts/deletes alongside versioned editor/scoring/rewrite/PDF use cases. Approval history below is not a request to reprovision credentials.
+
+See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
+
 Needed for the user's requested database-backed resume create/upload/save flow. The user explicitly approved this restricted local role on 2026-10-04. It has been provisioned in the loopback development database, and startup grant assertions and disposable role/persistence tests pass.
 
 Create one local login role, `rf_local_resume`, in the existing loopback PostgreSQL cluster. Store its generated password only in the primary checkout's ignored `.local/runtime-database.env`, mode 0600. Keep all existing role passwords unchanged. Resume service must refuse the administrator login and assert the exact role/grant matrix at startup.

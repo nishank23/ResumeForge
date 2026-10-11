@@ -5,7 +5,12 @@ import type {
 } from "@resume-forge/shared-types";
 import { editorDocumentSchema } from "@resume-forge/shared-types";
 import { AiUnavailable } from "./ai.js";
-import { REWRITE_GRAMMAR, canonicalRewriteWord, canonicalRewriteText } from "./rewrite-vocabulary.js";
+import {
+  REWRITE_GRAMMAR,
+  canonicalRewriteWord,
+  canonicalRewriteText,
+  REWRITE_PROTECTED_CLAIMS,
+} from "./rewrite-vocabulary.js";
 type Rich = EditorDocument["sections"][number]["summary"];
 export function plain(node: {
   type: string;
@@ -100,9 +105,11 @@ export function assertContactFree(text: string, doc: EditorDocument) {
 }
 const grammar = new Set(REWRITE_GRAMMAR.split(" "));
 const words = (text: string) =>
-  (canonicalRewriteText(text).toLowerCase().match(/[\p{L}][\p{L}\p{N}+#.-]*/gu) ?? []).map((word) =>
-    canonicalRewriteWord(word.replace(/[.-]+$/, "")),
-  );
+  (
+    canonicalRewriteText(text)
+      .toLowerCase()
+      .match(/[\p{L}][\p{L}\p{N}+#.-]*/gu) ?? []
+  ).map((word) => canonicalRewriteWord(word.replace(/[.-]+$/, "")));
 const numbers = (text: string) =>
   (text.match(/\d+(?:[.,]\d+)*(?:%|[kKmMbB])?/g) ?? []).sort();
 export function validateChanges(
@@ -127,28 +134,48 @@ export function validateChanges(
         );
       seen.add(change.field);
       assertContactFree(change.proposed, doc);
-      const slashTerms =
-        source.original.match(/[\p{L}\p{N}.+#-]+(?:\/[\p{L}\p{N}.+#-]+)+/gu) ??
-        [];
-      const vocabulary = new Set(words(source.original));
-      const proposedVocabulary = new Set(words(change.proposed));
+      const sourceLines = source.original
+        .split("\n")
+        .filter((line) => line.trim());
+      const proposedLines = change.proposed
+        .split("\n")
+        .filter((line) => line.trim());
       if (
-        slashTerms.some((term) => !change.proposed.includes(term)) ||
-        JSON.stringify(numbers(source.original)) !==
-          JSON.stringify(numbers(change.proposed)) ||
-        words(change.proposed).some(
-          (w) => !vocabulary.has(w) && !grammar.has(w),
-        ) ||
-        [...vocabulary].some(
-          (w) => !grammar.has(w) && !proposedVocabulary.has(w),
-        )
+        sourceLines.length !== proposedLines.length ||
+        sourceLines.some((original, index) => {
+          const proposed = proposedLines[index] ?? "";
+          const slashTerms =
+            original.match(/[\p{L}\p{N}.+#-]+(?:\/[\p{L}\p{N}.+#-]+)+/gu) ?? [];
+          const vocabulary = new Set(words(original));
+          const proposedVocabulary = new Set(words(proposed));
+          return (
+            slashTerms.some((term) => !proposed.includes(term)) ||
+            JSON.stringify(numbers(original)) !==
+              JSON.stringify(numbers(proposed)) ||
+            [...proposedVocabulary].some(
+              (word) => !vocabulary.has(word) && !grammar.has(word),
+            ) ||
+            [...vocabulary].some(
+              (word) => !grammar.has(word) && !proposedVocabulary.has(word),
+            ) ||
+            REWRITE_PROTECTED_CLAIMS.some(
+              (group) =>
+                group.some((word) => proposedVocabulary.has(word)) !==
+                group.some((word) => vocabulary.has(word)),
+            )
+          );
+        })
       )
         throw new AiUnavailable(
           "AI introduced unsupported facts or wording. Edit manually or retry.",
         );
       return { ...source, proposed: change.proposed };
     })
-    .filter((change) => change.original !== change.proposed);
+    .filter(
+      (change) =>
+        change.original.replace(/\s+/g, " ").trim() !==
+        change.proposed.replace(/\s+/g, " ").trim(),
+    );
 }
 export function applyRewrite(
   doc: EditorDocument,

@@ -1,5 +1,9 @@
 # Foldable workspace sidebar — 2026-10-04
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 The first workspace column now folds independently of the resume editor's tool panel. This bounded shell change preserves the existing editor, routing, verified session and privacy boundaries.
 
 ## Delivered

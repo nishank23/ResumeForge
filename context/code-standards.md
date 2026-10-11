@@ -1,6 +1,12 @@
 # Code Standards
 
-These are planned engineering conventions. No toolchain or tests exist for resume-forge yet.
+## Current audit snapshot — 2026-10-11
+
+Strict TypeScript, Zod, package exports, native Node tests, lint/typecheck/build and bounded local services exist. React/session controllers manage state; AI/vector work is synchronous and bounded, with isolated import/PDF workers. Query/Zustand and durable Trigger jobs are planned rather than active integrations.
+
+[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+
+These conventions govern existing code and future slices; current summaries distinguish active implementation from targets.
 
 ## TypeScript and packages
 
@@ -41,7 +47,7 @@ These are planned engineering conventions. No toolchain or tests exist for resum
 
 ## AI and background jobs
 
-- Long-running AI, embeddings, and PDF generation run in Trigger.dev tasks, not an open HTTP request.
+- Target: move long-running AI, embeddings and PDF work into durable tasks. Current local processing is bounded synchronous work; Trigger.dev is not integrated.
 - Inject provider adapters into domain logic. Validate structured output, preserve source facts, and record model/prompt/rubric versions.
 - Treat JD text, profile text, and imported data as untrusted content, never executable instructions. Do not give generation prompts unrestricted tools.
 - Minimize provider input: exclude contacts and tokens. Do not place sensitive content in progress metadata or raw logs.

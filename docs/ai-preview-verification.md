@@ -1,5 +1,9 @@
 # Temporary AI improvement dialogs — 2026-10-04
 
+## Historical evidence notice — 2026-10-11
+
+This document retains the original plan or dated inspection/verification. It is not the current implementation register. Later resume persistence, PDF, readiness/JD scoring, paid Gemini, templates and UI changes supersede earlier pending/synthetic-only/provider/branch claims. Current status and remaining acceptance are in the [implementation audit](implementation-audit.md). Historical browser observations and test counts were not rerun for this documentation audit.
+
 The user requested frontend-only dialogs after Improve with AI, matching the supplied thinking and suggested-change references, plus a no-suggestion state. Work is on `codex/frontend`; backend services, public contracts, schema and dependencies are unchanged. Read root/context guidance and branch ownership before claiming the existing local task lock.
 
 ## Local behavior
