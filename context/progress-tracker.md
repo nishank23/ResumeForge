@@ -1,5 +1,25 @@
 # Progress Tracker
 
+## Docker release verification — 2026-10-11
+
+- [x] Prepared the accumulated Docker setup and IP-link session fix for the requested short commit/PR into main. Fetched main and fast-forwarded docker-setup to its identical code baseline; no conflict or unrelated remote code needed reconciliation.
+- [x] Fresh Dockerfile static validation reports no warnings; both Compose configurations pass. The rebuilt checks target passes **34/34** lint/typecheck tasks, **279/279** workspace cases across 13 suites and **9/9** helper/credential cases. The isolated full-app integration passes **8/8**, covering fresh migrations/pgvector, five restricted roles, synthetic sign-in, versioned saves/reload, owner PDF/privacy, upload, delete/undo and audit delivery.
+- [x] Candidate scan excludes actual environment values, private/generated paths and binary resumes. Disposable test containers/volumes were removed; the user's normal app/database and private settings remain intact. Windows/amd64 and live Google/Gemini remain manual checks, as documented in the Docker setup evidence.
+
+## Docker IP-link session repair — 2026-10-11
+
+- [x] Reproduced the reported session-error screen in an anonymous Chrome context at `http://127.0.0.1:3000`. Auth correctly rejects that browser origin with 403; localhost anonymous refresh returns 401. Google configuration is loaded and the authorization setup endpoint returns 200. No live Google sign-in was attempted.
+- [x] The shell now redirects only `http://127.0.0.1:3000` to the canonical localhost origin before mounting the application. It preserves deep links/query/fragment and leaves other ports/hosts/protocols unchanged. Auth CORS, cookies, role checks and server policy remain unchanged. Added README/Docker address guidance.
+- [x] Shell tests **18/18**, lint, TypeScript and whitespace validation pass; Docker rebuild **15/15** tasks. Recreated the existing app without deleting volumes; resume/version counts and generated credential hashes match before/after. Anonymous Chrome verifies the exact canonical redirect before any refresh, built federated sign-in and reload without browser errors. Database/app remain healthy. Actual user Google sign-in remains a manual check.
+
+## Full local Docker app — 2026-10-11
+
+- [x] Created and checked out **docker-setup** from clean fixes in the existing frontend worktree. Git does not permit the requested space in “docker setup”. No commit, push or merge is part of this slice.
+- [x] Added digest-pinned Node/PostgreSQL/pgvector images and full Compose startup: four built MFEs, four personal APIs, audit recipient/worker, separate database and generated credential volumes. Bootstrap applies existing migrations and verifies the same five restricted roles. Only browser ports publish on host loopback; app runs non-root without the administrator volume. Native configuration/role boundaries and production/shared-route gates remain.
+- [x] Added runtime-mode validation, Docker credential/bootstrap/supervisor/health helpers, isolated synthetic integration tests, Docker installation/provider `.env` instructions and manual checks. Private `.env`, `.local`, Git history and check_resumes are excluded from the image.
+- [x] Actual Docker verification: Dockerfile checks without warnings; both Compose configs; **15/15** build tasks, **34/34** lint/typecheck tasks, **276/276** workspace tests, **9/9** helper/credential tests and **8/8** integration tests. Chromium verifies built federation, actual auth refresh, library/create/builder/reload without browser errors. Stop/start preserves 7 synthetic resumes, 10 immutable versions and all credentials; child failure stops the app and restart restores health. Eight native endpoints still respond. Test-only volumes/containers cleaned.
+- [ ] Windows/WSL2, Linux amd64 and real Google/Gemini manual verification remain unrun. Current execution is Linux aarch64 Docker on macOS; hosted production is outside scope. [Evidence and instructions](../docs/docker-setup.md).
+
 ## JD composer focus and action — 2026-10-11
 
 - [x] Release candidate validated for the requested **fixes → main** PR: workspace build **15/15** (11 cached), lint/typecheck **34/34** (23 cached), shared tests **13/13** and resume-MFE tests **50/50**. An initial build/check overlap collided on generated shared declarations; sequential build passes. Candidate whitespace and credential/contact-pattern scans pass, and `check_resumes` stays ignored/untracked. Remote main has the same baseline tree; no product-code conflict or additional backend/AI/database change is included.

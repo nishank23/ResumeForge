@@ -1,5 +1,9 @@
 # Frontend and backend development lanes
 
+## Current Docker branch — 2026-10-11
+
+The user requested a new branch named docker setup. Git forbids spaces, so **docker-setup** was created from the clean fixes checkout and checked out in the existing frontend worktree. New Docker implementation/checks use this branch. The original private runtime checkout, its local database and existing services remain untouched. This supersedes fixes as the active branch. The initial setup request excluded publication; the follow-up now authorizes committing and pushing docker-setup, creating a short PR and merging it into main. Keep the other checkouts unchanged.
+
 ## Current checkout — 2026-10-11
 
 Task ownership is in [context/development-status.md](../context/development-status.md); root README contains product setup only. Historical checkouts/commit IDs below do not direct current work.

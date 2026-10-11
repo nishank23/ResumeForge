@@ -2,7 +2,7 @@
 
 ## Current audit snapshot — 2026-10-11
 
-Development is authorized on fixes in the existing frontend worktree. Task state belongs in context/development-status.md. Preserve primary-checkout private configuration and avoid competing runtime credentials. Current audit status overrides obsolete next-slice and paused-design instructions.
+Development is authorized on docker-setup in the existing frontend worktree for the requested full local Docker setup. Task state belongs in context/development-status.md. Preserve primary-checkout private configuration and avoid competing runtime credentials. Current audit status overrides obsolete next-slice and paused-design instructions.
 
 [Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
 

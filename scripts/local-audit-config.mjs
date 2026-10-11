@@ -1,3 +1,4 @@
+import { managedRuntimeDatabaseUrl } from "../packages/prisma-client/dist/index.js";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
@@ -24,24 +25,11 @@ export function loadLocalAuditConfig(service = "auditRelay") {
         ? "AUDIT_INGEST_DATABASE_URL"
         : undefined;
   if (!variable) throw new Error("Invalid local audit database service");
-  const url = new URL(database[variable]);
-  if (
-    url.protocol !== "postgresql:" ||
-    url.hostname !== "127.0.0.1" ||
-    url.port !== "55432" ||
-    url.pathname !== "/resume_forge_dev" ||
-    url.username !==
-      (service === "auditRelay"
-        ? "rf_local_audit_relay"
-        : "rf_local_audit_ingest") ||
-    !/^[0-9a-f]{64}$/.test(url.password) ||
-    url.search ||
-    url.hash ||
-    !/^[0-9a-f]{64}$/.test(transport.LOCAL_AUDIT_RELAY_KEY ?? "")
-  )
+  const databaseUrl = managedRuntimeDatabaseUrl(database[variable], service);
+  if (!/^[0-9a-f]{64}$/.test(transport.LOCAL_AUDIT_RELAY_KEY ?? ""))
     throw new Error("Invalid local audit configuration");
   return {
-    databaseUrl: url.href,
+    databaseUrl,
     key: transport.LOCAL_AUDIT_RELAY_KEY,
     endpoint: "http://127.0.0.1:4005/internal/audit/events",
   };

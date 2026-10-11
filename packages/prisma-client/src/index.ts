@@ -1,3 +1,4 @@
+export { managedRuntimeDatabaseUrl } from "./local-runtime.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client.js";
 export {

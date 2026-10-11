@@ -2,7 +2,7 @@
 
 ## Current checkout and authorization — 2026-10-11
 
-Use **fixes** in /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2 for commands, edits, task claims and checks. This supersedes historical codex/frontend, codex/backend, features and ux-ui-update branch instructions. Do not implement in main, switch another agent's checkout or recreate retired branches.
+Use **docker-setup** in /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2 for commands, edits, task claims and checks. This supersedes fixes and historical codex/frontend, codex/backend, features and ux-ui-update branch instructions. The user requested the full local Docker app on docker-setup. Do not implement in main, switch another agent's checkout or recreate retired branches.
 
 The original /Users/nishankbansal/Downloads/ResumeBuilderv2 is the detached primary runtime/configuration checkout. Preserve its private .local files, services and database. Worktrees do not isolate database roles, API contracts or dependency conflicts. New parallel assignments require explicit branch/path ownership and one integration owner. See [workflow](docs/parallel-development.md).
 

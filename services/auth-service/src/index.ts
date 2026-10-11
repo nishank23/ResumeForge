@@ -33,7 +33,12 @@ const app = createAuthApp({
   profileServiceKey: config.profileServiceKey,
 });
 serve(
-  { fetch: app.fetch, port: config.AUTH_SERVICE_PORT, hostname: "127.0.0.1" },
+  {
+    fetch: app.fetch,
+    port: config.AUTH_SERVICE_PORT,
+    hostname:
+      process.env.RESUME_FORGE_RUNTIME === "docker" ? "0.0.0.0" : "127.0.0.1",
+  },
   () => {
     console.log(`Auth service listening on ${origin}`);
   },
