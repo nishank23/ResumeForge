@@ -91,8 +91,12 @@ function WorkspaceShell() {
   const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { theme, preference: themePreference, setPreference, toggleTheme } =
-    useThemePreference();
+  const {
+    theme,
+    preference: themePreference,
+    setPreference,
+    toggleTheme,
+  } = useThemePreference();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [quietMotion, setQuietMotion] = useState(false);
@@ -172,6 +176,7 @@ function WorkspaceShell() {
       remoteName={`${name}-mfe`}
       remoteUrl={`http://localhost:${name === "auth" ? "3001" : name === "profile" ? "3002" : "3003"}/remoteEntry.js`}
       simulateFailure={simulateFailure}
+      reducedMotion={reducedMotion}
       onResetSimulatedFailure={() => {
         setSimulateFailure(false);
       }}
@@ -463,7 +468,8 @@ function WorkspaceShell() {
                             ]}
                             onChange={(event) => {
                               const value = event.target.value;
-                              if (isThemePreference(value)) setPreference(value);
+                              if (isThemePreference(value))
+                                setPreference(value);
                             }}
                           />
                         </div>
@@ -573,6 +579,7 @@ interface FederatedRemoteSlotProps {
   readonly remoteName: string;
   readonly remoteUrl: string;
   readonly simulateFailure: boolean;
+  readonly reducedMotion: boolean;
   readonly onResetSimulatedFailure: () => void;
   readonly children: React.ReactNode;
 }
@@ -591,6 +598,7 @@ function FederatedRemoteSlot({
   remoteName,
   remoteUrl,
   simulateFailure,
+  reducedMotion,
   onResetSimulatedFailure,
   children,
 }: FederatedRemoteSlotProps) {
@@ -601,7 +609,14 @@ function FederatedRemoteSlot({
       remoteUrl={remoteUrl}
       onRetry={onResetSimulatedFailure}
     >
-      <Suspense fallback={<RemoteSuspenseFallback remoteName={remoteName} />}>
+      <Suspense
+        fallback={
+          <RemoteSuspenseFallback
+            remoteName={remoteName}
+            reducedMotion={reducedMotion}
+          />
+        }
+      >
         {simulateFailure ? (
           <CrashingRemoteSimulator remoteName={remoteName} />
         ) : (

@@ -8,6 +8,7 @@ import {
   Button,
   AsciiSpotlight,
   RequestFeedback,
+  StudioLoading,
   useSession,
   type ShellFederationContext,
 } from "@resume-forge/shared";
@@ -163,12 +164,7 @@ export function ResumeRemoteRoot({
   if (view === "editor") {
     if (loading)
       return (
-        <div className="rf-page">
-          <RequestFeedback
-            label="Loading your resume"
-            reducedMotion={context.reducedMotion}
-          />
-        </div>
+        <StudioLoading reducedMotion={context.reducedMotion} />
       );
     if (!saved)
       return (

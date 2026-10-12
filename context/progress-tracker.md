@@ -1,5 +1,19 @@
 # Progress Tracker
 
+## Forge navigation loading — 2026-10-12
+
+- [x] All page loaders now share the generic message “Loading your workspace…” instead of naming the resume editor or another destination. Saving, creation and AI operations retain their specific status text. Shared build, four-package lint/typecheck and **33/33** shared/shell tests pass, including consistent copy across federated destinations and session recovery. Docker rebuild passes **15/15** build tasks; updated app is healthy. The stopped database container was restarted with its existing volumes; no database reset or credential provisioning was needed.
+- [x] Added a shared StudioLoading document-scan treatment for session verification, remote-module loading, saved-resume list/editor and initial profile requests. Uses existing carbon/violet and light-theme tokens, Sora/DM Sans and Performative WibblingSpinner. It renders only during real loading, with a brief CSS reveal and no artificial request delay or progress percentage. Gentler page fades start at 80% opacity instead of 35%.
+- [x] Static status text is available independently of decorative glyph animation. Reduced/quiet motion disables the scan and timer-driven glyphs; inactive/offscreen decoration stops. Remote fallbacks receive the shell's quiet-motion setting. Existing route keys, session guards, forms, save/conflict logic and error recovery are preserved.
+- [x] Locked dependencies installed in the shared local folder; affected dependency/MFE builds, five-package lint/typecheck and **90/90** tests pass (shared 15, shell 18, resume MFE 50, profile MFE 7). Two new tests cover complete status announcements, decorative exclusion and forwarded quiet mode. Docker build **15/15** passes; running image contains the new loader/fade and app/database are healthy. Resume/version counts and generated credential hashes match before/after.
+- [x] Browser preview checks: dark/light, default desktop and 320px width without horizontal overflow, wrapped long labels, immediate removal on completion and quiet mode with no scan/container animation or timer glyphs. Rebuilt Docker sign-in renders without browser errors. Signed-in private navigation, real touch and screen-reader speech remain manual checks. Temporary preview uses no user data or live API calls.
+- [x] A Compose update encountered a transient bootstrap-container name conflict. Subsequent inspection confirmed the latest image running healthy, with the new assets and matching retained data; no container/volume deletion or database reset was performed. No commit or push was requested.
+
+## Docker Gemini diagnosis — 2026-10-12
+
+- [x] Both private environment files and the running container have a Gemini key and paid mode; the live container matches the local provider settings. Real Docker adapter probes using only fictional text returned **HTTP 200** for a grounded rewrite, semantic JD analysis and two normalized **768-dimensional** embeddings. No credentials or personal resume text were printed/sent by these probes; no provider/key/model configuration changed.
+- [ ] The user's specific app-level AI failure is not reproduced by these provider probes. Requested the failing action and exact error asynchronously; no speculative backend change was made.
+
 ## Docker release verification — 2026-10-11
 
 - [x] Prepared the accumulated Docker setup and IP-link session fix for the requested short commit/PR into main. Fetched main and fast-forwarded docker-setup to its identical code baseline; no conflict or unrelated remote code needed reconciliation.

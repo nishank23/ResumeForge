@@ -1,5 +1,9 @@
 # Frontend Integration and Reference Review
 
+## Navigation loading refinement — 2026-10-12
+
+Shared StudioLoading replaces generic page-request cards/text with a bounded document scan and the existing Performative status adapter. Session, federation, resume-list/editor and profile loading use the same themed treatment and generic “Loading your workspace…” message. Saving, creation and AI operations retain their specific status text. The request controls its lifetime; a short CSS reveal suppresses brief visual flashes without delaying completion. Quiet/reduced motion and inactive decoration remain static. Existing route/session identity keys and error boundaries remain authoritative. [Verification and limits](progress-tracker.md#forge-navigation-loading--2026-10-12).
+
 ## Current audit snapshot — 2026-10-11
 
 Performative UI 0.7.0 is installed behind shared wrappers: AsciiHero, Temperature, Prompt, NodeGraph and validated-result playback serve actual flows. Saved editor uses server Gemini proposals, persisted scores and PDF downloads. Search is quiet. Timer previews and samples are historical/standalone paths.
