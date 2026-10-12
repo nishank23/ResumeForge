@@ -45,11 +45,14 @@ export function RequestFeedback({
   const quiet = useReducedMotion() || reducedMotion === true;
   return (
     <span role="status" className={cn("rf-request-feedback", className)}>
-      {quiet ? (
-        <span>{label}…</span>
-      ) : (
-        <WibblingSpinner verbs={[label]} glyphColor="var(--primary)" />
-      )}
+      <span className="sr-only">{label}…</span>
+      <span aria-hidden="true">
+        {quiet ? (
+          <span>{label}…</span>
+        ) : (
+          <WibblingSpinner verbs={[label]} glyphColor="var(--primary)" />
+        )}
+      </span>
     </span>
   );
 }

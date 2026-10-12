@@ -871,11 +871,11 @@
   margin-bottom: 40px;
 }
 .rf-route-view {
-  animation: rf-route-arrive 220ms ease-out;
+  animation: rf-route-arrive 160ms ease-out;
 }
 @keyframes rf-route-arrive {
   from {
-    opacity: 0.35;
+    opacity: 0.8;
   }
   to {
     opacity: 1;
@@ -935,6 +935,179 @@
 }
 [data-reduced-motion="true"] :is(.rf-route-view, .rf-sidebar) {
   animation: none;
+}
+
+/* One bounded document scan; loading never changes the printable paper. */
+.rf-studio-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: clamp(290px, 48vh, 480px);
+  width: 100%;
+  padding: 36px 20px;
+  color: var(--foreground);
+  animation: rf-loading-arrive 180ms ease-out 120ms both;
+}
+.rf-studio-loading-compact {
+  min-height: 210px;
+  padding: 20px 12px;
+  gap: 20px;
+}
+.rf-studio-loading-art {
+  width: 142px;
+  height: 142px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary) 9%, transparent),
+    transparent 70%
+  );
+}
+.rf-studio-loading-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: solid color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.rf-studio-loading-corner:nth-child(1) {
+  top: 12px;
+  left: 12px;
+  border-width: 1px 0 0 1px;
+}
+.rf-studio-loading-corner:nth-child(2) {
+  top: 12px;
+  right: 12px;
+  border-width: 1px 1px 0 0;
+}
+.rf-studio-loading-corner:nth-child(3) {
+  bottom: 12px;
+  right: 12px;
+  border-width: 0 1px 1px 0;
+}
+.rf-studio-loading-corner:nth-child(4) {
+  bottom: 12px;
+  left: 12px;
+  border-width: 0 0 1px 1px;
+}
+.rf-studio-loading-sheet {
+  width: 62px;
+  height: 82px;
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--primary) 60%, var(--border));
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow:
+    -7px 7px 0 -1px var(--surface-muted),
+    -7px 7px 0 0 var(--border);
+  overflow: hidden;
+}
+.rf-studio-loading-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  border: solid var(--border);
+  border-width: 0 0 1px 1px;
+  border-bottom-left-radius: 3px;
+  background: var(--surface-muted);
+}
+.rf-studio-loading-heading,
+.rf-studio-loading-line {
+  position: absolute;
+  left: 11px;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.rf-studio-loading-heading {
+  top: 24px;
+  width: 26px;
+  background: var(--primary);
+}
+.rf-studio-loading-line:nth-of-type(3) {
+  top: 37px;
+  width: 38px;
+}
+.rf-studio-loading-line:nth-of-type(4) {
+  top: 48px;
+  width: 31px;
+}
+.rf-studio-loading-line:nth-of-type(5) {
+  top: 59px;
+  width: 36px;
+}
+.rf-studio-loading-scan {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 20px;
+  border-bottom: 1px solid var(--primary);
+  background: linear-gradient(
+    transparent,
+    color-mix(in srgb, var(--primary) 17%, transparent)
+  );
+  animation: rf-document-scan 2.6s ease-in-out infinite;
+}
+.rf-studio-loading .rf-request-feedback {
+  justify-content: center;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 1.6;
+  color: var(--foreground);
+}
+.rf-studio-loading .pui-wibble {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.rf-studio-loading .pui-wibble__verb {
+  font-family: inherit;
+}
+@keyframes rf-loading-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rf-document-scan {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(82px);
+    opacity: 0;
+  }
+}
+.rf-studio-loading[data-active="false"] .rf-studio-loading-scan,
+.rf-studio-loading[data-reduced-motion="true"] .rf-studio-loading-scan {
+  display: none;
+}
+.rf-studio-loading[data-reduced-motion="true"] {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rf-studio-loading {
+    animation: none;
+  }
+  .rf-studio-loading-scan {
+    display: none;
+  }
 }
 
 /* Portals escape the editor's scrolling/painted panels and paper transforms. */

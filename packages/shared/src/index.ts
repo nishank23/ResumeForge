@@ -8,6 +8,8 @@
 
 import "./styles/styles.css";
 
+export { StudioLoading } from "./components/ui/studio-loading";
+
 export {
   SummaryEditor,
   type SummaryEditorProps,

@@ -7,6 +7,7 @@ import {
   StudioPrompt,
   DocumentStatus,
   RequestFeedback,
+  StudioLoading,
   ConfirmDeleteDialog,
   useSession,
   type ShellFederationContext,
@@ -224,7 +225,9 @@ export function ResumeLibrary({
           </div>
           <div className="rf-library-start-actions">
             <Button
-              onClick={() => { setUploadOpen(true); }}
+              onClick={() => {
+                setUploadOpen(true);
+              }}
               disabled={
                 creating ||
                 loadingMore ||
@@ -330,8 +333,8 @@ export function ResumeLibrary({
           ) : null}
           {loading ? (
             <div className="rf-library-empty">
-              <RequestFeedback
-                label="Loading your saved resumes"
+              <StudioLoading
+                compact
                 reducedMotion={context.reducedMotion}
               />
             </div>

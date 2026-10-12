@@ -254,7 +254,7 @@ test("sign-in waits for session verification without flashing the welcome", () =
       ),
     ),
   );
-  assert.match(html, /Opening your workspace/);
+  assert.match(html, /Loading your workspace/);
   assert.equal(html.includes("Welcome sentinel"), false);
 });
 

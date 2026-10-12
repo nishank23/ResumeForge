@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, Navigate, Outlet, useParams } from "react-router";
-import {
-  Button,
-  RequestFeedback,
-  type SessionState,
-} from "@resume-forge/shared";
+import { Button, StudioLoading, type SessionState } from "@resume-forge/shared";
 import { resolveProtectedRoute, sessionHome } from "./routing";
 
 export function SessionRecovery({
@@ -15,13 +11,7 @@ export function SessionRecovery({
   retry: () => Promise<void>;
 }) {
   if (session.status === "loading")
-    return (
-      <div className="rf-empty" role="status" aria-live="polite">
-        <h1>Opening your workspace</h1>
-        <RequestFeedback label="Checking your session" />
-        <p>Your workspace will open once your session is verified.</p>
-      </div>
-    );
+    return <StudioLoading />;
   return (
     <div className="rf-empty">
       <h1>We couldn’t verify your session</h1>

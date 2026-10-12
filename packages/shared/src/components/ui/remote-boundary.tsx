@@ -1,13 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-} from "./primitives";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "./primitives";
+import { StudioLoading } from "./studio-loading";
 
 export interface RemoteFallbackProps {
   readonly remoteName: string;
@@ -60,28 +54,12 @@ export function RemoteLoadFallback({
 }
 
 export function RemoteSuspenseFallback({
-  remoteName,
+  reducedMotion,
 }: {
   readonly remoteName: string;
+  readonly reducedMotion?: boolean;
 }) {
-  const label = remoteName.startsWith("auth")
-    ? "sign-in"
-    : remoteName.startsWith("profile")
-      ? "profile"
-      : "resume editor";
-  return (
-    <Card aria-busy="true" aria-label={`Loading ${label}`}>
-      <CardHeader>
-        <span className="text-sm text-[var(--muted-foreground)]">
-          Loading {label}…
-        </span>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="h-6 w-1/3" />
-        <Skeleton className="h-16 w-full" />
-      </CardContent>
-    </Card>
-  );
+  return <StudioLoading reducedMotion={reducedMotion} />;
 }
 
 export interface RemoteErrorBoundaryProps {

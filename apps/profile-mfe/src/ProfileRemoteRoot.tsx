@@ -5,7 +5,7 @@ import {
   FormField,
   Input,
   DocumentStatus,
-  RequestFeedback,
+  StudioLoading,
   Textarea,
   useSession,
   type ShellFederationContext,
@@ -214,8 +214,8 @@ function ConnectedProfile({ context }: { context: ShellFederationContext }) {
       </div>
       {loading && !loaded ? (
         <div className="rf-profile-state">
-          <RequestFeedback
-            label="Loading your professional details"
+          <StudioLoading
+            compact
             reducedMotion={context.reducedMotion}
           />
         </div>
