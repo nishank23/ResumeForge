@@ -1,11 +1,15 @@
 import { spawn } from "node:child_process";
 import { readRuntime } from "./config.mjs";
+import { runtimeAppOrigin } from "../packages/access-policy/dist/server.js";
 
+const cloud = process.env.RESUME_FORGE_RUNTIME === "cloud";
 if (
-  process.env.RESUME_FORGE_RUNTIME !== "docker" ||
-  process.env.NODE_ENV === "production"
+  !cloud &&
+  (process.env.RESUME_FORGE_RUNTIME !== "docker" ||
+    process.env.NODE_ENV === "production")
 )
   throw new Error("This launcher supports the managed local Docker app only.");
+runtimeAppOrigin();
 readRuntime();
 const children = [];
 let stopping = false;
@@ -22,6 +26,8 @@ function stop(code) {
 }
 function start(name, command, args, cwd = "/app") {
   const env = { ...process.env };
+  if (cloud && name !== "resume-service")
+    env.NODE_OPTIONS = "--max-old-space-size=128";
   // Absent optional credentials must stay absent, and only the owning service receives them.
   for (const key of [
     "GOOGLE_CLIENT_ID",
@@ -60,7 +66,9 @@ for (const name of [
   start(name, "node", [`services/${name}/dist/index.js`]);
 start("audit-recipient", "node", ["scripts/start-local-audit.mjs"]);
 start("audit-worker", "node", ["scripts/work-local-audit.mjs"]);
-for (const name of ["shell", "auth-mfe", "profile-mfe", "resume-mfe"])
+for (const name of cloud
+  ? []
+  : ["shell", "auth-mfe", "profile-mfe", "resume-mfe"])
   start(
     name,
     "pnpm",
@@ -78,5 +86,7 @@ for (const name of ["shell", "auth-mfe", "profile-mfe", "resume-mfe"])
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 console.log(
-  "Forge Studio Docker app starting; open http://localhost:3000 after its healthcheck passes.",
+  cloud
+    ? "Forge Studio personal APIs starting in production mode."
+    : "Forge Studio Docker app starting; open http://localhost:3000 after its healthcheck passes.",
 );

@@ -1,4 +1,12 @@
 import { z } from "zod";
+// Replaced by Vite; native tests and local builds retain the established URLs.
+declare const __FORGE_CLOUD__: boolean;
+const cloud = typeof __FORGE_CLOUD__ !== "undefined" && __FORGE_CLOUD__;
+export const AUTH_URL = cloud
+  ? "/api/v1/auth"
+  : "http://localhost:4001/api/v1/auth";
+const API_URL = cloud ? "" : "http://localhost:4000";
+export const SHELL_URL = cloud ? "/" : "http://localhost:3000/";
 
 const identitySchema = z.object({
   id: z.string().uuid(),
@@ -25,7 +33,6 @@ export interface SessionTransport {
   exclusive: <T>(operation: () => Promise<T>) => Promise<T>;
   notifyLogout: () => void;
 }
-export const AUTH_URL = "http://localhost:4001/api/v1/auth";
 
 /** Tokens remain inside this controller and never enter storage or federation props. */
 export function createSessionController(transport: SessionTransport) {
@@ -158,7 +165,7 @@ export function createSessionController(transport: SessionTransport) {
     const send = () => {
       const headers = new Headers(options.headers);
       headers.set("Authorization", `Bearer ${token ?? ""}`);
-      return transport.request(`http://localhost:4000${path}`, {
+      return transport.request(`${API_URL}${path}`, {
         ...options,
         headers,
         credentials: "omit",

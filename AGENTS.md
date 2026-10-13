@@ -1,5 +1,11 @@
 # resume-forge — Agent instructions
 
+## Cloud deployment authorization — 2026-10-13
+
+The user explicitly approved an isolated **codex/cloud-deploy** worktree at /Users/nishankbansal/.codex/worktrees/cloud-deploy/ResumeBuilderv2, starting from the current personal private GitHub release. This supersedes the checkout rule below only for the Google Cloud showcase deployment. Use the personal **origin** remote, nishank23/ResumeForge. Preserve the organization copy and the existing local runtime/database/private settings. Do not switch another checkout or copy its database/configuration into this worktree.
+
+The deployment slice covers production packaging, the chosen HTTPS hostname, existing personal services, Google OAuth callback configuration, and VM/domain validation. It does not activate shared access or future complete JD generation. External credential transfers and public exposure must follow the applicable action-time approval rules. Current deployment evidence lives in [cloud deployment](docs/cloud-deployment.md).
+
 ## Current checkout and authorization — 2026-10-11
 
 Use **docker-setup** in /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2 for commands, edits, task claims and checks. This supersedes fixes and historical codex/frontend, codex/backend, features and ux-ui-update branch instructions. The user requested the full local Docker app on docker-setup. Do not implement in main, switch another agent's checkout or recreate retired branches.
@@ -51,6 +57,7 @@ Reviewed import, three saved template styles, local readiness/JD scoring, paid G
 - Keep product README limited to overview, stack, prerequisites, setup and run/build.
 
 <!-- CODEGRAPH_START -->
+
 ## CodeGraph
 
 When a `.codegraph/` directory exists at the repo root, use `codegraph_explore` (or `codegraph explore "<question or symbol>"`) before grep/find or raw file reads to understand or locate indexed code. Name the relevant file or symbol in the query. Use direct reads for documentation/configuration that CodeGraph does not index or when it explicitly reports stale/unavailable content. If there is no index, skip CodeGraph; do not initialize it without the user's request.

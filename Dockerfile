@@ -23,6 +23,7 @@ COPY services/resume-service/package.json services/resume-service/package.json
 COPY services/workspace-service/package.json services/workspace-service/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
+ARG FORGE_PUBLIC_ORIGIN=""
 RUN pnpm build --concurrency=2
 
 FROM build AS checks
@@ -30,7 +31,24 @@ RUN test ! -e .env && test ! -e .local && test ! -e .git && test ! -e check_resu
     && pnpm check --concurrency=2 && pnpm test --concurrency=2 \
     && node --test scripts/test/development-task.test.mjs scripts/test/local-vector-config.test.mjs docker/test/*.test.mjs
 
-# Host checkout modes may be owner-only; the non-root app needs readable public code.
+FROM build AS cloud-runtime
+RUN chmod -R a+rX /app
+ENV NODE_ENV=production RESUME_FORGE_RUNTIME=cloud RESUME_FORGE_LOCAL_ROOT=/app
+USER node
+CMD ["node", "docker/start-app.mjs"]
+
+# Serve only built public assets; no provider settings or database credentials enter this image.
+FROM nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94 AS cloud-web
+COPY docker/cloud.nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/apps/shell/dist /usr/share/nginx/html
+COPY --from=build /app/apps/auth-mfe/dist /usr/share/nginx/html/mfe/auth
+COPY --from=build /app/apps/profile-mfe/dist /usr/share/nginx/html/mfe/profile
+COPY --from=build /app/apps/resume-mfe/dist /usr/share/nginx/html/mfe/resume
+USER nginx
+ENTRYPOINT []
+CMD ["nginx", "-g", "daemon off;"]
+
+# Preserve the default local target as well as Compose's explicit runtime target.
 FROM build AS runtime
 RUN chmod -R a+rX /app
 ENV NODE_ENV=development RESUME_FORGE_RUNTIME=docker RESUME_FORGE_LOCAL_ROOT=/app

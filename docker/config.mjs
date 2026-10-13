@@ -42,7 +42,13 @@ export function readRuntime(directory = "/app/.local") {
   return Object.fromEntries(
     Object.entries(variables).map(([service, variable]) => [
       service,
-      new URL(managedRuntimeDatabaseUrl(env[variable], service, "docker")),
+      new URL(
+        managedRuntimeDatabaseUrl(
+          env[variable],
+          service,
+          process.env.RESUME_FORGE_RUNTIME === "cloud" ? "cloud" : "docker",
+        ),
+      ),
     ]),
   );
 }

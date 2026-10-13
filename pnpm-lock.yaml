@@ -653,6 +653,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.0
         version: 1.19.17(hono@4.13.10)
+      '@resume-forge/access-policy':
+        specifier: workspace:*
+        version: link:../../packages/access-policy
       '@resume-forge/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

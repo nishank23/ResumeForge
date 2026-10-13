@@ -173,6 +173,7 @@ export type {
 } from "@resume-forge/shared-types";
 export { useSession } from "./auth/use-session";
 export type { SessionState, SessionIdentity } from "./auth/session";
+export { AUTH_URL, SHELL_URL } from "./auth/session";
 
 export {
   DocumentStatus,

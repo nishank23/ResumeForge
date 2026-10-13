@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { federation } from "@module-federation/vite";
 
 export default defineConfig({
+  define: { __FORGE_CLOUD__: Boolean(process.env.FORGE_PUBLIC_ORIGIN) },
   plugins: [
     react(),
     tailwindcss(),
@@ -17,17 +18,23 @@ export default defineConfig({
         auth_mfe: {
           type: "module",
           name: "auth_mfe",
-          entry: "http://localhost:3001/remoteEntry.js",
+          entry: process.env.FORGE_PUBLIC_ORIGIN
+            ? `${process.env.FORGE_PUBLIC_ORIGIN}/mfe/auth/remoteEntry.js`
+            : "http://localhost:3001/remoteEntry.js",
         },
         profile_mfe: {
           type: "module",
           name: "profile_mfe",
-          entry: "http://localhost:3002/remoteEntry.js",
+          entry: process.env.FORGE_PUBLIC_ORIGIN
+            ? `${process.env.FORGE_PUBLIC_ORIGIN}/mfe/profile/remoteEntry.js`
+            : "http://localhost:3002/remoteEntry.js",
         },
         resume_mfe: {
           type: "module",
           name: "resume_mfe",
-          entry: "http://localhost:3003/remoteEntry.js",
+          entry: process.env.FORGE_PUBLIC_ORIGIN
+            ? `${process.env.FORGE_PUBLIC_ORIGIN}/mfe/resume/remoteEntry.js`
+            : "http://localhost:3003/remoteEntry.js",
         },
       },
       shared: {

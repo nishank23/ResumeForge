@@ -27,6 +27,10 @@ assert.equal(
 const { blankResume, createResumeApi, fromResumeContent } =
   await loadResumeApi();
 const runtime = readRuntime();
+const cloud = process.env.RESUME_FORGE_RUNTIME === "cloud";
+const appOrigin = cloud
+  ? process.env.FORGE_PUBLIC_ORIGIN
+  : "http://localhost:3000";
 const admin = new Client({ connectionString: readAdmin().href });
 const owner = createDatabaseClient(readAdmin().href);
 const clients = Object.fromEntries(
@@ -48,17 +52,34 @@ test("full Docker app, migrated vector database and restricted personal flow", a
     await t.test(
       "published app services and all three federation entries are reachable",
       async () => {
-        for (const [port, path, status] of [
-          [3000, "/", 200],
-          [3001, "/remoteEntry.js", 200],
-          [3002, "/remoteEntry.js", 200],
-          [3003, "/remoteEntry.js", 200],
-          [4000, "/api/v1/health", 200],
-          [4001, "/api/v1/auth/me", 401],
-          [4000, "/api/v1/resume", 401],
-          [4000, "/api/v1/profile", 401],
-        ]) {
-          const response = await fetch(`http://localhost:${port}${path}`, {
+        const addresses = cloud
+          ? [
+              ["http://web:8080/", 200],
+              ["http://web:8080/mfe/auth/remoteEntry.js", 200],
+              ["http://web:8080/mfe/profile/remoteEntry.js", 200],
+              ["http://web:8080/mfe/resume/remoteEntry.js", 200],
+              ["http://web:8080/api/v1/health", 200],
+              ["http://web:8080/api/v1/auth/me", 401],
+              ["http://web:8080/api/v1/resume", 401],
+              ["http://web:8080/api/v1/profile", 401],
+              ["http://web:8080/internal/auth/resolve", 404],
+              ["http://web:8080/mfe/missing.js", 404],
+            ]
+          : [
+              [3000, "/", 200],
+              [3001, "/remoteEntry.js", 200],
+              [3002, "/remoteEntry.js", 200],
+              [3003, "/remoteEntry.js", 200],
+              [4000, "/api/v1/health", 200],
+              [4001, "/api/v1/auth/me", 401],
+              [4000, "/api/v1/resume", 401],
+              [4000, "/api/v1/profile", 401],
+            ].map(([port, path, status]) => [
+              `http://localhost:${port}${path}`,
+              status,
+            ]);
+        for (const [url, status] of addresses) {
+          const response = await fetch(url, {
             signal: AbortSignal.timeout(5000),
           });
           assert.equal(response.status, status);
@@ -129,7 +150,7 @@ test("full Docker app, migrated vector database and restricted personal flow", a
     const key = "b".repeat(64); // Synthetic internal key, never used by the running app.
     const auth = createAuthApp({
       db: clients.auth,
-      appOrigin: "http://localhost:3000",
+      appOrigin,
       profileServiceKey: key,
       provider: {
         authorizationURL: (state) =>
@@ -159,7 +180,7 @@ test("full Docker app, migrated vector database and restricted personal flow", a
         method: "POST",
         headers: {
           Cookie: cookie(callback, "refresh_token"),
-          Origin: "http://localhost:3000",
+          Origin: appOrigin,
         },
       });
       assert.equal(refreshed.status, 200);
@@ -189,11 +210,13 @@ test("full Docker app, migrated vector database and restricted personal flow", a
     );
     const app = createResumeApp({
       personalEditorOnly: true,
+      appOrigin,
       resolveActor: createLocalActorResolver({ endpoint, key }),
       resumes: createResumeUseCases(clients.resume),
     });
-    const gateway = createGatewayApp((target, options) =>
-      app.request(target, options),
+    const gateway = createGatewayApp(
+      (target, options) => app.request(target, options),
+      appOrigin,
     );
     const api = (actor) =>
       createResumeApi(
@@ -203,7 +226,7 @@ test("full Docker app, migrated vector database and restricted personal flow", a
             headers: {
               ...options?.headers,
               Authorization: `Bearer ${actor.token}`,
-              Origin: "http://localhost:3000",
+              Origin: appOrigin,
             },
           }),
         actor.user.workspaceId,

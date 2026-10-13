@@ -1,11 +1,11 @@
 import { managedRuntimeDatabaseUrl } from "../packages/prisma-client/dist/index.js";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
+import { runtimeAppOrigin } from "../packages/access-policy/dist/server.js";
 
 // Deliberately ignore process/root .env database overrides and hosted endpoints.
 export function loadLocalAuditConfig(service = "auditRelay") {
-  if (process.env.NODE_ENV === "production")
-    throw new Error("Local audit transport is not approved for production");
+  runtimeAppOrigin();
   const database = parseEnv(
     readFileSync(
       new URL("../.local/runtime-database.env", import.meta.url),

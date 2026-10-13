@@ -21,6 +21,7 @@ try {
 const app = createProfileApp({
   resolveActor: createLocalActorResolver(config),
   profiles: createProfileUseCases(db),
+  appOrigin: config.appOrigin,
 });
 serve({ fetch: app.fetch, hostname: "127.0.0.1", port: 4002 }, () => {
   console.log("Profile service listening on http://localhost:4002");

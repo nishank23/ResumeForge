@@ -23,14 +23,19 @@ export async function checkApp(host = "127.0.0.1") {
     await db.$disconnect();
   }
   await Promise.all(
-    checks.map(async ([port, path, expected]) => {
-      const response = await fetch(`http://${host}:${port}${path}`, {
-        signal: AbortSignal.timeout(3000),
-        redirect: "error",
-      });
-      await response.body?.cancel();
-      if (response.status !== expected) throw new Error("App is not ready.");
-    }),
+    checks
+      .filter(
+        ([port]) =>
+          process.env.RESUME_FORGE_RUNTIME !== "cloud" || port >= 4000,
+      )
+      .map(async ([port, path, expected]) => {
+        const response = await fetch(`http://${host}:${port}${path}`, {
+          signal: AbortSignal.timeout(3000),
+          redirect: "error",
+        });
+        await response.body?.cancel();
+        if (response.status !== expected) throw new Error("App is not ready.");
+      }),
   );
 }
 if (

@@ -23,21 +23,24 @@ const provider =
     ? createGoogleProvider(
         config.GOOGLE_CLIENT_ID,
         config.GOOGLE_CLIENT_SECRET,
-        `${origin}/api/v1/auth/google/callback`,
+        `${process.env.RESUME_FORGE_RUNTIME === "cloud" ? config.appOrigin : origin}/api/v1/auth/google/callback`,
       )
     : undefined;
 const app = createAuthApp({
   db,
   provider,
-  appOrigin: "http://localhost:3000",
+  appOrigin: config.appOrigin,
   profileServiceKey: config.profileServiceKey,
 });
 serve(
   {
     fetch: app.fetch,
     port: config.AUTH_SERVICE_PORT,
-    hostname:
-      process.env.RESUME_FORGE_RUNTIME === "docker" ? "0.0.0.0" : "127.0.0.1",
+    hostname: ["docker", "cloud"].includes(
+      process.env.RESUME_FORGE_RUNTIME ?? "",
+    )
+      ? "0.0.0.0"
+      : "127.0.0.1",
   },
   () => {
     console.log(`Auth service listening on ${origin}`);

@@ -2,7 +2,10 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 
 /** Local personal-profile transport. Domain authorization stays in profile-service. */
-export function createGatewayApp(request: typeof fetch = fetch) {
+export function createGatewayApp(
+  request: typeof fetch = fetch,
+  appOrigin = "http://localhost:3000",
+) {
   const app = new Hono();
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
@@ -12,7 +15,7 @@ export function createGatewayApp(request: typeof fetch = fetch) {
   app.use(
     "/api/v1/*",
     cors({
-      origin: "http://localhost:3000",
+      origin: appOrigin,
       allowMethods: ["GET", "POST", "PUT", "DELETE"],
       allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
       exposeHeaders: [
@@ -45,7 +48,7 @@ export function createGatewayApp(request: typeof fetch = fetch) {
   app.post("/api/v1/resume/:id/ai-rewrite/apply", proxy);
   async function proxy(c: Context) {
     const origin = c.req.header("Origin");
-    if (origin && origin !== "http://localhost:3000")
+    if (origin && origin !== appOrigin)
       return c.json(
         { error: { code: "forbidden", message: "Origin unavailable." } },
         403,

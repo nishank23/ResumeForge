@@ -4,7 +4,10 @@ import { parseEnv } from "node:util";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { localProfileServiceKeySchema } from "@resume-forge/access-policy/server";
+import {
+  localProfileServiceKeySchema,
+  runtimeAppOrigin,
+} from "@resume-forge/access-policy/server";
 
 const localRoot = process.env.RESUME_FORGE_LOCAL_ROOT
   ? pathToFileURL(`${resolve(process.env.RESUME_FORGE_LOCAL_ROOT)}/`)
@@ -20,6 +23,7 @@ const schema = z.object({
   AUTH_SERVICE_PORT: z.coerce.number().int().min(1).max(65535).default(4001),
 });
 export function loadConfig() {
+  const appOrigin = runtimeAppOrigin();
   let databaseUrl: string;
   try {
     const local = parseEnv(
@@ -42,8 +46,6 @@ export function loadConfig() {
     throw new Error(
       "Invalid auth configuration. Check database and OAuth settings; see docs/google-login.md.",
     );
-  if (process.env.NODE_ENV === "production")
-    throw new Error("Local auth is not approved for production deployment.");
   const file = new URL(".local/auth-transport.env", localRoot);
   let profileServiceKey: string | undefined;
   if (existsSync(file)) {
@@ -59,5 +61,5 @@ export function loadConfig() {
       );
     }
   }
-  return { ...result.data, profileServiceKey };
+  return { ...result.data, profileServiceKey, appOrigin };
 }

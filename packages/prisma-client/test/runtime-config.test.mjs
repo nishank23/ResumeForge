@@ -7,6 +7,37 @@ const native = (role) =>
   `postgresql://${role}:${password}@127.0.0.1:55432/resume_forge_dev`;
 const docker = (role) =>
   `postgresql://${role}:${password}@database:5432/resume_forge_dev`;
+test("cloud mode preserves restricted roles and private Docker database destinations", () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    for (const [service, role] of Object.entries(runtimeRoleNames())) {
+      assert.equal(
+        managedRuntimeDatabaseUrl(docker(role), service, "cloud"),
+        docker(role),
+      );
+      assert.throws(() =>
+        managedRuntimeDatabaseUrl(docker(role), service, "docker"),
+      );
+      assert.throws(() =>
+        managedRuntimeDatabaseUrl(native(role), service, "cloud"),
+      );
+      assert.throws(() =>
+        managedRuntimeDatabaseUrl(docker("resume_forge"), service, "cloud"),
+      );
+      assert.throws(() =>
+        managedRuntimeDatabaseUrl(
+          docker(role).replace("@database:", "@example.invalid:"),
+          service,
+          "cloud",
+        ),
+      );
+    }
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  }
+});
 test("all five restricted roles work in their managed native and Docker modes", () => {
   for (const [service, role] of Object.entries(runtimeRoleNames())) {
     assert.equal(

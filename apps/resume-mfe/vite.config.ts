@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import { federation } from "@module-federation/vite";
 
 export default defineConfig({
+  base: process.env.FORGE_PUBLIC_ORIGIN ? "/mfe/resume/" : "/",
+  define: { __FORGE_CLOUD__: Boolean(process.env.FORGE_PUBLIC_ORIGIN) },
   plugins: [
     react(),
     tailwindcss(),

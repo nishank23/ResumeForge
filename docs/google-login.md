@@ -1,5 +1,9 @@
 # Local Google sign-in
 
+## Personal cloud callback — 2026-10-13
+
+The cloud runtime uses its configured canonical HTTPS origin and Secure cookies. The existing Google web client now lists `https://resumeforge.sugarbuddyai.com/api/v1/auth/google/callback` alongside the local callback below; the console showed “OAuth client saved.” Real cloud sign-in remains unverified. Source continues requesting only `openid`, `profile`, and `email`; no Google scope or publishing-status expansion is included. See [deployment steps](cloud-deployment.md).
+
 ## Implemented scope — 2026-10-11
 
 - [x] ✅ Google PKCE callback, provider identity and personal Workspace bootstrap.
@@ -17,7 +21,7 @@ Use the [README's verified setup](../README.md#setup-and-installation). In the p
 http://localhost:4001/api/v1/auth/google/callback
 ```
 
-In Google consent testing mode, add the testing account. Initialize the local database, runtime roles and auth transport file in the documented order, then run `pnpm dev:personal` in the active worktree. It resolves the primary configuration automatically; RESUME_FORGE_LOCAL_ROOT is the explicit override.
+Google's [basic-identity exception](https://support.google.com/cloud/answer/15549945?hl=en) allows the current `openid`, `profile`, and `email` requests without a test-user allowlist. Initialize the local database, runtime roles and auth transport file in the documented order, then run `pnpm dev:personal` in the active worktree. It resolves the primary configuration automatically; RESUME_FORGE_LOCAL_ROOT is the explicit override.
 
 Open http://localhost:3000. Using 127.0.0.1 changes the allowed browser origin. Sign-in does not require creating a profile. Use Preferences to sign out.
 
