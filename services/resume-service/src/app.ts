@@ -55,7 +55,7 @@ export function createResumeApp(config: {
           path,
         ) &&
           ["PUT", "OPTIONS"].includes(method)) ||
-        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(jd-match|ai-rewrite)$/i.test(
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(jd-match|ai-rewrite|tailoring)$/i.test(
           path,
         ) &&
           ["GET", "POST", "OPTIONS"].includes(method)) ||
@@ -63,7 +63,9 @@ export function createResumeApp(config: {
           path,
         ) &&
           ["PUT", "OPTIONS"].includes(method)) ||
-        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/ai-rewrite\/apply$/i.test(path) &&
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(ai-rewrite\/apply|tailoring\/(apply|cancel))$/i.test(
+          path,
+        ) &&
           ["POST", "OPTIONS"].includes(method)) ||
         (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/restore$/i.test(path) &&
           ["POST", "OPTIONS"].includes(method));
@@ -555,6 +557,19 @@ export function createResumeApp(config: {
   );
   app.post("/api/v1/resume/:id/ai-rewrite/apply", (c) =>
     atsRequest(c, config.resumes.applySavedRewrite),
+  );
+  app.on(["GET", "POST"], "/api/v1/resume/:id/tailoring", (c) =>
+    atsRequest(c, (context, id, body) =>
+      c.req.method === "GET"
+        ? config.resumes.getTailoring(context, id)
+        : config.resumes.startTailoring(context, id, body),
+    ),
+  );
+  app.post("/api/v1/resume/:id/tailoring/cancel", (c) =>
+    atsRequest(c, config.resumes.cancelTailoring),
+  );
+  app.post("/api/v1/resume/:id/tailoring/apply", (c) =>
+    atsRequest(c, config.resumes.applyTailoring),
   );
   app.on(["GET", "POST"], "/api/v1/resume/:id/readiness", async (c) => {
     const requestId = randomUUID();

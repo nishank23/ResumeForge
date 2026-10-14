@@ -102,7 +102,7 @@ Membership revocation invalidates future reads, mutations, and task-token issuan
 
 Audit profile/contact reads, updates, generation, downloads, deletion, invitations, removals, role changes, and denied sensitive actions with allowlisted metadata. Permission names are capability keys; event names such as `contact.viewed` are historical facts, not interchangeable constants.
 
-Exercise every role against every permission and workspace type, plus cross-tenant and cross-profile ID substitution. Verify restricted data is absent from REST, task metadata, cached DTOs, all historical resume versions, PDF text/metadata, and MCP. See [F14](feature-specs/14-rbac-privacy.md) and [F15](feature-specs/15-audit-logging.md).
+Exercise every role against every permission and workspace type, plus cross-tenant and cross-profile ID substitution. Verify restricted data is absent from REST, task metadata, cached DTOs, all historical resume versions, PDF text/metadata, and MCP. See [F14](../docs/archive/2026-10-14/context/feature-specs/14-rbac-privacy.md) and [F15](../docs/archive/2026-10-14/context/feature-specs/15-audit-logging.md).
 
 ## Contextual prompt authorization
 

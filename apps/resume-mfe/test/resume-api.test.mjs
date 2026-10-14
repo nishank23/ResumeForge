@@ -13,6 +13,34 @@ const { blankResume, toResumeContent, fromResumeContent, createResumeApi } =
 const workspaceId = "22222222-2222-4222-8222-222222222222",
   id = "11111111-1111-4111-8111-111111111111";
 const envelope = (data) => new Response(JSON.stringify({ data }));
+const tailoringFixture = () => ({
+  currentVersion: 1, available: true,
+  run: {
+    id: "33333333-3333-4333-8333-333333333333", sourceVersion: 1, status: "ready",
+    model: "gemini-3.8-flash", promptVersion: "tailor-v2",
+    quality: { sourceWords: 200, proposedWords: 210, fieldsChecked: 5, fieldsRewritten: 4, retainedOriginal: 1 }, warnings: ["Kept one original field."],
+    jobTitle: "Backend Engineer", jdText: "Backend Engineer. Build Python APIs and PostgreSQL systems for operations.",
+    requirements: [], responsibilities: [], createdAt: "2026-10-14T18:00:00.000Z", expiresAt: "2026-10-14T18:30:00.000Z",
+    batchesDone: 2, batchesTotal: 2,
+    before: { score: 50, matched: [], missing: [], statedYears: null, datedYears: null, experienceLevel: "unknown" },
+    after: null, changes: [], copyId: null, error: null,
+  },
+});
+test("tailoring client accepts full-writer metadata and restores legacy defaults without dropping quality", async () => {
+ const current=tailoringFixture(),api=createResumeApi(async()=>envelope(current),workspaceId);
+ assert.deepEqual(await api.tailoring(id),current);
+ assert.deepEqual(await api.startTailoring(id,1,current.run.id,current.run.jdText),current);
+ assert.deepEqual(await api.cancelTailoring(id,current.run.id),current);
+ const legacy=tailoringFixture();for(const key of ["model","promptVersion","quality","warnings"])delete legacy.run[key];
+ const restored=await createResumeApi(async()=>envelope(legacy),workspaceId).tailoring(id);
+ assert.equal(restored.run.model,"gemini-3.5-flash-lite");assert.equal(restored.run.promptVersion,"tailor-v1");assert.equal(restored.run.quality,null);assert.deepEqual(restored.run.warnings,[]);
+});
+test("tailoring protocol failures reject results with a safe refresh message instead of raw schema JSON", async () => {
+ for(const value of [null,{...tailoringFixture(),run:{...tailoringFixture().run,privateDebug:"PRIVATE VALUE"}},{...tailoringFixture(),run:{...tailoringFixture().run,quality:{...tailoringFixture().run.quality,sourceWords:-1}}}]){
+  const api=createResumeApi(async()=>envelope(value),workspaceId);
+  for(const action of [()=>api.tailoring(id),()=>api.startTailoring(id,1,tailoringFixture().run.id,tailoringFixture().run.jdText),()=>api.cancelTailoring(id,tailoringFixture().run.id)])await assert.rejects(action,e=>e.code==="invalid_response"&&e.message.includes("Refresh this page")&&!/PRIVATE|unrecognized_keys|ZodError/.test(e.message));
+ }
+});
 test("blank creation uses only account name; includes no fictional professional/contact facts", () => {
   const d = blankResume("Synthetic Person");
   assert.equal(d.synthetic, false);

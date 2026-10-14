@@ -72,6 +72,23 @@ export function ResumeRemoteRoot({
       readinessId && readinessVersion
         ? {
             load: (signal?: AbortSignal) => api.jdMatch(readinessId, signal),
+            tailoring: {
+              load: (signal?: AbortSignal) =>
+                api.tailoring(readinessId, signal),
+              start: (id: string, text: string) =>
+                api.startTailoring(readinessId, readinessVersion, id, text),
+              cancel: (id: string) => api.cancelTailoring(readinessId, id),
+              apply: (id: string, selected: string[], title: string) =>
+                api.applyTailoring(
+                  readinessId,
+                  readinessVersion,
+                  id,
+                  selected,
+                  title,
+                ),
+              openCopy: (id: string) =>
+                context?.onNavigate?.(`/w/${workspaceId}/resumes/${id}`),
+            },
             run: (text: string, semantic: boolean, consent: boolean) =>
               api.runJdMatch(
                 readinessId,
@@ -94,7 +111,7 @@ export function ResumeRemoteRoot({
               ),
           }
         : undefined,
-    [api, readinessId, readinessVersion],
+    [api, readinessId, readinessVersion, context, workspaceId],
   );
   const rewrite = useMemo(
     () =>
@@ -162,10 +179,7 @@ export function ResumeRemoteRoot({
       <ResumeLibrary context={context} initialUploadOpen={view === "upload"} />
     );
   if (view === "editor") {
-    if (loading)
-      return (
-        <StudioLoading reducedMotion={context.reducedMotion} />
-      );
+    if (loading) return <StudioLoading reducedMotion={context.reducedMotion} />;
     if (!saved)
       return (
         <div className="rf-page rf-empty">

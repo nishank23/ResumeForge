@@ -1,6 +1,6 @@
 # Frontend API readiness
 
-## Current integration — 2026-10-11
+## Current integration — 2026-10-14
 
 | Capability | Status | Source |
 | --- | --- | --- |
@@ -13,9 +13,10 @@
 | Templates | ✅ Classic/Modern/Editorial styles, immutable appearance saves and PDF integration. | [Template registry](../apps/resume-mfe/src/templates/registry.ts) |
 | Master section/contact/complete APIs | Partial: profile-service handlers exist but gateway/browser forms do not expose them. Contact permissions/events need repair. | [Profile app](../services/profile-service/src/app.ts) |
 | Clone, version browsing and JD history | Partial: backend handlers exist but personal allowlist/gateway/UI do not connect them. | [Resume app](../services/resume-service/src/app.ts) |
-| Full generation/tailoring/legacy gaps | Partial backend source, gated; legacy safety defects block activation. | [Audit](implementation-audit.md) |
+| Full saved-source JD tailoring | ✅ Scoped batches, restored owned progress, review/reject/preview and independent-copy save/PDF. | [Contract](full-resume-tailoring.md) |
+| Legacy generation/suggestions/Apply | Gated; client-authoritative Apply and other unsafe suggestions remain unapproved. | [Audit](implementation-audit.md) |
 | Shared workspaces and audit viewer | Partial backend only; no released workspace flow. | [Workspace service](../services/workspace-service/src/workspace.ts) |
-| R2, durable jobs, LinkedIn archive import, MCP | Not started as integrations. | [Feature register](../context/build-plan.md) |
+| R2, general task orchestration, LinkedIn archive import, MCP | Not connected; bounded tailoring progress is persisted in resume metadata. | [Product plan](../PLAN.md) |
 
 Setup is in [README](../README.md). Start the approved personal stack; root pnpm dev includes unfinished services and is not the supported full-app launcher.
 
@@ -23,4 +24,4 @@ Historical provider instructions selecting Textkernel/OpenCode/MiMo, readiness-v
 
 ## Next integration gate
 
-Repair contact policy/audit, unsafe legacy suggestion application and shared service startup/roles before exposing more endpoints. Then connect version history/restore and global library actions, validate import/PDF/scoring quality, and build durable jobs/provenance. Source-linked details: [audit priorities](implementation-audit.md#prioritized-next-work).
+The first saved-source tailoring slice is approved and connected through /tailoring routes. Native development uses `pnpm dev:personal` with source watchers. Next: synthetic calibration and reviewed additional-fact/profile intake. URL JD intake, DOCX, tracker, billing and cover-letter modules remain planned. Shared access retains contact/role/consent/runtime gates.

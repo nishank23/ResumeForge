@@ -1,6 +1,8 @@
 # API reference
 
-## Current route availability — 2026-10-11
+## Current route availability — 2026-10-14
+
+Full saved-source tailoring adds GET/POST `/api/v1/resume/:id/tailoring`, POST `/tailoring/cancel` and POST `/tailoring/apply` beneath the same owned resume. Start queues bounded work; Apply creates an independent copy from stored selections. [Bodies, scope, limits and manual checks](full-resume-tailoring.md). These routes do not activate the legacy `/tailor`, `/clone`, `/generate` or client-authored Apply paths.
 
 All external paths below use the /api/v1 prefix. Current source: [gateway](../services/gateway/src/app.ts), [personal allowlist](../services/resume-service/src/app.ts), [auth](../services/auth-service/src/app.ts), [profile](../services/profile-service/src/app.ts). The resume entry point enables personalEditorOnly.
 
@@ -57,7 +59,7 @@ These are private owner-only personal editor routes, not the legacy JD scoring/g
 
 The normal `{ data, requestId }` envelope contains `{ currentVersion, evaluation, previous, dismissed }`. An evaluation includes UUID identity/resume/version IDs, positive resumeVersion, SHA-256 contact-free inputHash, evaluatedAt, mode `general`, rubricVersion `readiness-v2`, bounded integer score, five weighted component counts and up to 100 generic checks with stable optional section/entry targets. `truncated` reports feedback truncation; all checks contribute to math.
 
-Strict validation rejects client-supplied scores/extra fields (422), stale versions/evaluation identities fail 409, missing/deleted/foreign resources fail 404, denied workspace fails 403, missing/expired actor fails 401 and infrastructure failure returns an unavailable error. Mutations share the resume advisory transaction lock with manual save/delete and require atomic sanitized audit. Responses are private/no-store. Existing role grants and schema remain unchanged. History/metadata limits fail visibly without deleting evidence. See [F07](../context/feature-specs/07-ats-scoring.md) and [README](archive/readme-history.md#general-resume-readiness--2026-10-09).
+Strict validation rejects client-supplied scores/extra fields (422), stale versions/evaluation identities fail 409, missing/deleted/foreign resources fail 404, denied workspace fails 403, missing/expired actor fails 401 and infrastructure failure returns an unavailable error. Mutations share the resume advisory transaction lock with manual save/delete and require atomic sanitized audit. Responses are private/no-store. Existing role grants and schema remain unchanged. History/metadata limits fail visibly without deleting evidence. See [F07](archive/2026-10-14/context/feature-specs/07-ats-scoring.md) and [README](archive/readme-history.md#general-resume-readiness--2026-10-09).
 
 **Mostly planned contracts.** Local Google/session endpoints, professional profile POST/GET/PUT, professional draft PUT, bounded personal editor routes described below, Experience GET/POST and entry PUT plus the internal audit/actor-resolution endpoints below are implemented; other routes remain planned. All external paths below are relative to one `/api/v1` prefix. This reconciles conflicting service headings in the source plan. Proposed additions are labeled and need contract review before implementation.
 
@@ -243,3 +245,7 @@ Committed success: HTTP 200 `{ data: { eventId, duplicate } }`. Equivalent retri
 ## Local professional browser transport — 2026-10-04
 
 The local gateway on loopback port 4000 now forwards GET/POST/PUT `/api/v1/profile` and PUT `/api/v1/profile/draft` to loopback profile-service port 4002. Browser requests originate at `http://localhost:3000` and carry the existing opaque Bearer plus personal workspace selector. Profile-service independently resolves/authorizes every actor/resource; the gateway supplies no identity authority. Cookies and arbitrary actor headers are dropped, upstream error/request IDs are preserved, and responses are no-store. Contacts, sections, completion, internal auth and resume routes remain unavailable through this gateway. This transport is refused in production; hosted topology remains D10. [README](profile-api.md#current-audit-status--2026-10-11) records current scope/manual checks.
+
+## Full-tailoring model and review metadata
+
+The implemented personal `/api/v1/resume/:id/tailoring` routes retain their inputs. Public runs add server-owned `model`, `promptVersion`, nullable `quality` (source/proposed words, fields checked/rewritten, retained originals) and `warnings`. V2 uses approved Gemini 3.8 Flash with write/review and optional correction/final review. Private draft/verdict payloads are never returned. Historical v1 defaults preserve readability and review/Apply. The request cannot override model, prose or facts. [Contract](full-resume-tailoring.md).

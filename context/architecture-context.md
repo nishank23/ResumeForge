@@ -1,166 +1,23 @@
-# Architecture Context
+# Architecture
 
-## Full local Docker app — 2026-10-11
+## Implemented stack
 
-The user authorized a full local Compose setup on docker-setup. The app image contains the built four MFEs, four personal Hono services and audit-only recipient/worker. Separate PostgreSQL 18/pgvector and generated administrator/runtime credential volumes preserve the existing role allowlist and personal route gates. Health-gated bootstrap applies migrations and verifies all five runtime identities. Native startup and its managed loopback database remain separate. This is local/demo packaging; hosted production deployment remains deferred. See [Docker contract and verification](../docs/docker-setup.md).
+Four React/Vite microfrontends (shell, auth, profile, resume) use federation and browser-safe shared controls. The shell owns routing, session lifecycle, theme and page errors. Hono gateway/auth/profile/resume services use strict TypeScript, Zod and Prisma/PostgreSQL. Resume-core owns pure scoring/domain types without authentication, storage or HTTP.
 
-## Current audit snapshot — 2026-10-11
+Paid Gemini REST adapters provide semantic JD evidence, selected-description rewriting and 768-dimensional retrieval. Queries restrict owner, workspace, resume and exact version. Existing single-target/vector work is synchronous. Full tailoring uses Gemini 3.8 Flash whole-source writing and separate fact/coverage review, with one bounded correction pass. It uses an owned persisted queue in Resume.atsBreakdown with leases, cancellation, restart recovery and independent-copy save. [Tailoring contract](../docs/full-resume-tailoring.md). OpenCode and Textkernel are not active dependencies.
 
-Actual stack: four React/Vite MFEs, Hono gateway/auth/profile/resume, safe audit-only workspace listener, PostgreSQL/Prisma/pgvector, access-policy and shared packages. React state/session clients and service-local Gemini REST adapters drive active flows. Trigger.dev, AI SDK, R2/storage service, hosted Neon/Pages and MCP remain target infrastructure. Shared business startup is unsafe to activate.
+Local Compose packages built MFEs, personal services and audit recipient/worker with PostgreSQL 18/pgvector and retained generated-credential volumes. Gateway/auth ports are 4000/4001; profile/resume are 4002/4003 internally. MFEs use 3000–3003. The audit-only listener uses 4005 and does not activate shared business routes. [Setup](../README.md) and [Docker contract](../docs/docker-setup.md) are authoritative for local operation.
 
-[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+## Ownership and invariants
 
-## Gemini validation and action boundary — 2026-10-10
+- Auth owns identity/sessions; profile-service owns master professional/contact writes; resume-service owns documents, versions, assessments and proposals.
+- Reuse authorized use cases at HTTP, future worker and integration boundaries. Recheck owner/action/resource scope inside use cases and at serialization/export.
+- Private contact snapshots may exist in owner resumes. Exclude them, source files and OAuth credentials from scoring/AI/retrieval projections. Shared access stays gated until role/consent/output/audit defects are repaired.
+- Preserve stable editor targets, expected-version saves, atomic version/audit writes, server-stored proposals and idempotent Apply.
+- Browser and PDF renderers are separate. Printable pages never use decorative app effects.
 
-Prompt/validator share bounded grammar and exact shorthand aliases so harmless wording is not misclassified as a new fact. Provider receives field IDs/text only for scoped rewriting. UI checkboxes are removed; labeled actions supply the existing processing-intent flag. Contact exclusion, paid configuration, auditing, authorization and version/hash rechecks remain. Generation deadlines are 20 seconds; embeddings remain eight. No provider, schema, grants or scoring changes. [Contract](../docs/ats-workflow.md#explicit-ai-actions-and-inline-review--2026-10-10).
+## Proposed expansion
 
-## No-JD guidance boundary — 2026-10-09
+[PLAN.md](../PLAN.md)'s first tailoring slice reuses the resume MFE/service and provider seam. The metadata queue preserves existing restricted grants. Dedicated task-table orchestration, usage ledgers and optional profile snapshots remain follow-on work. No new ai-copilot-service or provider SDK is approved merely by the blueprint.
 
-The shared private-document adapter derives one contact-completeness boolean. General readiness receives that boolean separately from its contact-free professional projection; resume-core never receives raw header/contact fields. Local professional guidance also uses entry technologies, visible bullet count and editor rich-text bold counts. Added advice is score-neutral. JD/provider/vector projections receive no contact hints; their scoring behavior stays unchanged. Legacy readiness histories remain readable, with current-rubric replay and preference checks. [Contract](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
-
-
-## Current Gemini and compact assessment update — 2026-10-09
-
-The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](../docs/ats-workflow.md).
-
-
-## Current personal vector retrieval — 2026-10-09
-
-Resume-service orchestrates consented Gemini document/query embeddings and a private pgvector cache; resume-core remains pure and provider/database-free. Exact owner/workspace/resume/version filtering precedes cosine ranking. This bounded synchronous slice supplements JD evidence without changing local score weights. Durable background indexing and authorized HR-scale retrieval remain pending. [Contract](../docs/resume-vector-search.md).
-
-This is the target architecture, not deployed infrastructure. Stack choices come from the supplied plan plus the user’s 2026-09-29 Performative UI addition; implementation refinements remain subject to [decisions.md](decisions.md).
-
-## Stack
-
-| Layer | Planned technology | Responsibility |
-|---|---|---|
-| Workspace | pnpm + Turborepo | Package boundaries, dependency graph, shared tasks |
-| Frontend | Vite 6 + React 19 + TypeScript | Browser-rendered shell and remote applications |
-| Federation | `@module-federation/vite` | Independently buildable auth/profile/resume remotes |
-| Navigation | React Router v7 | Shell-owned workspace routes |
-| UI | Tailwind CSS v4 + shadcn/ui + Lucide + Performative UI | Shared tokens, accessible primitives, wrapped prompts/backgrounds/surfaces/accents; D13 compatibility gate |
-| Forms | React Hook Form + Zod | Form state and boundary validation |
-| State | Zustand + TanStack Query | Local interaction state and scoped server cache |
-| Editing/preview | Tiptap + `@react-pdf/renderer` | Limited rich text and resume rendering |
-| HTTP | Hono on Node.js containers | Gateway and domain service APIs |
-| Identity | Google + LinkedIn OAuth; JWT sessions | Provider sign-in and application sessions |
-| Database | Local PostgreSQL 18 + pgvector + Prisma 7; hosting deferred | Relations and structured JSONB implemented; extension ready, real semantic vectors gated by D07 |
-| Async work | Trigger.dev v4 | Durable AI, scoring, embedding, and PDF tasks |
-| AI | Vercel AI SDK, Gemini default | Provider adapters and validated structured output |
-| Artifacts | Cloudflare R2 | Private PDFs and temporary import uploads |
-| Frontend hosting | Cloudflare Pages | Shell and remote static deployments |
-| Integration | MCP SDK | Adapters over authorized application use cases |
-
-Pin versions after checking compatibility in Phase 1. Node.js host and deployment topology remain D10. Hono portability does not imply Prisma, PDF, or background workers already run on Cloudflare Workers.
-
-## System shape
-
-```mermaid
-flowchart LR
-    Shell[Shell + auth/profile/resume MFEs] --> Gateway[Hono gateway]
-    Gateway --> Auth[Auth service]
-    Gateway --> Profile[Profile service]
-    Gateway --> Resume[Resume service]
-    Gateway --> Workspace[Workspace service]
-    Gateway --> Storage[Storage service]
-    Resume --> Profile
-    Resume --> Tasks[Trigger.dev tasks]
-    Tasks --> Core[Workspace-independent resume core]
-    Core --> AI[AI provider adapter]
-    Auth --> DB[(Local PostgreSQL + pgvector)]
-    Profile --> DB
-    Resume --> DB
-    Workspace --> DB
-    Tasks --> Storage
-    Storage --> R2[(Private R2)]
-    MCP[MCP adapters] --> Profile
-    MCP --> Resume
-    MCP --> Storage
-```
-
-## Service ownership
-
-| Service / local port | Owns | Boundary |
-|---|---|---|
-| `gateway` / 4000 | Routing, edge authentication, CORS, limits, correlation IDs | No resume/profile business logic; does not expose `/internal/*` |
-| `auth-service` / 4001 | User identity, OAuth accounts, sessions, JWT issuance | Does not own professional profile or tenant membership |
-| `profile-service` / 4002 | UserProfile, UserContact, profile sections, reviewed imports | Returns scoped DTOs; authorizes contact separately |
-| `resume-service` / 4003 | JDHistory, Resume, ResumeVersion, TaskRun, templates, pipeline | Fetches authorized profile snapshots; owns resume persistence |
-| `storage-service` / 4004 | Object operations, bounded signed capabilities, cleanup | No user/tenant authority inferred from an R2 key |
-| `workspace-service` / 4005 | Workspace identity, organizations, vendors, membership, policy context, AuditEvent | Owns membership and durable audit ingestion |
-
-Services share a physical database initially, with logical table ownership. Shared Prisma access is not permission to mutate another service's domain tables. Use authenticated internal HTTP for cross-service use cases. Cross-service workflows use idempotency and reconciliation rather than pretending a distributed call is one SQL transaction.
-
-Local Phase 1 uses opaque access credentials backed by auth-service's process-local map and revocable database sessions. A service-authenticated `/internal/auth/resolve` boundary now supplies minimal personal actor context through `@resume-forge/access-policy/server`; it does not share the session database with profile consumers or activate shared-workspace policy. Production JWT/distributed storage and hosting remain deferred. See [actor resolution](../docs/actor-resolution.md).
-
-`/internal/` routes need service authentication as well as network isolation. Carry the verified actor and tenant context; workers must not impersonate a globally privileged user. Services enforce resource access even when the gateway already authenticated the request.
-
-## Proposed repository layout after approval
-
-```text
-apps/
-  shell/                    # Router, session bootstrap, workspace switcher
-  auth-mfe/                 # Sign-in, OAuth return and session states
-  profile-mfe/              # Wizard, profile editing, import review
-  resume-mfe/               # Generation, preview, ATS, dashboard, history
-services/
-  gateway/ auth-service/ profile-service/
-  resume-service/ workspace-service/ storage-service/
-packages/
-  shared/                   # @resume-forge/shared: UI, tokens, formatters
-  shared-types/             # @resume-forge/shared-types: validated public contracts
-  authorization/            # @resume-forge/authorization: permissions, policy, DTO privacy
-  resume-core/              # @resume-forge/resume-core: domain engine
-  ai-provider/              # @resume-forge/ai-provider: model/prompt/schema adapters
-  prisma-client/            # @resume-forge/prisma-client: schema, migrations, DB helpers
-trigger/                    # Proposed shared worker entrypoint + task definitions
-tests/                      # Cross-service and end-to-end scenarios
-```
-
-The root worker directory is a proposed clarification to the source tree, which named tasks but omitted their home. No implementation directories are created during context preparation.
-
-## Shared package boundaries
-
-- `shared`: browser-safe UI and utilities, including Performative UI wrappers and token/style integration; no secrets, provider calls or database imports.
-- `shared-types`: profile/contact DTOs, resume/version contracts, parsed JD, ATS, workspace, auth, audit schemas. Keep private persistence models out of public exports.
-- `authorization`: pure policy plus server middleware/sanitizers in separate entrypoints. UI capability hints are never enforcement.
-- `resume-core`: typed section-scoped suggestion contracts, JD parsing contracts, fact selection, content generation orchestration, ATS and gap logic, template registry and render contracts. Accept typed professional data and injected AI/render adapters. No actor, JWT, workspace, database client, R2 key, or service discovery.
-- `ai-provider`: configured model/embedding adapters, prompt versions, Zod output schemas, timeout/retry budgets. Credentials remain on the server.
-- `prisma-client`: client construction, models, migrations, parameterized vector queries. Only server services/workers import it.
-
-## Microfrontend contract
-
-The shell owns browser history, session lifecycle, active-workspace selection, and top-level error boundaries. Remotes expose documented route components. Share compatible React/React DOM instances; verify routing and context across production federation builds. A remote load failure displays recovery without taking down the shell.
-
-Pass a narrow browser-safe shell context and API client contract. Never pass long-lived secrets or database models through federation props. Query keys include user, workspace type/ID, resource, filters, and visibility variant. Clear or invalidate cache on logout, membership changes, and workspace switch; abandon stale in-flight responses from the prior scope.
-
-Workspace settings/member/audit screens are shell-owned in Phase 4 using shared components. A separate workspace MFE is not part of this plan.
-
-## Resume lifecycle
-
-1. Authenticate, authorize, resolve the profile and JD under the requested workspace.
-2. Persist an idempotent run intent with actor, tenant, profile revision, JD, and template versions.
-3. Trigger background work; persist external run ID and reconcile dispatch failures.
-4. Worker rechecks current access, loads a scoped snapshot, and calls the workspace-independent engine.
-5. Parse JD → map supported profile facts → generate schema-valid content → score against the JD.
-6. Persist an immutable ResumeVersion, score/rubric metadata, and current-version pointer atomically within the resume domain.
-7. Preview the approved DTO. Phase 3 adds private PDF rendering/upload and artifact metadata.
-8. Emit durable audit events; expose only sanitized task progress to an authorized client.
-
-Source resume statuses are `generating`, `completed`, and `failed`. Task stage/status and PDF readiness are separate: a completed content version need not already have a PDF. Proposed dispatch state, optimistic revisions, provenance, and artifact metadata are detailed in [data-model.md](data-model.md).
-
-## Non-negotiable boundaries
-
-Authorization applies before data fetches and again at serialization/export boundaries. Contact restrictions cover derived content, cached versions, PDFs, logs, task metadata, and MCP. Private contact must not enter ordinary AI prompts or public task outputs. A revoked membership cannot continue fetching resources merely because it once received a task ID.
-
-Phase 1 establishes personal-workspace ownership and audit event capture contracts. Phase 4 activates organization/vendor access only after full RBAC, privacy, and audit verification. This prevents the roadmap from delaying essential isolation until after data is stored.
-
-See [data model](data-model.md), [authorization](authorization-model.md), [API contracts](../docs/api-reference.md), and [deployment](../docs/deployment.md).
-
-## Contextual editing extension — planning update
-
-[Frontend integration](frontend-integration.md) defines dependency boundaries; [editing contract](resume-editing-contract.md) defines behavior. Reuse the existing resume MFE/service, shared package, AI adapter and task worker. Basic draft creation can omit JD/AI. Section suggestions are private proposal resources tied to a base version, stable target and optional JD; they do not change the current version until explicit Apply commits an authorized, conflict-checked new version. No new MFE/service or general chat infrastructure is required. Late results cannot modify a different selection, workspace or newer version.
-
-## U06 expansion boundaries
-
-[Capability coverage](resume-capability-coverage.md) expands F08 editing, F07 issue handling and F10 management. Proposed Phase 6 adds F19 staged file parsing in an isolated worker/private storage and F20 shared browser/server template settings. Resume service owns imports, versions, preferences and scoped preset use cases; profile service remains the sole master-profile writer. Core receives normalized, contact-free, user-confirmed facts with provenance and validated render settings. No new microfrontend, domain service, MCP tool or permission name is implied.
+TaskRun/JDHistory/version changes, structured fact provenance, personal JobApplication, Subscription/UsageLedger and CoverLetter contracts require phase-specific design and approval. New models are not migrated or connected yet. Production hosting, durable artifacts, distributed sessions, backups and retention are release work; local Docker success does not complete them.

@@ -1,5 +1,6 @@
 import {
   jdStateSchema,
+  tailoringStateSchema,
   rewriteProposalSchema,
   type RewriteTarget,
 } from "@resume-forge/shared-types";
@@ -290,7 +291,7 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
       const code = str(record(envelope.error).code);
       throw new ResumeApiError(
         code,
-        /\/(jd-match|ai-rewrite)(?:\/|$)/.test(path) &&
+        /\/(jd-match|ai-rewrite|tailoring)(?:\/|$)/.test(path) &&
           str(record(envelope.error).message).length <= 700
           ? str(record(envelope.error).message) || "ATS request failed. Retry."
           : code === "revision_conflict"
@@ -328,7 +329,75 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
         "Choose a saved resume version.",
       );
   }
+  function tailoringState(value: unknown) {
+    const parsed = tailoringStateSchema.safeParse(value);
+    if (!parsed.success)
+      throw new ResumeApiError(
+        "invalid_response",
+        "Could not read tailoring results. Refresh this page and reopen your saved resume.",
+      );
+    return parsed.data;
+  }
   return {
+    tailoring: async (id: string, signal?: AbortSignal) => {
+      savedTarget(id, 1);
+      return tailoringState(
+        await call(`/api/v1/resume/${id}/tailoring`, "GET", undefined, signal),
+      );
+    },
+    startTailoring: async (
+      id: string,
+      expectedVersion: number,
+      requestId: string,
+      jdText: string,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const data = tailoringState(
+        await call(`/api/v1/resume/${id}/tailoring`, "POST", {
+          id: requestId,
+          expectedVersion,
+          jdText,
+          consent: true,
+        }),
+      );
+      if (
+        data.currentVersion !== expectedVersion ||
+        data.run?.id !== requestId ||
+        data.run.sourceVersion !== expectedVersion
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Tailoring returned a different request or version.",
+        );
+      return data;
+    },
+    cancelTailoring: async (id: string, runId: string) =>
+      tailoringState(
+        await call(`/api/v1/resume/${id}/tailoring/cancel`, "POST", { runId }),
+      ),
+    applyTailoring: async (
+      id: string,
+      expectedVersion: number,
+      runId: string,
+      selectedIds: string[],
+      title: string,
+    ) => {
+      savedTarget(id, expectedVersion);
+      const copy = detail(
+        await call(`/api/v1/resume/${id}/tailoring/apply`, "POST", {
+          expectedVersion,
+          runId,
+          selectedIds,
+          title,
+        }),
+      );
+      if (copy.id === id)
+        throw new ResumeApiError(
+          "invalid_response",
+          "Tailoring must create a separate resume.",
+        );
+      return copy;
+    },
     list: async (signal?: AbortSignal, cursor?: string) => {
       const data = await call(
         cursor ? `/api/v1/resume?cursor=${cursor}` : "/api/v1/resume",

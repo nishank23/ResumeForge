@@ -333,10 +333,7 @@ export function ResumeLibrary({
           ) : null}
           {loading ? (
             <div className="rf-library-empty">
-              <StudioLoading
-                compact
-                reducedMotion={context.reducedMotion}
-              />
+              <StudioLoading compact reducedMotion={context.reducedMotion} />
             </div>
           ) : !shown.length ? (
             <div className="rf-library-empty">
@@ -392,13 +389,16 @@ export function ResumeLibrary({
                             {r.title}
                             <small
                               title={
-                                r.status === "draft"
+                                r.status === "draft" || r.status === "completed"
                                   ? "Saved to your account; reopen to keep editing."
                                   : undefined
                               }
                             >
                               <DocumentStatus>
-                                {r.status === "draft" ? "Saved" : r.status}
+                                {r.status === "draft" ||
+                                r.status === "completed"
+                                  ? "Saved"
+                                  : r.status}
                               </DocumentStatus>
                             </small>
                           </span>
