@@ -9,6 +9,7 @@ Key features:
 - Rich-text section editing, local undo/redo, three templates and saved appearance.
 - General readiness and job-description matching with actionable feedback.
 - Optional paid Gemini analysis and selected-description rewriting, reviewed before Apply.
+- JD-based full-resume proposals, per-change review and independent tailored-copy saving with recalculated checks and saved PDF.
 - Device-aware light/dark themes and an optional master professional profile.
 
 ## Tech stack
@@ -97,7 +98,7 @@ GEMINI_API_KEY=your-gemini-api-key
 GEMINI_DATA_MODE=paid
 ```
 
-Set `paid` only for a billed project. The backend uses `gemini-3.5-flash-lite` for analysis/rewrites and `gemini-embedding-001` with 768 dimensions. Without Gemini, manual editing, local scores and PDFs still work.
+Set `paid` only for a billed project. The backend uses `gemini-3.8-flash` for full JD tailoring and fact review, `gemini-3.5-flash-lite` for small edits/analysis, and `gemini-embedding-001` with 768 dimensions. Without Gemini, manual editing, local scores and PDFs still work.
 
 These four provider variables are all Docker needs. Do not set `DATABASE_URL`, runtime passwords or internal service keys. Compose generates those in private named volumes. Keep `.env` private; never prefix secrets with `VITE_`. The image excludes `.env`, native `.local/` and private resume files.
 

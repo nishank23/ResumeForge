@@ -36,7 +36,7 @@ Current Prisma Resume/ResumeVersion records support the bounded personal editor.
 
 ## Status and ownership
 
-This is the logical schema specification. The schema includes identity, workspace, sections, resume/JD/task and audit/cache entities; proposed supporting models remain future scope. The original ERD remains in [source-plan.md](../docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
+This is the logical schema specification. The schema includes identity, workspace, sections, resume/JD/task and audit/cache entities; proposed supporting models remain future scope. The original ERD remains in [source-plan.md](../docs/archive/2026-10-14/docs/source-plan.md). D03/D04/D07/D08/D11/D12 in [decisions.md](decisions.md) affect final migrations. Items marked **Proposed** extend the source to make security and lifecycle requirements explicit.
 
 Use opaque stable IDs, UTC timestamps, explicit foreign keys, and server-derived ownership. Every tenant-owned object resolves to exactly one workspace. No child ID is sufficient authority to read or modify its parent resource.
 
@@ -138,7 +138,7 @@ Store model identifier, dimensions, source hash, and generatedAt alongside vecto
 - Deletion removes access first, prevents workers recreating deleted output, then cleans version artifacts idempotently. Retention and audit pseudonymization require D11; do not blindly cascade away audit history.
 - Account deletion, shared-profile revocation, and any retained workspace copies must follow the approved D03/D11 policy before release.
 
-Verification belongs in [F03](feature-specs/03-database-schema.md) and [validation-strategy.md](validation-strategy.md).
+Verification belongs in [F03](../docs/archive/2026-10-14/context/feature-specs/03-database-schema.md) and [validation-strategy.md](validation-strategy.md).
 
 ## Implemented local audit delivery contract — 2026-10-02
 
@@ -163,3 +163,7 @@ Unselected content and protected header references survive Apply unchanged. Appl
 - TemplatePreset (F20): owner actor or workspace, stable ID/version, typed settings only, visibility and archivedAt. Historical resume versions embed settings or retain immutable preset versions. No content/contact fields or executable code.
 
 All relations enforce tenant/profile scope through their parent. No Phase 6 tables are required in initial migrations merely because they are planned. D14/D05/D11/D12 and feature acceptance govern their later implementation.
+
+## Implemented saved-source tailoring metadata
+
+`Resume.atsBreakdown.tailoring` holds bounded owned runs, source version/fingerprint, model/prompt version, stage progress, private draft/review, lease, stored validated operations, quality/warnings and idempotent copy linkage. `tailor-v2` uses Gemini 3.8 Flash and two or four stages; historical v1 defaults remain compatible. Unverified text is not a public proposal or new fact. New copies start at immutable version 1 and record source/model/prompt/selection provenance, with fresh local readiness/JD results. No new table/grant or master-profile write is required. [Detailed contract](../docs/full-resume-tailoring.md).

@@ -1,54 +1,35 @@
-# resume-forge — Agent instructions
+# Forge Studio — agent instructions
 
-## Current checkout and authorization — 2026-10-11
+## Checkout and authorization — 2026-10-14
 
-Use **docker-setup** in /Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2 for commands, edits, task claims and checks. This supersedes fixes and historical codex/frontend, codex/backend, features and ux-ui-update branch instructions. The user requested the full local Docker app on docker-setup. Do not implement in main, switch another agent's checkout or recreate retired branches.
+Work on **feature** in /Users/nishankbansal/Downloads/ResumeBuilderv2 for this organization task. Use remote **organization** (resuming-v2/ResumeForge). Personal **origin** points to nishank23/ResumeForge; do not publish this work there or switch another worktree. Worktree-local Git defaults are configured. Preserve private .env/.local, services, database and credential volumes.
 
-The original /Users/nishankbansal/Downloads/ResumeBuilderv2 is the detached primary runtime/configuration checkout. Preserve its private .local files, services and database. Worktrees do not isolate database roles, API contracts or dependency conflicts. New parallel assignments require explicit branch/path ownership and one integration owner. See [workflow](docs/parallel-development.md).
+The user approved the first Phase 1 slice on 2026-10-14: saved-resume + pasted-JD full tailoring, review, separate-copy save and PDF, using native pnpm development. [PLAN.md](PLAN.md) defines this bounded work. Master-profile import, URL intake, DOCX, tracker, billing and outreach remain later phases, not blanket implementation authorization. The user subsequently approved Gemini 3.8 Flash for whole-source writing and independent fact/coverage review with bounded correction. Flash-Lite remains for small edits. Existing approved personal functionality stays implemented. The old context-review gate was cleared; do not ask to approve all historical context again.
 
-The context-review gate was cleared on 2026-09-29. Subsequent user instructions authorized the personal resume-first app and its current AI/UI slices. Do not ask for overall context approval again or rerun initial scaffolding. Resolve genuinely open decisions only at their dependent boundaries. A proposed future capability is not permission to execute every phase.
+## Read before work
 
-## Read before working
+1. [Product plan](PLAN.md), [current audit](docs/implementation-audit.md), [progress](context/progress-tracker.md) and [task ownership](context/development-status.md).
+2. [Overview](context/project-overview.md), [architecture](context/architecture-context.md), [UI](context/ui-context.md), [code standards](context/code-standards.md), [workflow](context/ai-workflow-rules.md) and [decisions](context/decisions.md).
+3. The task's live domain contracts: [editing](context/resume-editing-contract.md), [authorization](context/authorization-model.md), [data](context/data-model.md), [ATS/Gemini](docs/ats-workflow.md), [frontend](context/frontend-integration.md) and [API readiness](docs/frontend-api-readiness.md).
 
-1. [Project overview](context/project-overview.md).
-2. [Architecture](context/architecture-context.md).
-3. [UI context](context/ui-context.md).
-4. [Code standards](context/code-standards.md).
-5. [Workflow rules](context/ai-workflow-rules.md).
-6. [Progress tracker](context/progress-tracker.md) and [implementation audit](docs/implementation-audit.md).
-7. [Decisions](context/decisions.md), [feature/phase register](context/build-plan.md) and the relevant domain contract.
-
-The [context index](context/README.md) identifies canonical documents. Source plans, handoffs and old verification logs are historical; current audit headers and source supersede their activation claims. Task state lives in [context/development-status.md](context/development-status.md), not README.
+[Context index](context/README.md) and [technical guides](docs/README.md) identify active documentation. [Historical archives](docs/archive/README.md) are evidence, not current task instructions. README stays limited to product overview, stack, prerequisites, setup and run/build.
 
 ## Product and architecture invariants
 
-- Build resume/profile management. Exclude job boards, applicant pipelines, interviews, offers and hiring workflows. User-supplied JDs are tailoring inputs.
-- Preserve Individual, Organization and Vendor models. Only personal access is currently connected; do not activate shared routes without repairing the audit's policy/runtime/consent gaps.
-- Keep UserContact separate from UserProfile. Server permissions and field privacy must cover saved versions, PDFs, exports, tasks and MCP.
-- Authenticate actor, membership, action and resource scope. A client workspace ID is a selector, never authority.
-- AI may rewrite supported visible facts and confirmed resume-local content only. Never invent qualifications or modify master profile, unrelated sections or protected contacts.
-- Keep packages/resume-core free of authentication, workspace, HTTP, ORM and storage.
-- Reuse authorized use cases across REST, future jobs and MCP; recheck access at execution/retrieval.
-- Preserve the 27 permission names. Cover-letter permissions remain reserved and inactive.
+- Current access is personal. The proposed plan adds personal application tracking, monetization and cover-letter/message drafts in later phases; it does not activate employer hiring workflows or automatic outreach.
+- Preserve Individual, Organization and Vendor models and the 27 permission names. Shared access, contact permissions/consent and reserved cover-letter permissions require phase-specific repair and verification before activation.
+- Keep UserContact separate from UserProfile. Apply server permissions/privacy to versions, PDFs, exports, tasks, retrieval and future integrations. Authenticate actor/action/resource scope; a client workspace ID is a selector, never authority.
+- AI uses supported professional facts only. Never fabricate metrics, tools, qualifications or seniority. Keep personal identity/contacts, source files and OAuth credentials out of provider projections. Reviewed resume changes never silently alter the master profile.
+- Keep resume-core free of authentication, workspace, HTTP, ORM and storage. Reuse authorized use cases across REST/future jobs/MCP; recheck access on execution/retrieval.
+- Preserve immutable versions, stable editor targets, expected revisions, server-stored proposals, idempotent Apply and atomic audit.
 
-## Frontend and contextual editing
+## Execution and UI
 
-Use Vite/React federation and Hono services with existing package boundaries. Read [frontend integration](context/frontend-integration.md), [editing contract](context/resume-editing-contract.md) and [capability coverage](context/resume-capability-coverage.md) before related changes.
+Inspect status/diff and task owner; preserve existing changes. Use strict TypeScript, Zod, scoped queries and sanitized logs. Never commit secrets, OAuth tokens or real resume/contact fixtures. Parallel work requires explicit assignments and branch/path ownership; see [workflow](docs/parallel-development.md).
 
-Performative UI adapters, shadcn-style controls and Tiptap are implemented. Preserve accessibility, reduced motion, theme behavior and document/PDF isolation. CareerZenith is a capability reference; create original app visuals and omit private account/resume data from reference evidence.
+Reuse Vite/React federation, Hono, existing package/service seams, shared Performative/shadcn-style adapters and Tiptap. Preserve accessibility, device theme, reduced motion, real request feedback and document/PDF isolation. CareerZenith is a capability reference, not the visual design.
 
-Reviewed import, three saved template styles, local readiness/JD scoring, paid Gemini scoped rewriting and private 768-dimensional retrieval are bounded implementations, not full roadmap completion. Keep legacy generation/JD-history/shared-workspace exposure gated until their contracts pass.
-
-## Execution and reporting
-
-- Inspect status/diff and task owner; preserve existing changes.
-- Follow dependencies and the authorized slice rather than feature-number order.
-- Use strict TypeScript, boundary validation, scoped queries, sanitized logs and atomic audit.
-- Never commit secrets, OAuth tokens or real resume/contact fixtures.
-- Check installed docs and current official provider docs for version-sensitive changes; do not silently upgrade.
-- Run relevant checks and record actual commands/results/limitations. Dated tests are not fresh evidence.
-- Update the tracker and affected specs/contracts after meaningful work. Mark completed capabilities precisely; schema/spec presence does not complete a product feature.
-- Keep product README limited to overview, stack, prerequisites, setup and run/build.
+Legacy generation/JD history/shared routes remain gated. The legacy quantify action no longer fabricates metrics; other legacy suggestions and client-authoritative Apply remain unapproved. The new /tailoring routes use stored proposals and an owned leased metadata queue. Read installed/current official docs for version-sensitive changes; do not silently upgrade. Run relevant checks and record actual results/limitations. Update affected contracts and the current tracker after meaningful work; historical tests are not fresh evidence.
 
 <!-- CODEGRAPH_START -->
 ## CodeGraph
