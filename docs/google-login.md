@@ -1,8 +1,8 @@
 # Local Google sign-in
 
-## Personal cloud callback — 2026-10-13
+## Personal cloud callback — 2026-10-14
 
-The cloud runtime uses its configured canonical HTTPS origin and Secure cookies. The existing Google web client now lists `https://resumeforge.sugarbuddyai.com/api/v1/auth/google/callback` alongside the local callback below; the console showed “OAuth client saved.” Real cloud sign-in remains unverified. Source continues requesting only `openid`, `profile`, and `email`; no Google scope or publishing-status expansion is included. See [deployment steps](cloud-deployment.md).
+The cloud runtime uses its configured canonical HTTPS origin and Secure cookies. The existing Google web client lists `https://resumeforge.sugarbuddyai.com/api/v1/auth/google/callback` alongside the local callback below; the console showed “OAuth client saved.” The operator's Google-backed session was observed on the live public app, retained after reload, and used for separate synthetic save/upload/PDF checks. The agent did not replay account selection. Source continues requesting only `openid`, `profile`, and `email`; no Google scope or publishing-status expansion is included. See [deployment evidence](cloud-deployment.md).
 
 ## Implemented scope — 2026-10-11
 

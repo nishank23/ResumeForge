@@ -1,17 +1,21 @@
 # Progress Tracker
 
-## Google Cloud personal showcase deployment — 2026-10-13
+## Google Cloud personal showcase deployment — 2026-10-14
 
 - [x] User approved `codex/cloud-deploy` in an isolated worktree from the personal private repository. The organization copy and existing local runtime/private files remain separate.
 - [x] Added explicit managed cloud runtime validation, a canonical HTTPS origin, secure OAuth cookies, same-origin browser APIs, static federation paths, and Nginx packaging. Local/native production guards remain active; existing personal authorization, five restricted database roles, and internal service credentials are reused.
 - [x] Fresh production asset build passes **15/15 tasks**; lint/typecheck passes **34/34 tasks**. Workspace tests pass **284/284 cases** across 13 suites. The initial regression identified an altered actor-resolver error contract; fixed without weakening the guard.
 - [x] Linux amd64 application and static frontend image builds pass. Cloud Compose configuration passes static validation. Private VM tunnel service is active/enabled with four registered IPv6 connections.
 - [x] Isolated production integration passes **8/8 checks**: static federation/readiness, migrations/pgvector, five restricted roles, synthetic sign-in/refresh, immutable saves/reload, cross-owner denial, owner PDFs/readiness, upload/delete/undo and real audit delivery. No host ports or real provider values are exposed. Fixed tmpfs quoting and Nginx temporary paths discovered during startup validation.
-- [ ] VM startup, physical resource measurements, public HTTPS/federation and fresh real sign-in remain pending. The synthetic identity fixture is not a real provider login.
+- [x] Approved bundle/provider transfer completed with matching checksums and a fresh private database. Root-owned provider configuration is 0600; the local database remains excluded. Debian RAM-backed `/tmp` filled during extraction; moved the verified archive to the boot disk and removed only partial staging files.
+- [x] Native parallel cold startup failed restricted-role checks during contention (seven restarts, no OOM); isolated 3-second role probes passed. Cloud startup now waits for each private port before launching the next service; pure config imports avoid loading the ORM in the supervisor. No role/query timeout changes or RAM upgrade. Shutdown/cancellation/timeout and credential tests pass **5/5**; the revised image passes isolated integration **8/8** again.
+- [x] Native VM app/database/web become healthy in about 105 seconds and remain healthy with **zero restarts** after ordinary public flows. After save/PDF/AI tests: app 332.4 MiB, database 38.51 MiB, web 2.145 MiB, host 231 MiB available and 443 MiB swap used. Heavy concurrency/large uploads remain unmeasured. Docker/cloudflared stay enabled; no idle suspension policy is configured.
+- [x] User added the Cloudflare route. Public HTTPS and all three static federation entries pass; anonymous APIs return 401 and internal auth returns 404. Observed the operator's Google-backed session and existing saved resume without altering it. A separate synthetic resume saves as version 2 and persists after reload. The agent did not replay Google account selection.
+- [x] Actual saved PDF is 11,303 bytes, one page, selectable text and visually clean. Reuploading it produces the reviewed draft and persists as version 1 only after confirmation/reload. A scoped Gemini request using fictional summary text completed with “No changes needed”; no real resume/contact text was sent by that check. Two clearly named synthetic test resumes remain.
 - [x] Existing Google OAuth client lists the production callback alongside localhost; the console showed “OAuth client saved.” Its External/Testing audience and basic identity scopes are unchanged.
-- [ ] The user approved transfer of the tested image bundle and selected existing provider settings to the VM. Transfer is in progress; startup, the public route and backup/restore remain incomplete. The local database is excluded.
+- [x] Manual native backup/restore verification passed twice, including after public tests. Downloaded the post-test archive through IAP into the primary checkout's ignored `.local/cloud-backups/` directory (0700, files 0600); SHA-256 matches. Automatic backups/retention and CI deployment remain unconfigured. No temporary Google Cloud CLI login/token was created.
 
-See [deployment contract and remaining checks](../docs/cloud-deployment.md).
+See [deployment evidence and operational limits](../docs/cloud-deployment.md). The $2.50 Compute Engine budget is an alert, not a spending cap; AI and other usage can add charges.
 
 ## Forge navigation loading — 2026-10-12
 

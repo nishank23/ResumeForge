@@ -3,16 +3,14 @@
 Internal task ownership for scripts/development-task.mjs. Product setup belongs in the root README. The ignored lock remains local to this checkout; only its owner may finish a task.
 
 <!-- BEGIN:CURRENT_TASK -->
-
 ```json
 {
-  "status": "ongoing",
-  "task": "Production deployment on personal GitHub: HTTPS origin, static federation, restricted Docker runtime and VM validation.",
-  "owner": "57bb1f92-2994-4e2d-93fd-b4fc606977cc",
-  "startedAt": "2026-10-13T18:57:57.331Z",
-  "updatedAt": "2026-10-13T18:57:57.331Z",
-  "lastResult": "Forge page loaders verified: builds, lint/typecheck and 90 tests pass. Docker rebuilt with 15 build tasks; app healthy after restarting the stopped database with retained volumes."
+  "status": "idle",
+  "task": null,
+  "owner": null,
+  "startedAt": null,
+  "updatedAt": "2026-10-14T05:12:05.677Z",
+  "lastResult": "Cloud demo live: HTTPS save/reload, PDF import/export and scoped AI pass; sequential VM startup healthy; backup restored and verified off VM. Heavy concurrency and automatic backups remain unmeasured."
 }
 ```
-
 <!-- END:CURRENT_TASK -->

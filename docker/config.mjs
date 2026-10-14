@@ -1,9 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
-import {
-  managedRuntimeDatabaseUrl,
-  runtimeRoleNames,
-} from "../packages/prisma-client/dist/index.js";
+import { managedRuntimeDatabaseUrl } from "../packages/prisma-client/dist/local-runtime.js";
+import { runtimeRoleNames } from "../packages/prisma-client/dist/runtime-access.js";
 
 export const variables = {
   auth: "AUTH_DATABASE_URL",

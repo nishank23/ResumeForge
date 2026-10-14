@@ -1,8 +1,8 @@
 # Decisions and Open Questions
 
-## D10 personal showcase hosting selection — 2026-10-13
+## D10 personal showcase hosting selection — 2026-10-14
 
-The user authorized Google Cloud setup, chose to handle Spaceship/Cloudflare personally, approved IAP-only SSH/installations and budget email alerts, and approved the isolated `codex/cloud-deploy` worktree. The selected host is a 1 GB e2-micro VM in us-central1-a with a 30 GB standard boot disk, external IPv6 and no external IPv4. The proposed application hostname is `resumeforge.sugarbuddyai.com`; publication remains an action-time boundary. Prepare an explicit production container mode, static frontends and canonical HTTPS OAuth transport while preserving all existing personal access/data contracts. This resolves the bounded host/runtime choice; it does not settle wider retention, distributed sessions or shared-workspace decisions. [Deployment evidence](../docs/cloud-deployment.md).
+The user authorized Google Cloud setup, chose to handle Spaceship/Cloudflare personally, approved IAP-only SSH/installations and budget email alerts, and approved the isolated `codex/cloud-deploy` worktree and private image/provider transfer with a fresh database. The selected host is a 1 GB e2-micro VM in us-central1-a with a 30 GB standard boot disk, external IPv6 and no external IPv4. The user published `resumeforge.sugarbuddyai.com` through the named tunnel after private origin checks. Explicit production containers, static frontends, canonical HTTPS OAuth transport and sequential cloud startup preserve existing personal access/data contracts. Ordinary public save/upload/PDF/AI flows and native backup/restore pass with active swap. A verified private backup is off the VM. This resolves the bounded host/runtime choice; it does not settle automatic retention, CI deployment, sustained-load acceptance, distributed sessions or shared-workspace decisions. [Deployment evidence](../docs/cloud-deployment.md).
 
 ## Current audit snapshot — 2026-10-11
 
