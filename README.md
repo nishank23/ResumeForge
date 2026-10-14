@@ -20,6 +20,7 @@ Key features:
 - PostgreSQL 18, pgvector and Prisma 7.
 - PDF.js/Mammoth imports; React PDF exports; server-side Gemini REST adapters.
 - Docker Compose for the complete local app.
+- Optional Google Cloud VM deployment with static Nginx frontends and Cloudflare Tunnel; see [cloud setup](docs/cloud-deployment.md).
 
 ## Prerequisites
 

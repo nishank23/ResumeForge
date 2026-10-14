@@ -1,5 +1,9 @@
 # Architecture Context
 
+## Personal cloud deployment preparation — 2026-10-13
+
+The user selected Google Compute Engine e2-micro in us-central1-a, no external IPv4, Cloudflare Tunnel over IPv6, and `resumeforge.sugarbuddyai.com`. The isolated deployment branch prepares Nginx-served federation bundles and the existing supervised personal APIs/audit processes. Production requires explicit cloud mode and one HTTPS origin; local runtime behavior remains separate. This supersedes the older blanket hosted-deployment deferral for this bounded showcase only. App deployment and live acceptance are pending; see [current evidence](../docs/cloud-deployment.md).
+
 ## Full local Docker app — 2026-10-11
 
 The user authorized a full local Compose setup on docker-setup. The app image contains the built four MFEs, four personal Hono services and audit-only recipient/worker. Separate PostgreSQL 18/pgvector and generated administrator/runtime credential volumes preserve the existing role allowlist and personal route gates. Health-gated bootstrap applies migrations and verifies all five runtime identities. Native startup and its managed loopback database remain separate. This is local/demo packaging; hosted production deployment remains deferred. See [Docker contract and verification](../docs/docker-setup.md).
@@ -18,11 +22,9 @@ Prompt/validator share bounded grammar and exact shorthand aliases so harmless w
 
 The shared private-document adapter derives one contact-completeness boolean. General readiness receives that boolean separately from its contact-free professional projection; resume-core never receives raw header/contact fields. Local professional guidance also uses entry technologies, visible bullet count and editor rich-text bold counts. Added advice is score-neutral. JD/provider/vector projections receive no contact hints; their scoring behavior stays unchanged. Legacy readiness histories remain readable, with current-rubric replay and preference checks. [Contract](../docs/ats-workflow.md#no-jd-rule-guidance-and-compatibility--2026-10-09).
 
-
 ## Current Gemini and compact assessment update — 2026-10-09
 
 The user now selects paid **gemini-3.5-flash-lite** for semantic JD evidence and selected wording, superseding earlier Gemini-analysis-only/MiMo-rewrite instructions. Server keys, explicit per-request consent, professional/contact-free scope, grounding, immutable-version review/Apply and private gemini-embedding-001/768 retrieval remain. ATS groups all checks into five expandable areas; JD editor/breakdown/evidence collapse after evaluation. Approved numeric rubrics stay deterministic. OpenCode SDK/native/HTTP and unused Textkernel runtime/tests are removed; legacy stored proposals/public result schemas remain readable. [Current configuration, API behavior and limits](../docs/ats-workflow.md).
-
 
 ## Current personal vector retrieval — 2026-10-09
 
@@ -32,24 +34,24 @@ This is the target architecture, not deployed infrastructure. Stack choices come
 
 ## Stack
 
-| Layer | Planned technology | Responsibility |
-|---|---|---|
-| Workspace | pnpm + Turborepo | Package boundaries, dependency graph, shared tasks |
-| Frontend | Vite 6 + React 19 + TypeScript | Browser-rendered shell and remote applications |
-| Federation | `@module-federation/vite` | Independently buildable auth/profile/resume remotes |
-| Navigation | React Router v7 | Shell-owned workspace routes |
-| UI | Tailwind CSS v4 + shadcn/ui + Lucide + Performative UI | Shared tokens, accessible primitives, wrapped prompts/backgrounds/surfaces/accents; D13 compatibility gate |
-| Forms | React Hook Form + Zod | Form state and boundary validation |
-| State | Zustand + TanStack Query | Local interaction state and scoped server cache |
-| Editing/preview | Tiptap + `@react-pdf/renderer` | Limited rich text and resume rendering |
-| HTTP | Hono on Node.js containers | Gateway and domain service APIs |
-| Identity | Google + LinkedIn OAuth; JWT sessions | Provider sign-in and application sessions |
-| Database | Local PostgreSQL 18 + pgvector + Prisma 7; hosting deferred | Relations and structured JSONB implemented; extension ready, real semantic vectors gated by D07 |
-| Async work | Trigger.dev v4 | Durable AI, scoring, embedding, and PDF tasks |
-| AI | Vercel AI SDK, Gemini default | Provider adapters and validated structured output |
-| Artifacts | Cloudflare R2 | Private PDFs and temporary import uploads |
-| Frontend hosting | Cloudflare Pages | Shell and remote static deployments |
-| Integration | MCP SDK | Adapters over authorized application use cases |
+| Layer            | Planned technology                                          | Responsibility                                                                                             |
+| ---------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Workspace        | pnpm + Turborepo                                            | Package boundaries, dependency graph, shared tasks                                                         |
+| Frontend         | Vite 6 + React 19 + TypeScript                              | Browser-rendered shell and remote applications                                                             |
+| Federation       | `@module-federation/vite`                                   | Independently buildable auth/profile/resume remotes                                                        |
+| Navigation       | React Router v7                                             | Shell-owned workspace routes                                                                               |
+| UI               | Tailwind CSS v4 + shadcn/ui + Lucide + Performative UI      | Shared tokens, accessible primitives, wrapped prompts/backgrounds/surfaces/accents; D13 compatibility gate |
+| Forms            | React Hook Form + Zod                                       | Form state and boundary validation                                                                         |
+| State            | Zustand + TanStack Query                                    | Local interaction state and scoped server cache                                                            |
+| Editing/preview  | Tiptap + `@react-pdf/renderer`                              | Limited rich text and resume rendering                                                                     |
+| HTTP             | Hono on Node.js containers                                  | Gateway and domain service APIs                                                                            |
+| Identity         | Google + LinkedIn OAuth; JWT sessions                       | Provider sign-in and application sessions                                                                  |
+| Database         | Local PostgreSQL 18 + pgvector + Prisma 7; hosting deferred | Relations and structured JSONB implemented; extension ready, real semantic vectors gated by D07            |
+| Async work       | Trigger.dev v4                                              | Durable AI, scoring, embedding, and PDF tasks                                                              |
+| AI               | Vercel AI SDK, Gemini default                               | Provider adapters and validated structured output                                                          |
+| Artifacts        | Cloudflare R2                                               | Private PDFs and temporary import uploads                                                                  |
+| Frontend hosting | Cloudflare Pages                                            | Shell and remote static deployments                                                                        |
+| Integration      | MCP SDK                                                     | Adapters over authorized application use cases                                                             |
 
 Pin versions after checking compatibility in Phase 1. Node.js host and deployment topology remain D10. Hono portability does not imply Prisma, PDF, or background workers already run on Cloudflare Workers.
 
@@ -80,14 +82,14 @@ flowchart LR
 
 ## Service ownership
 
-| Service / local port | Owns | Boundary |
-|---|---|---|
-| `gateway` / 4000 | Routing, edge authentication, CORS, limits, correlation IDs | No resume/profile business logic; does not expose `/internal/*` |
-| `auth-service` / 4001 | User identity, OAuth accounts, sessions, JWT issuance | Does not own professional profile or tenant membership |
-| `profile-service` / 4002 | UserProfile, UserContact, profile sections, reviewed imports | Returns scoped DTOs; authorizes contact separately |
-| `resume-service` / 4003 | JDHistory, Resume, ResumeVersion, TaskRun, templates, pipeline | Fetches authorized profile snapshots; owns resume persistence |
-| `storage-service` / 4004 | Object operations, bounded signed capabilities, cleanup | No user/tenant authority inferred from an R2 key |
-| `workspace-service` / 4005 | Workspace identity, organizations, vendors, membership, policy context, AuditEvent | Owns membership and durable audit ingestion |
+| Service / local port       | Owns                                                                               | Boundary                                                        |
+| -------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `gateway` / 4000           | Routing, edge authentication, CORS, limits, correlation IDs                        | No resume/profile business logic; does not expose `/internal/*` |
+| `auth-service` / 4001      | User identity, OAuth accounts, sessions, JWT issuance                              | Does not own professional profile or tenant membership          |
+| `profile-service` / 4002   | UserProfile, UserContact, profile sections, reviewed imports                       | Returns scoped DTOs; authorizes contact separately              |
+| `resume-service` / 4003    | JDHistory, Resume, ResumeVersion, TaskRun, templates, pipeline                     | Fetches authorized profile snapshots; owns resume persistence   |
+| `storage-service` / 4004   | Object operations, bounded signed capabilities, cleanup                            | No user/tenant authority inferred from an R2 key                |
+| `workspace-service` / 4005 | Workspace identity, organizations, vendors, membership, policy context, AuditEvent | Owns membership and durable audit ingestion                     |
 
 Services share a physical database initially, with logical table ownership. Shared Prisma access is not permission to mutate another service's domain tables. Use authenticated internal HTTP for cross-service use cases. Cross-service workflows use idempotency and reconciliation rather than pretending a distributed call is one SQL transaction.
 

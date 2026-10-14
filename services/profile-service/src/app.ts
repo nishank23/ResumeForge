@@ -8,7 +8,9 @@ import { ProfileError } from "./contracts.js";
 export function createProfileApp(config: {
   resolveActor: (authorization: string | undefined) => Promise<ActorResolution>;
   profiles: ReturnType<typeof createProfileUseCases>;
+  appOrigin?: string;
 }) {
+  const appOrigin = config.appOrigin ?? "http://localhost:3000";
   const app = new Hono();
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
@@ -16,7 +18,7 @@ export function createProfileApp(config: {
     await next();
   });
   const localCors = cors({
-    origin: "http://localhost:3000",
+    origin: appOrigin,
     allowMethods: ["GET", "POST", "PUT", "DELETE"],
     allowHeaders: [
       "Authorization",
@@ -105,10 +107,7 @@ export function createProfileApp(config: {
                       : config.profiles.read(context)),
           requestId,
         });
-      if (
-        c.req.header("Origin") &&
-        c.req.header("Origin") !== "http://localhost:3000"
-      )
+      if (c.req.header("Origin") && c.req.header("Origin") !== appOrigin)
         return fail("forbidden", 403);
       let input: unknown;
       if (c.req.method === "DELETE") {
@@ -243,7 +242,11 @@ export function createProfileApp(config: {
                   : isProjectEntry
                     ? config.profiles.deleteProject(context, entryId, input)
                     : isCertificationEntry
-                      ? config.profiles.deleteCertification(context, entryId, input)
+                      ? config.profiles.deleteCertification(
+                          context,
+                          entryId,
+                          input,
+                        )
                       : fail("not_found", 404)),
             requestId,
           },
@@ -286,7 +289,11 @@ export function createProfileApp(config: {
                   : isProjectEntry
                     ? config.profiles.updateProject(context, entryId, input)
                     : isCertificationEntry
-                      ? config.profiles.updateCertification(context, entryId, input)
+                      ? config.profiles.updateCertification(
+                          context,
+                          entryId,
+                          input,
+                        )
                       : c.req.path === "/api/v1/profile/draft"
                         ? config.profiles.saveDraft(context, input)
                         : config.profiles.update(context, input)),

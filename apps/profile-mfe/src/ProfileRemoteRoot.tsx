@@ -8,6 +8,7 @@ import {
   StudioLoading,
   Textarea,
   useSession,
+  SHELL_URL,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 import {
@@ -32,7 +33,7 @@ export function ProfileRemoteRoot({ context }: ProfileRemoteRootProps) {
             Open your signed-in workspace to load and save professional details.
           </p>
         </div>
-        <a className="rf-text-link" href="http://localhost:3000/">
+        <a className="rf-text-link" href={SHELL_URL}>
           Open resume-forge
         </a>
       </div>
@@ -214,10 +215,7 @@ function ConnectedProfile({ context }: { context: ShellFederationContext }) {
       </div>
       {loading && !loaded ? (
         <div className="rf-profile-state">
-          <StudioLoading
-            compact
-            reducedMotion={context.reducedMotion}
-          />
+          <StudioLoading compact reducedMotion={context.reducedMotion} />
         </div>
       ) : null}
       {failure ? (

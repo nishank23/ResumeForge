@@ -16,6 +16,7 @@ await assertRuntimeDatabaseRole(db, "resume");
 
 const app = createResumeApp({
   personalEditorOnly: true,
+  appOrigin: config.appOrigin,
   resolveActor: createLocalActorResolver({
     endpoint: config.endpoint,
     key: config.authKey,

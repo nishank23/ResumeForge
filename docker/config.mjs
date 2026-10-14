@@ -1,9 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
-import {
-  managedRuntimeDatabaseUrl,
-  runtimeRoleNames,
-} from "../packages/prisma-client/dist/index.js";
+import { managedRuntimeDatabaseUrl } from "../packages/prisma-client/dist/local-runtime.js";
+import { runtimeRoleNames } from "../packages/prisma-client/dist/runtime-access.js";
 
 export const variables = {
   auth: "AUTH_DATABASE_URL",
@@ -42,7 +40,13 @@ export function readRuntime(directory = "/app/.local") {
   return Object.fromEntries(
     Object.entries(variables).map(([service, variable]) => [
       service,
-      new URL(managedRuntimeDatabaseUrl(env[variable], service, "docker")),
+      new URL(
+        managedRuntimeDatabaseUrl(
+          env[variable],
+          service,
+          process.env.RESUME_FORGE_RUNTIME === "cloud" ? "cloud" : "docker",
+        ),
+      ),
     ]),
   );
 }

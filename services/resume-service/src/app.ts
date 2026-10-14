@@ -14,6 +14,7 @@ export function createResumeApp(config: {
   resolveActor: (authorization: string | undefined) => Promise<ActorResolution>;
   resumes: ReturnType<typeof createResumeUseCases>;
   personalEditorOnly?: boolean;
+  appOrigin?: string;
 }) {
   const app = new Hono();
 
@@ -24,7 +25,10 @@ export function createResumeApp(config: {
   });
 
   const localCors = cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: config.appOrigin ?? [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Authorization", "Content-Type", "X-Workspace-Id"],
   });

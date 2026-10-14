@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { runtimeAppOrigin } from "./runtime.js";
+export { runtimeAppOrigin } from "./runtime.js";
 
 // Server-only entrypoint. Never expose a service credential through federation.
 export const INTERNAL_ACTOR_PATH = "/internal/auth/resolve";
@@ -32,13 +34,13 @@ export function createLocalActorResolver(config: {
 }): (authorization: string | undefined) => Promise<ActorResolution> {
   let url: URL;
   try {
+    runtimeAppOrigin();
     url = new URL(config.endpoint);
   } catch {
     throw new Error("Invalid local actor resolver configuration");
   }
   const timeout = config.timeoutMs ?? 3_000;
   if (
-    process.env.NODE_ENV === "production" ||
     !localProfileServiceKeySchema.safeParse(config.key).success ||
     url.protocol !== "http:" ||
     url.hostname !== "127.0.0.1" ||

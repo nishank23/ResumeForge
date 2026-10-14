@@ -1,0 +1,145 @@
+name: resumeforge-demo
+
+x-app-image: &app-image
+  image: forge-studio:cloud
+  platform: linux/amd64
+  pull_policy: never
+
+x-runtime-env: &runtime-env
+  NODE_ENV: production
+  RESUME_FORGE_RUNTIME: cloud
+  RESUME_FORGE_LOCAL_ROOT: /app
+  FORGE_PUBLIC_ORIGIN: "${FORGE_PUBLIC_ORIGIN:?Set the canonical HTTPS origin}"
+
+services:
+  credentials:
+    <<: *app-image
+    user: "0:0"
+    command: ["node", "docker/credentials.mjs"]
+    environment: *runtime-env
+    network_mode: none
+    volumes:
+      - database-credentials:/run/forge-admin
+      - runtime-credentials:/app/.local
+    restart: "no"
+
+  database:
+    platform: linux/amd64
+    image: pgvector/pgvector:0.8.7-pg18-bookworm@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+    environment:
+      POSTGRES_USER: resume_forge
+      POSTGRES_DB: resume_forge_dev
+      POSTGRES_PASSWORD_FILE: /run/forge-admin/postgres-password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "work_mem=2MB"]
+    depends_on:
+      credentials:
+        condition: service_completed_successfully
+    networks: [backend]
+    volumes:
+      - database-data:/var/lib/postgresql
+      - database-credentials:/run/forge-admin:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U resume_forge -d resume_forge_dev",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 160m
+    memswap_limit: 320m
+    restart: unless-stopped
+
+  bootstrap:
+    <<: *app-image
+    user: "0:0"
+    command: ["node", "docker/bootstrap.mjs"]
+    environment: *runtime-env
+    depends_on:
+      database:
+        condition: service_healthy
+    networks: [backend]
+    volumes:
+      - database-credentials:/run/forge-admin:ro
+      - runtime-credentials:/app/.local:ro
+    restart: "no"
+
+  app:
+    <<: *app-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cloud-runtime
+      args:
+        FORGE_PUBLIC_ORIGIN: "${FORGE_PUBLIC_ORIGIN}"
+    init: true
+    environment:
+      <<: *runtime-env
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_DATA_MODE: "${GEMINI_DATA_MODE:-}"
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    networks: [backend, edge]
+    volumes:
+      - runtime-credentials:/app/.local:ro
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 640m
+    memswap_limit: 1280m
+    healthcheck:
+      test: ["CMD", "node", "docker/healthcheck.mjs"]
+      interval: 30s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+  web:
+    platform: linux/amd64
+    image: forge-studio-web:cloud
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cloud-web
+      args:
+        FORGE_PUBLIC_ORIGIN: "${FORGE_PUBLIC_ORIGIN}"
+    depends_on:
+      app:
+        condition: service_healthy
+        restart: true
+    networks: [edge]
+    ports: ["127.0.0.1:8080:8080"]
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 32m
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  backend:
+    internal: true
+  edge:
+    external: true
+    name: resumeforge-cloud
+
+volumes:
+  database-data:
+  database-credentials:
+  runtime-credentials:

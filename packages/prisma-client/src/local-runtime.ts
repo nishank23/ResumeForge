@@ -1,17 +1,20 @@
 import { runtimeRoleNames, type RuntimeService } from "./runtime-access.js";
 
-/** Only the two managed local installations are supported; never a hosted URL. */
+/** Managed native development and container installations; arbitrary hosted URLs remain refused. */
 export function managedRuntimeDatabaseUrl(
   value: string,
   service: RuntimeService,
   mode = process.env.RESUME_FORGE_RUNTIME,
 ): string {
-  if (process.env.NODE_ENV === "production")
+  const cloud = mode === "cloud";
+  if (process.env.NODE_ENV === "production" && !cloud)
     throw new Error("Local runtime is not approved for production.");
-  if (mode !== undefined && mode !== "native" && mode !== "docker")
+  if (cloud && process.env.NODE_ENV !== "production")
+    throw new Error("Cloud runtime requires production mode.");
+  if (mode !== undefined && mode !== "native" && mode !== "docker" && !cloud)
     throw new Error("Invalid local runtime mode.");
   const url = new URL(value);
-  const docker = mode === "docker";
+  const docker = mode === "docker" || cloud;
   if (
     url.protocol !== "postgresql:" ||
     url.hostname !== (docker ? "database" : "127.0.0.1") ||

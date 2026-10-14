@@ -10,6 +10,7 @@ import {
   RequestFeedback,
   StudioLoading,
   useSession,
+  SHELL_URL,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 import { RESUME_UI_FEATURES } from "./ui-features";
@@ -152,7 +153,7 @@ export function ResumeRemoteRoot({
       <div className="rf-page rf-empty">
         <h1>Your resume workspace</h1>
         <p>Sign in to load and save your own resumes.</p>
-        <a className="rf-primary-link" href="http://localhost:3000/">
+        <a className="rf-primary-link" href={SHELL_URL}>
           Open workspace
         </a>
       </div>
@@ -162,10 +163,7 @@ export function ResumeRemoteRoot({
       <ResumeLibrary context={context} initialUploadOpen={view === "upload"} />
     );
   if (view === "editor") {
-    if (loading)
-      return (
-        <StudioLoading reducedMotion={context.reducedMotion} />
-      );
+    if (loading) return <StudioLoading reducedMotion={context.reducedMotion} />;
     if (!saved)
       return (
         <div className="rf-page rf-empty">

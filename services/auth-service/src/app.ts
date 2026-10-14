@@ -10,12 +10,6 @@ import { createActorRoute } from "./actor-route.js";
 type Database = ReturnType<typeof createDatabaseClient>;
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
-const cookie = {
-  path: "/api/v1/auth",
-  httpOnly: true,
-  sameSite: "Lax" as const,
-  secure: false,
-};
 const lifetime = 30 * 24 * 60 * 60;
 
 /** Single-process local implementation. Restart invalidates pending OAuth and access tokens. */
@@ -32,6 +26,12 @@ export function createAuthApp({
   profileServiceKey?: string;
   now?: () => number;
 }) {
+  const cookie = {
+    path: "/api/v1/auth",
+    httpOnly: true,
+    sameSite: "Lax" as const,
+    secure: new URL(appOrigin).protocol === "https:",
+  };
   const app = new Hono();
   const pending = new Map<
     string,

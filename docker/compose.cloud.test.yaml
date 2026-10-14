@@ -1,0 +1,31 @@
+# Always use -p resumeforge-cloud-check. These volumes contain synthetic test data only.
+services:
+  app:
+    environment:
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      GEMINI_API_KEY: ""
+      GEMINI_DATA_MODE: ""
+    restart: "no"
+  web:
+    ports: !reset []
+    restart: "no"
+  test:
+    image: forge-studio:cloud
+    platform: linux/amd64
+    pull_policy: never
+    user: "0:0"
+    network_mode: service:app
+    environment:
+      NODE_ENV: production
+      RESUME_FORGE_RUNTIME: cloud
+      RESUME_FORGE_LOCAL_ROOT: /app
+      FORGE_DOCKER_TEST: "1"
+      FORGE_PUBLIC_ORIGIN: "${FORGE_PUBLIC_ORIGIN}"
+    command: ["node", "--test", "docker/integration.test.mjs"]
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      - database-credentials:/run/forge-admin:ro
+      - runtime-credentials:/app/.local:ro

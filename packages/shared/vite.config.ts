@@ -5,6 +5,7 @@ import dts from "vite-plugin-dts";
 import { resolve } from "node:path";
 
 export default defineConfig({
+  define: { __FORGE_CLOUD__: Boolean(process.env.FORGE_PUBLIC_ORIGIN) },
   plugins: [
     react(),
     tailwindcss(),

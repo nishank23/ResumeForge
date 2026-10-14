@@ -502,9 +502,7 @@ export function ManualResumeEditor({
   };
   const goBack = () => {
     if (!context?.onNavigate) {
-      announce(
-        "All resumes is available in the signed-in workspace at localhost:3000.",
-      );
+      announce("Open All resumes from your signed-in workspace.");
       return;
     }
     if (dirty || inlinePending || savedVersion === 0) setLeaving(true);

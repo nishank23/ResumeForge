@@ -6,10 +6,10 @@ import {
   GlassCardSurface,
   RequestFeedback,
   useSession,
+  AUTH_URL,
   type ShellFederationContext,
 } from "@resume-forge/shared";
 
-const AUTH_URL = "http://localhost:4001/api/v1/auth";
 export interface AuthRemoteRootProps {
   readonly context?: ShellFederationContext;
 }

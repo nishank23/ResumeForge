@@ -1,5 +1,9 @@
 # Implementation audit — 2026-10-11
 
+## Personal cloud showcase deployment — 2026-10-14
+
+Production is deployed on the 1 GB Google Cloud VM behind the operator's Cloudflare route: explicit HTTPS runtime configuration, secure cookies, same-origin APIs/federation, static Nginx frontends and existing restricted personal services. Sequential cloud startup resolved parallel cold-start contention without weakening role checks. Public synthetic save/reload, reviewed PDF upload, rendered saved PDF and scoped Gemini checks passed using the operator's observed Google-backed session. Native backup/restore passed and a checksum-verified private copy is off the VM. Swap is actively used; heavy concurrency, automatic backups and CI deployment remain unverified/unconfigured. This does not complete any broader feature/phase or shared-access gap. [Current deployment evidence](cloud-deployment.md).
+
 ## Scope and evidence
 
 This audit compares all 92 existing repository Markdown documents with source, manifests, scripts, migrations, route allowlists and tests in the `fixes` checkout. The reviewed-file register below includes root guidance, every context/spec/phase file, operational/reference docs, backend handoffs and package/template READMEs. Dependency/build output, private local files and user resume fixtures are excluded.
@@ -14,28 +18,28 @@ The running local app is the personal resume flow. `services/resume-service/src/
 
 ## Feature register
 
-| Feature | Status | Implemented evidence |
-| --- | --- | --- |
-| F01 Design system | ✅ Done for foundation scope | [packages/shared/src/index.ts](../packages/shared/src/index.ts) |
-| F02 OAuth and sessions | Partially done | [services/auth-service/src/app.ts](../services/auth-service/src/app.ts) |
-| F03 Database and persistence | Partially done | [packages/prisma-client/prisma/schema.prisma](../packages/prisma-client/prisma/schema.prisma) |
-| F04 Individual profile entry | Partially done; entry scope changed | [services/profile-service/src/profile.ts](../services/profile-service/src/profile.ts) |
-| F05 JD parser | Partially done | [services/resume-service/src/jd-parser.ts](../services/resume-service/src/jd-parser.ts) |
-| F06 Generation and scoped suggestions | Partially done | [services/resume-service/src/ats/use-cases.ts](../services/resume-service/src/ats/use-cases.ts) |
-| F07 Readiness and JD scoring | Partially done | [packages/resume-core/src/jd-scoring.ts](../packages/resume-core/src/jd-scoring.ts) |
-| F08 Resume builder and preview | Partially done | [apps/resume-mfe/src/ManualResumeEditor.tsx](../apps/resume-mfe/src/ManualResumeEditor.tsx) |
-| F09 PDF and storage | Partially done | [services/resume-service/src/pdf.ts](../services/resume-service/src/pdf.ts) |
-| F10 Resume dashboard | Partially done | [apps/resume-mfe/src/ResumeLibrary.tsx](../apps/resume-mfe/src/ResumeLibrary.tsx) |
-| F11 JD and optimization history | Partially done | [services/resume-service/src/resume.ts](../services/resume-service/src/resume.ts) |
-| F12 Master profile editor | Partially done | [apps/profile-mfe/src/ProfileRemoteRoot.tsx](../apps/profile-mfe/src/ProfileRemoteRoot.tsx) |
-| F13 Organization/vendor workspaces | Partially done; backend only | [services/workspace-service/src/workspace.ts](../services/workspace-service/src/workspace.ts) |
-| F14 RBAC and privacy | Partially done; shared activation blocked | [packages/access-policy/src/index.ts](../packages/access-policy/src/index.ts) |
-| F15 Audit logging/viewer | Partially done | [packages/prisma-client/src/audit-delivery.ts](../packages/prisma-client/src/audit-delivery.ts) |
-| F16 LinkedIn archive import | Not started | [context/feature-specs/16-linkedin-import.md](../context/feature-specs/16-linkedin-import.md) |
-| F17 Gap analysis | Partially done; backend and active JD evidence | [services/resume-service/src/gap-analyzer.ts](../services/resume-service/src/gap-analyzer.ts) |
-| F18 MCP integration | Not started | [docs/mcp-integration.md](mcp-integration.md) |
-| F19 File import | Partially done | [services/resume-service/src/upload.ts](../services/resume-service/src/upload.ts) |
-| F20 Templates and formatting | Partially done | [apps/resume-mfe/src/templates/registry.ts](../apps/resume-mfe/src/templates/registry.ts) |
+| Feature                               | Status                                         | Implemented evidence                                                                            |
+| ------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| F01 Design system                     | ✅ Done for foundation scope                   | [packages/shared/src/index.ts](../packages/shared/src/index.ts)                                 |
+| F02 OAuth and sessions                | Partially done                                 | [services/auth-service/src/app.ts](../services/auth-service/src/app.ts)                         |
+| F03 Database and persistence          | Partially done                                 | [packages/prisma-client/prisma/schema.prisma](../packages/prisma-client/prisma/schema.prisma)   |
+| F04 Individual profile entry          | Partially done; entry scope changed            | [services/profile-service/src/profile.ts](../services/profile-service/src/profile.ts)           |
+| F05 JD parser                         | Partially done                                 | [services/resume-service/src/jd-parser.ts](../services/resume-service/src/jd-parser.ts)         |
+| F06 Generation and scoped suggestions | Partially done                                 | [services/resume-service/src/ats/use-cases.ts](../services/resume-service/src/ats/use-cases.ts) |
+| F07 Readiness and JD scoring          | Partially done                                 | [packages/resume-core/src/jd-scoring.ts](../packages/resume-core/src/jd-scoring.ts)             |
+| F08 Resume builder and preview        | Partially done                                 | [apps/resume-mfe/src/ManualResumeEditor.tsx](../apps/resume-mfe/src/ManualResumeEditor.tsx)     |
+| F09 PDF and storage                   | Partially done                                 | [services/resume-service/src/pdf.ts](../services/resume-service/src/pdf.ts)                     |
+| F10 Resume dashboard                  | Partially done                                 | [apps/resume-mfe/src/ResumeLibrary.tsx](../apps/resume-mfe/src/ResumeLibrary.tsx)               |
+| F11 JD and optimization history       | Partially done                                 | [services/resume-service/src/resume.ts](../services/resume-service/src/resume.ts)               |
+| F12 Master profile editor             | Partially done                                 | [apps/profile-mfe/src/ProfileRemoteRoot.tsx](../apps/profile-mfe/src/ProfileRemoteRoot.tsx)     |
+| F13 Organization/vendor workspaces    | Partially done; backend only                   | [services/workspace-service/src/workspace.ts](../services/workspace-service/src/workspace.ts)   |
+| F14 RBAC and privacy                  | Partially done; shared activation blocked      | [packages/access-policy/src/index.ts](../packages/access-policy/src/index.ts)                   |
+| F15 Audit logging/viewer              | Partially done                                 | [packages/prisma-client/src/audit-delivery.ts](../packages/prisma-client/src/audit-delivery.ts) |
+| F16 LinkedIn archive import           | Not started                                    | [context/feature-specs/16-linkedin-import.md](../context/feature-specs/16-linkedin-import.md)   |
+| F17 Gap analysis                      | Partially done; backend and active JD evidence | [services/resume-service/src/gap-analyzer.ts](../services/resume-service/src/gap-analyzer.ts)   |
+| F18 MCP integration                   | Not started                                    | [docs/mcp-integration.md](mcp-integration.md)                                                   |
+| F19 File import                       | Partially done                                 | [services/resume-service/src/upload.ts](../services/resume-service/src/upload.ts)               |
+| F20 Templates and formatting          | Partially done                                 | [apps/resume-mfe/src/templates/registry.ts](../apps/resume-mfe/src/templates/registry.ts)       |
 
 ## Done capabilities and remaining scope
 
@@ -201,42 +205,42 @@ Seven tools are specified in documentation; no MCP server, SDK integration or re
 
 ## Cross-cutting planned items
 
-| Planned item | Audit result and evidence |
-| --- | --- |
-| Package graph, strict TypeScript, federation, shared UI, lint/build/tests | ✅ Root manifests, four apps and server/shared packages exist. Native Node test runners are used; not every package defines every Turbo task. |
-| Google and LinkedIn login | ✅ Google local flow; LinkedIn callback/account linking is not built. Local opaque credentials are used rather than the proposed JWT deployment design. |
-| Required profile wizard | Superseded by the user. Optional profile editing exists; do not reinstate a mandatory entry gate. |
-| Zustand/TanStack Query state architecture | Planned. Current flows primarily use React state and the shared session/API controller; these libraries are not the active cache architecture. |
-| Shared authorization / AI packages | Actual packages are access-policy and service-local ats adapters. Planned authorization/ai-provider package paths do not exist. |
-| Durable Trigger.dev jobs and Vercel AI SDK | Not started as integrations. TaskRun storage/legacy synchronous handlers exist; Gemini currently uses bounded server REST calls. |
-| Vector search | ✅ ResumeSearchChunk, gemini-embedding-001/768/professional-v1, RLS, scoped exact cosine retrieval and save/delete invalidation. Profile/JD 1536 and skill 384 columns are unbuilt proposals. HNSW exists but current bounded exact query does not use it. |
-| Cloudflare Pages/Neon/Node container deployment | ✅ Full local Docker app; hosted deployment, CI release pipeline and production configuration remain planned/unverified. |
-| R2/storage service/signed links | Not started. PDF is an authenticated ephemeral stream; upload bytes are discarded after parsing. |
-| Retention/backup/restore/rate and cost operations | Partial request/size/time/concurrency bounds; production quotas, retention/purge, alerting and operational restore procedures remain missing. |
-| Task bookkeeping | ✅ Moved from product README to context/development-status.md; lock/owner semantics remain in scripts/development-task.mjs. |
-| Additional custom sections and rendering | Partial typed supported sections; certifications/volunteering/custom section UI and shared rendering contracts still need work. |
-| Cover letters, billing, jobs, recruitment and candidate ranking | Excluded or unallocated scope. They are not unfinished approved product tasks. |
+| Planned item                                                              | Audit result and evidence                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package graph, strict TypeScript, federation, shared UI, lint/build/tests | ✅ Root manifests, four apps and server/shared packages exist. Native Node test runners are used; not every package defines every Turbo task.                                                                                                              |
+| Google and LinkedIn login                                                 | ✅ Google local flow; LinkedIn callback/account linking is not built. Local opaque credentials are used rather than the proposed JWT deployment design.                                                                                                    |
+| Required profile wizard                                                   | Superseded by the user. Optional profile editing exists; do not reinstate a mandatory entry gate.                                                                                                                                                          |
+| Zustand/TanStack Query state architecture                                 | Planned. Current flows primarily use React state and the shared session/API controller; these libraries are not the active cache architecture.                                                                                                             |
+| Shared authorization / AI packages                                        | Actual packages are access-policy and service-local ats adapters. Planned authorization/ai-provider package paths do not exist.                                                                                                                            |
+| Durable Trigger.dev jobs and Vercel AI SDK                                | Not started as integrations. TaskRun storage/legacy synchronous handlers exist; Gemini currently uses bounded server REST calls.                                                                                                                           |
+| Vector search                                                             | ✅ ResumeSearchChunk, gemini-embedding-001/768/professional-v1, RLS, scoped exact cosine retrieval and save/delete invalidation. Profile/JD 1536 and skill 384 columns are unbuilt proposals. HNSW exists but current bounded exact query does not use it. |
+| Cloudflare Pages/Neon/Node container deployment                           | ✅ Local Docker and personal Google Cloud VM/Cloudflare Tunnel deployment verified for ordinary showcase flows. Pages/Neon are not selected. CI deployment, automated backup retention and sustained-load acceptance remain pending. |
+| R2/storage service/signed links                                           | Not started. PDF is an authenticated ephemeral stream; upload bytes are discarded after parsing.                                                                                                                                                           |
+| Retention/backup/restore/rate and cost operations                         | Partial request/size/time/concurrency bounds; production quotas, retention/purge, alerting and operational restore procedures remain missing.                                                                                                              |
+| Task bookkeeping                                                          | ✅ Moved from product README to context/development-status.md; lock/owner semantics remain in scripts/development-task.mjs.                                                                                                                                |
+| Additional custom sections and rendering                                  | Partial typed supported sections; certifications/volunteering/custom section UI and shared rendering contracts still need work.                                                                                                                            |
+| Cover letters, billing, jobs, recruitment and candidate ranking           | Excluded or unallocated scope. They are not unfinished approved product tasks.                                                                                                                                                                             |
 
 ## Outdated statements and contradictions
 
-| Finding | Current source and documentation action |
-| --- | --- |
-| Overview/workflow/validation say documentation-only or development not begun | Source, manifests and tests are implemented. Current canonical summaries now describe the personal app; dated logs remain historical. Context approval is cleared. |
-| F05/F11/F12/F13/F14/F17 say Not started | Parser/history/profile/workspace/role/gap source exists. Changed to Partial with exact integration gates rather than claiming full acceptance. |
-| Plans ask to rebuild Education, local forms or durable editor persistence | These implementations already exist. Current phase checklists and starter guidance now distinguish done personal slices from missing broader features. |
-| Old README mixes product setup, task ownership and 2026-09/10 implementation logs | Replaced with setup/use only. History preserved in archive/readme-history.md; links rebased. Task state moved into context/development-status.md. |
-| .env.example advertises inactive ports, LinkedIn, JWT, R2 and Trigger settings; copied blank OAuth values fail optional nonempty validation | Example now lists configured Google and optional paid Gemini only. Generated credentials and fixed ports are documented separately. |
-| Root Node engine >=22.0.0 is looser than installed Prisma | Prisma 7.10.0 requires ^20.19, ^22.12 or >=24. README requires supported 22.12+ in 22.x or 24+. Root engine declaration is a follow-up code/config change, not altered in this documentation task. |
-| Google docs still route to profile setup/sample or offer sign-out on /sign-in | Verified sessions land in My resumes; Preferences has sign-out. Current instructions corrected; dated OAuth failure observations remain history. |
-| State/AI/storage diagrams imply installed infrastructure | Current architecture separates actual React state, REST Gemini, local PostgreSQL/PDF from planned Query/Zustand, Trigger, AI SDK, R2, Neon and MCP. |
-| D07 unresolved/no vector columns; source ERD fixes 1536/384 | Resume vector slice is approved and implemented at 768 dimensions; other spaces remain unimplemented. Historical extension-only output is not application state. |
-| Textkernel/OpenCode setup still appears in older plans | Removed from active runtime/dependencies; paid Gemini is active. Legacy stored proposal model identifiers remain compatibility data. |
-| Runtime role guide says four roles and no DELETE anywhere | There are five roles; profile section tables and resume derived cache have narrow DELETE grants. Source resume deletion is a tombstone; AuditEvent stays append-only. Guide corrected to the actual allowlist. |
-| Backend handoff says complete Phase 4 and audit viewer | Backend routes exist, but startup, app/gateway integration, invitation/consent and complete privacy verification do not. Handoff marked historical source evidence; F13–F15 remain partial. |
-| Old task/branch guidance selects features or ux-ui-update | Current branch is fixes in the existing frontend worktree. Active workflow corrected; historical branch records are not instructions. |
-| Template MFE, fit-page controls, temporary preview and streamed reasoning are implied by dated notes | Templates live inside resume MFE; fit width is automatic, no inert A4/zoom strip; normal AI uses server rewrite. TokenStream plays validated notices rather than network reasoning. |
-| Raw extracted text view/save described as available | Disabled with apps/resume-mfe/src/ui-features.ts. Parsing and private persisted source remain intact; hiding UI does not delete underlying data. |
-| Broad old acceptance checks imply full accessibility/performance/PDF compliance | Dated evidence remains bounded. Full accessibility, low-end performance, corpus quality and all-layout PDF parity remain release work. |
+| Finding                                                                                                                                     | Current source and documentation action                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview/workflow/validation say documentation-only or development not begun                                                                | Source, manifests and tests are implemented. Current canonical summaries now describe the personal app; dated logs remain historical. Context approval is cleared.                                             |
+| F05/F11/F12/F13/F14/F17 say Not started                                                                                                     | Parser/history/profile/workspace/role/gap source exists. Changed to Partial with exact integration gates rather than claiming full acceptance.                                                                 |
+| Plans ask to rebuild Education, local forms or durable editor persistence                                                                   | These implementations already exist. Current phase checklists and starter guidance now distinguish done personal slices from missing broader features.                                                         |
+| Old README mixes product setup, task ownership and 2026-09/10 implementation logs                                                           | Replaced with setup/use only. History preserved in archive/readme-history.md; links rebased. Task state moved into context/development-status.md.                                                              |
+| .env.example advertises inactive ports, LinkedIn, JWT, R2 and Trigger settings; copied blank OAuth values fail optional nonempty validation | Example now lists configured Google and optional paid Gemini only. Generated credentials and fixed ports are documented separately.                                                                            |
+| Root Node engine >=22.0.0 is looser than installed Prisma                                                                                   | Prisma 7.10.0 requires ^20.19, ^22.12 or >=24. README requires supported 22.12+ in 22.x or 24+. Root engine declaration is a follow-up code/config change, not altered in this documentation task.             |
+| Google docs still route to profile setup/sample or offer sign-out on /sign-in                                                               | Verified sessions land in My resumes; Preferences has sign-out. Current instructions corrected; dated OAuth failure observations remain history.                                                               |
+| State/AI/storage diagrams imply installed infrastructure                                                                                    | Current architecture separates actual React state, REST Gemini, local PostgreSQL/PDF from planned Query/Zustand, Trigger, AI SDK, R2, Neon and MCP.                                                            |
+| D07 unresolved/no vector columns; source ERD fixes 1536/384                                                                                 | Resume vector slice is approved and implemented at 768 dimensions; other spaces remain unimplemented. Historical extension-only output is not application state.                                               |
+| Textkernel/OpenCode setup still appears in older plans                                                                                      | Removed from active runtime/dependencies; paid Gemini is active. Legacy stored proposal model identifiers remain compatibility data.                                                                           |
+| Runtime role guide says four roles and no DELETE anywhere                                                                                   | There are five roles; profile section tables and resume derived cache have narrow DELETE grants. Source resume deletion is a tombstone; AuditEvent stays append-only. Guide corrected to the actual allowlist. |
+| Backend handoff says complete Phase 4 and audit viewer                                                                                      | Backend routes exist, but startup, app/gateway integration, invitation/consent and complete privacy verification do not. Handoff marked historical source evidence; F13–F15 remain partial.                    |
+| Old task/branch guidance selects features or ux-ui-update                                                                                   | Current branch is fixes in the existing frontend worktree. Active workflow corrected; historical branch records are not instructions.                                                                          |
+| Template MFE, fit-page controls, temporary preview and streamed reasoning are implied by dated notes                                        | Templates live inside resume MFE; fit width is automatic, no inert A4/zoom strip; normal AI uses server rewrite. TokenStream plays validated notices rather than network reasoning.                            |
+| Raw extracted text view/save described as available                                                                                         | Disabled with apps/resume-mfe/src/ui-features.ts. Parsing and private persisted source remain intact; hiding UI does not delete underlying data.                                                               |
+| Broad old acceptance checks imply full accessibility/performance/PDF compliance                                                             | Dated evidence remains bounded. Full accessibility, low-end performance, corpus quality and all-layout PDF parity remain release work.                                                                         |
 
 ## Priority findings in existing source
 
@@ -254,17 +258,17 @@ README commands map to real root/package scripts; environment names map to actua
 
 Fresh validation in the active fixes worktree:
 
-| Command / check | Result |
-| --- | --- |
-| pnpm install --frozen-lockfile | Passed; 16 workspace projects; lockfile resolution unchanged. |
-| pnpm build | Passed; 15/15 tasks, no cached builds. |
-| pnpm check | Passed; 34/34 lint/typecheck tasks, 6 cached tasks. |
-| pnpm test | Passed; all 12 test suites executed without test-cache replay; 270/270 tests. Supporting build tasks used cache. |
-| pnpm task:test | Passed after helper relocation/formatting; 7/7 synthetic ownership/local-vector-config tests. |
-| node --check scripts/development-task.mjs | Passed. |
-| Markdown relative targets, fragments and fences | Passed across 95 current Markdown files; 1,016 local links, zero missing files/fragments or unbalanced fences. |
-| Capability coverage table | All 26 rows have correctly separated status/source columns. |
-| git diff --check | Passed. |
+| Command / check                                 | Result                                                                                                           |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| pnpm install --frozen-lockfile                  | Passed; 16 workspace projects; lockfile resolution unchanged.                                                    |
+| pnpm build                                      | Passed; 15/15 tasks, no cached builds.                                                                           |
+| pnpm check                                      | Passed; 34/34 lint/typecheck tasks, 6 cached tasks.                                                              |
+| pnpm test                                       | Passed; all 12 test suites executed without test-cache replay; 270/270 tests. Supporting build tasks used cache. |
+| pnpm task:test                                  | Passed after helper relocation/formatting; 7/7 synthetic ownership/local-vector-config tests.                    |
+| node --check scripts/development-task.mjs       | Passed.                                                                                                          |
+| Markdown relative targets, fragments and fences | Passed across 95 current Markdown files; 1,016 local links, zero missing files/fragments or unbalanced fences.   |
+| Capability coverage table                       | All 26 rows have correctly separated status/source columns.                                                      |
+| git diff --check                                | Passed.                                                                                                          |
 
 The three new Markdown files are this report, the task-status document and the historical README archive; the original reviewed register remains 92 files. A fresh clone/database bootstrap, database integration suites and live OAuth/Gemini calls were not run. Initialization commands and environment names were checked against source, not executed against the shared cluster. No database provisioning, migration, credential rotation or runtime restart occurred. Cached checks are identified rather than presented as freshly executed tests.
 

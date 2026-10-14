@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/node-server": "^1.14.0",
     "@resume-forge/shared-types": "workspace:*",
+    "@resume-forge/access-policy": "workspace:*",
     "hono": "^4.7.0"
   },
   "devDependencies": {
