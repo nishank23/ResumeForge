@@ -24,7 +24,8 @@ const args = process.argv.slice(2);
 const command = path.basename(process.argv[1]);
 const mode = process.env.CASE;
 fs.appendFileSync(process.env.CALLS, JSON.stringify([command, ...args]) + '\\n');
-const state = JSON.parse(fs.readFileSync(process.env.STATE, 'utf8'));
+// Checksum and Docker pipeline commands overlap; only Docker owns its state.
+const state = command === 'docker' ? JSON.parse(fs.readFileSync(process.env.STATE, 'utf8')) : {};
 let output = '';
 let code = 0;
 if (command === 'flock') code = mode === 'locked' ? 1 : 0;
@@ -59,7 +60,7 @@ if (command === 'docker') {
     state[args[2].startsWith('forge-studio-web:') ? 'webTag' : 'appTag'] = args[1].includes(':release-') ? (args[2].startsWith('forge-studio-web:') ? 'new-web' : 'new-app') : args[1];
   }
 }
-fs.writeFileSync(process.env.STATE, JSON.stringify(state));
+if (command === 'docker') fs.writeFileSync(process.env.STATE, JSON.stringify(state));
 if (output) process.stdout.write(output + '\\n');
 process.exitCode = code;
 if (command === 'docker' && args[0] === 'load') process.stdin.resume();
