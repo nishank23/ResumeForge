@@ -1,0 +1,95 @@
+name: Cloud release
+
+on:
+  pull_request:
+    branches: [main, codex/cloud-deploy]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never interrupt a deployment after the VM starts changing images.
+concurrency:
+  group: cloud-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
+  cancel-in-progress: false
+
+env:
+  FORGE_PUBLIC_ORIGIN: https://resumeforge.sugarbuddyai.com
+  CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+  CLOUDSDK_CORE_PROJECT: resume-forge-dev
+  CLOUDSDK_COMPUTE_ZONE: us-central1-a
+
+jobs:
+  verify:
+    if: >-
+      github.repository == 'nishank23/ResumeForge' && github.event.repository.private &&
+      (github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || vars.CLOUD_DEPLOY_ENABLED != 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: bash docker/ci-cloud.sh
+
+  deploy:
+    if: >-
+      github.repository == 'nishank23/ResumeForge' && github.event.repository.private &&
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.CLOUD_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build and verify without production credentials
+        run: bash docker/ci-cloud.sh
+      - name: Prepare the private transfer bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_id="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
+          docker tag forge-studio:cloud "forge-studio:release-$release_id"
+          docker tag forge-studio-web:cloud "forge-studio-web:release-$release_id"
+          mkdir -m 700 release
+          docker save "forge-studio:release-$release_id" "forge-studio-web:release-$release_id" | gzip -1 > release/images.tar.gz
+          (cd release && sha256sum images.tar.gz > images.tar.gz.sha256)
+          cp docker/deploy-cloud.sh release/deploy-cloud.sh
+      # Authenticate only after builds/tests, so no cloud credentials enter images.
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: resume-forge-dev
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - name: Upload over IAP; no public SSH port or registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_ID" =~ ^[a-f0-9]{40}-[0-9]+-[0-9]+$ ]]
+          gcloud compute ssh resumeforge-demo --tunnel-through-iap --ssh-key-expire-after=1h \
+            --command="umask 077; mkdir -p \"\$HOME/.resumeforge/releases/$RELEASE_ID\""
+          gcloud compute scp --tunnel-through-iap --ssh-key-expire-after=1h \
+            release/images.tar.gz release/images.tar.gz.sha256 release/deploy-cloud.sh \
+            "resumeforge-demo:.resumeforge/releases/$RELEASE_ID/"
+      - name: Reject a release superseded while building or uploading
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api repos/nishank23/ResumeForge/commits/main --jq .sha)" = "$GITHUB_SHA"
+      - name: Deploy with backup, health checks and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          # systemd owns the operation even if the SSH client disconnects.
+          gcloud compute ssh resumeforge-demo --tunnel-through-iap --ssh-key-expire-after=1h \
+            --command="sudo systemd-run --unit=resumeforge-deploy-$RELEASE_ID --collect --wait --pipe /bin/bash \"\$HOME/.resumeforge/releases/$RELEASE_ID/deploy-cloud.sh\" \"\$HOME/.resumeforge/releases/$RELEASE_ID\" '$RELEASE_ID'"
+      - name: Check the public route
+        run: |
+          curl --fail --silent --show-error --max-time 30 --retry 3 "$FORGE_PUBLIC_ORIGIN/api/v1/health"
+          curl --fail --silent --show-error --max-time 30 "$FORGE_PUBLIC_ORIGIN/" --output /dev/null

@@ -3,11 +3,646 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="resume-forge — AI resume and professional-profile management" />
+    <meta
+      name="description"
+      content="resume-forge — AI resume and professional-profile management"
+    />
     <title>resume-forge</title>
+    <style>
+      .rf-boot {
+        --boot-bg: #f5f3f8;
+        --boot-paper: #fff;
+        --boot-ink: #271f35;
+        --boot-muted: #746781;
+        --boot-line: #92829f;
+        --boot-border: #ded7e8;
+        --boot-accent: #6631c2;
+        --boot-signal: #207c8a;
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        box-sizing: border-box;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+        overflow: auto;
+        padding: clamp(20px, 4vw, 44px);
+        background: var(--boot-bg);
+        color: var(--boot-ink);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        isolation: isolate;
+      }
+      .rf-boot::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background-image: radial-gradient(
+          var(--boot-line) 0.65px,
+          transparent 0.65px
+        );
+        background-size: 26px 26px;
+        mask-image: radial-gradient(
+          ellipse 40% 55% at 50% 43%,
+          #0003,
+          transparent
+        );
+      }
+      .rf-boot p,
+      .rf-boot h1 {
+        margin: 0;
+      }
+      .rf-boot h1 {
+        font-family: inherit;
+      }
+      .rf-boot-header,
+      .rf-boot-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .rf-boot-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 17px;
+        letter-spacing: -0.04em;
+        font-weight: 650;
+      }
+      .rf-boot-brand svg {
+        color: var(--boot-accent);
+      }
+      .rf-boot-edition {
+        padding: 5px 11px;
+        border: 1px solid var(--boot-border);
+        border-radius: 30px;
+        color: var(--boot-muted);
+        font-size: 11px;
+      }
+      .rf-boot-content {
+        align-self: center;
+        justify-self: center;
+        width: min(100%, 600px);
+        padding-bottom: 12px;
+        text-align: center;
+      }
+      .rf-boot-art {
+        display: block;
+        width: min(100%, 560px);
+        height: auto;
+        margin: -12px auto -14px;
+        overflow: visible;
+      }
+      .rf-boot-guides {
+        fill: none;
+        stroke: var(--boot-line);
+        stroke-width: 1;
+        opacity: 0.65;
+      }
+      .rf-boot-wires {
+        fill: none;
+        stroke: var(--boot-accent);
+        stroke-width: 1;
+        opacity: 0.45;
+      }
+      .rf-boot-paper {
+        fill: var(--boot-paper);
+        stroke: var(--boot-line);
+        stroke-width: 1;
+      }
+      .rf-boot-rule {
+        fill: var(--boot-line);
+      }
+      .rf-boot-bold {
+        fill: var(--boot-accent);
+      }
+      .rf-boot-small {
+        fill: var(--boot-muted);
+        font-size: 11px;
+        letter-spacing: 0.01em;
+      }
+      .rf-boot-token {
+        fill: var(--boot-bg);
+        stroke: var(--boot-border);
+      }
+      .rf-boot-scan {
+        animation: rf-boot-scan 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+      .rf-boot-core {
+        fill: var(--boot-paper);
+        stroke: var(--boot-accent);
+      }
+      .rf-boot-halo {
+        fill: none;
+        stroke: var(--boot-accent);
+        opacity: 0.18;
+        animation: rf-boot-pulse 4s ease-in-out infinite;
+      }
+      .rf-boot-title {
+        font-size: clamp(28px, 4vw, 40px);
+        font-weight: 550;
+        line-height: 1.15;
+        letter-spacing: -0.05em;
+      }
+      .rf-boot-subtitle {
+        margin-top: 12px !important;
+        color: var(--boot-muted);
+        font-size: 13px;
+      }
+      .rf-boot-status {
+        display: grid;
+        justify-items: center;
+        gap: 13px;
+        margin-top: 28px;
+        color: var(--boot-muted);
+        font-size: 12px;
+      }
+      .rf-boot-track {
+        width: 164px;
+        height: 2px;
+        overflow: hidden;
+        background: var(--boot-border);
+        border-radius: 2px;
+      }
+      .rf-boot-runner {
+        display: block;
+        width: 55%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--boot-accent),
+          var(--boot-signal),
+          transparent
+        );
+        animation: rf-boot-travel 2.4s ease-in-out infinite;
+      }
+      .rf-boot-footer {
+        color: var(--boot-muted);
+        font-size: 11px;
+      }
+      .rf-boot-footer span:last-child {
+        color: var(--boot-accent);
+      }
+      .rf-boot-retry {
+        margin-top: 16px !important;
+        font-size: 12px;
+        visibility: hidden;
+      }
+      .rf-boot-retry a {
+        color: var(--boot-accent);
+        text-underline-offset: 4px;
+      }
+      .rf-boot-retry a:focus-visible {
+        outline: 2px solid var(--boot-accent);
+        outline-offset: 5px;
+        border-radius: 2px;
+      }
+      .rf-boot[data-waiting="true"] .rf-boot-retry {
+        visibility: visible;
+      }
+      .rf-boot[data-paused="true"] * {
+        animation-play-state: paused;
+      }
+      @keyframes rf-boot-scan {
+        0% {
+          transform: translateY(0);
+          opacity: 0;
+        }
+        12% {
+          opacity: 0.95;
+        }
+        82% {
+          opacity: 0.95;
+        }
+        100% {
+          transform: translateY(225px);
+          opacity: 0;
+        }
+      }
+      @keyframes rf-boot-pulse {
+        0%,
+        100% {
+          opacity: 0.12;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      @keyframes rf-boot-travel {
+        from {
+          transform: translateX(-105%);
+        }
+        to {
+          transform: translateX(285%);
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        .rf-boot {
+          --boot-bg: #111014;
+          --boot-paper: #1b1921;
+          --boot-ink: #f8f6fd;
+          --boot-muted: #aaa2b8;
+          --boot-line: #625571;
+          --boot-border: #393341;
+          --boot-accent: #b89aff;
+          --boot-signal: #82d8dc;
+        }
+      }
+      :root[data-theme="dark"] .rf-boot {
+        --boot-bg: #111014;
+        --boot-paper: #1b1921;
+        --boot-ink: #f8f6fd;
+        --boot-muted: #aaa2b8;
+        --boot-line: #625571;
+        --boot-border: #393341;
+        --boot-accent: #b89aff;
+        --boot-signal: #82d8dc;
+      }
+      :root[data-theme="light"] .rf-boot {
+        --boot-bg: #f5f3f8;
+        --boot-paper: #fff;
+        --boot-ink: #271f35;
+        --boot-muted: #746781;
+        --boot-line: #92829f;
+        --boot-border: #ded7e8;
+        --boot-accent: #6631c2;
+        --boot-signal: #207c8a;
+      }
+      @media (max-width: 420px) {
+        .rf-boot-header {
+          gap: 8px;
+        }
+        .rf-boot-brand {
+          font-size: 15px;
+        }
+        .rf-boot-art {
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+        .rf-boot-footer span:last-child {
+          display: none;
+        }
+        .rf-boot-footer {
+          justify-content: center;
+        }
+      }
+      @media (max-height: 700px) {
+        .rf-boot {
+          padding: 20px 32px;
+          gap: 8px;
+        }
+        .rf-boot-art {
+          max-width: 400px;
+          margin-top: -25px;
+          margin-bottom: -22px;
+        }
+        .rf-boot-title {
+          font-size: 27px;
+        }
+        .rf-boot-title br {
+          display: none;
+        }
+        .rf-boot-status {
+          margin-top: 16px;
+        }
+        .rf-boot-subtitle {
+          margin-top: 7px !important;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .rf-boot * {
+          animation: none !important;
+        }
+        .rf-boot-scan {
+          transform: translateY(115px);
+          opacity: 0.7;
+        }
+        .rf-boot-runner {
+          width: 100%;
+          opacity: 0.5;
+        }
+      }
+      @media (forced-colors: active) {
+        .rf-boot {
+          background: Canvas;
+          color: CanvasText;
+        }
+        .rf-boot-art {
+          forced-color-adjust: auto;
+        }
+        .rf-boot-track {
+          border: 1px solid CanvasText;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" inert aria-hidden="true"></div>
+    <!-- Independent of React: visible while scripts, the session and sign-in load. -->
+    <section
+      id="rf-boot"
+      class="rf-boot"
+      aria-label="Opening Forge Studio"
+      aria-busy="true"
+    >
+      <header class="rf-boot-header">
+        <div class="rf-boot-brand">
+          <svg
+            width="24"
+            height="26"
+            viewBox="0 0 24 26"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 2h10l5 5v17H5zM15 2v6h5M9 12h7M9 16h7M9 20h4"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Forge Studio</span>
+        </div>
+        <span class="rf-boot-edition">Resume + AI</span>
+      </header>
+      <div class="rf-boot-content">
+        <svg
+          class="rf-boot-art"
+          viewBox="0 0 600 400"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <defs>
+            <linearGradient id="rf-boot-beam" x1="0" y1="0" x2="0" y2="1">
+              <stop stop-color="var(--boot-accent)" stop-opacity="0" />
+              <stop
+                offset="1"
+                stop-color="var(--boot-accent)"
+                stop-opacity=".15"
+              />
+            </linearGradient>
+            <linearGradient id="rf-boot-edge">
+              <stop stop-color="var(--boot-accent)" stop-opacity="0" />
+              <stop offset=".5" stop-color="var(--boot-accent)" />
+              <stop
+                offset="1"
+                stop-color="var(--boot-signal)"
+                stop-opacity="0"
+              />
+            </linearGradient>
+            <clipPath id="rf-boot-clip">
+              <rect x="201" y="59" width="188" height="272" rx="12" />
+            </clipPath>
+          </defs>
+          <path
+            class="rf-boot-guides"
+            d="M177 75V35h40M373 35h40v40M413 315v40h-40M217 355h-40v-40"
+          />
+          <path
+            class="rf-boot-guides"
+            d="M287 35h16M295 27v16M287 355h16M295 347v16"
+            opacity=".4"
+          />
+          <g class="rf-boot-wires">
+            <path
+              d="M151 146h24q26 0 26-26v-6M151 249h24q26 0 26 26v8M389 170h28q15 0 15 15v10h10"
+            />
+            <circle cx="201" cy="114" r="3" fill="var(--boot-accent)" />
+            <circle cx="201" cy="283" r="3" fill="var(--boot-accent)" />
+          </g>
+          <rect
+            class="rf-boot-token"
+            x="83"
+            y="131"
+            width="68"
+            height="30"
+            rx="8"
+          />
+          <text class="rf-boot-small" x="117" y="150" text-anchor="middle">
+            Skills
+          </text>
+          <rect
+            class="rf-boot-token"
+            x="43"
+            y="234"
+            width="108"
+            height="30"
+            rx="8"
+          />
+          <text class="rf-boot-small" x="97" y="253" text-anchor="middle">
+            Experience
+          </text>
+          <rect
+            x="211"
+            y="69"
+            width="188"
+            height="272"
+            rx="12"
+            fill="var(--boot-accent)"
+            opacity=".035"
+          />
+          <rect
+            class="rf-boot-paper"
+            x="201"
+            y="59"
+            width="188"
+            height="272"
+            rx="12"
+          />
+          <path
+            class="rf-boot-guides"
+            d="M213 83v-12h12M365 71h12v12M377 307v12h-12M225 319h-12v-12"
+          />
+          <circle
+            cx="232"
+            cy="94"
+            r="11"
+            fill="var(--boot-accent)"
+            opacity=".14"
+          />
+          <path
+            d="M232 87v14M225 94h14"
+            stroke="var(--boot-accent)"
+            stroke-width="1.3"
+          />
+          <rect
+            class="rf-boot-bold"
+            x="254"
+            y="85"
+            width="91"
+            height="5"
+            rx="2.5"
+            opacity=".85"
+          />
+          <rect
+            class="rf-boot-rule"
+            x="254"
+            y="97"
+            width="61"
+            height="3"
+            rx="1.5"
+          />
+          <path d="M223 121h144" stroke="var(--boot-border)" />
+          <rect
+            class="rf-boot-bold"
+            x="223"
+            y="137"
+            width="43"
+            height="3"
+            rx="1.5"
+            opacity=".7"
+          />
+          <g class="rf-boot-rule" opacity=".65">
+            <rect x="223" y="149" width="137" height="3" rx="1.5" />
+            <rect x="223" y="158" width="145" height="3" rx="1.5" />
+            <rect x="223" y="167" width="114" height="3" rx="1.5" />
+          </g>
+          <rect
+            class="rf-boot-bold"
+            x="223"
+            y="190"
+            width="58"
+            height="3"
+            rx="1.5"
+            opacity=".7"
+          />
+          <path d="M228 208v56" stroke="var(--boot-border)" />
+          <circle cx="228" cy="210" r="3" fill="var(--boot-signal)" />
+          <circle cx="228" cy="249" r="3" fill="var(--boot-accent)" />
+          <g class="rf-boot-rule">
+            <rect x="240" y="207" width="81" height="3" rx="1.5" />
+            <rect
+              x="240"
+              y="217"
+              width="123"
+              height="3"
+              rx="1.5"
+              opacity=".6"
+            />
+            <rect
+              x="240"
+              y="226"
+              width="108"
+              height="3"
+              rx="1.5"
+              opacity=".6"
+            />
+            <rect x="240" y="246" width="92" height="3" rx="1.5" />
+            <rect
+              x="240"
+              y="256"
+              width="118"
+              height="3"
+              rx="1.5"
+              opacity=".6"
+            />
+            <rect x="240" y="265" width="97" height="3" rx="1.5" opacity=".6" />
+          </g>
+          <g fill="var(--boot-accent)" opacity=".13">
+            <rect x="223" y="291" width="40" height="13" rx="4" />
+            <rect x="269" y="291" width="51" height="13" rx="4" />
+            <rect x="326" y="291" width="34" height="13" rx="4" />
+          </g>
+          <g clip-path="url(#rf-boot-clip)">
+            <g class="rf-boot-scan">
+              <rect
+                x="202"
+                y="62"
+                width="186"
+                height="42"
+                fill="url(#rf-boot-beam)"
+              />
+              <path
+                d="M202 104h186"
+                stroke="url(#rf-boot-edge)"
+                stroke-width="1.5"
+              />
+            </g>
+          </g>
+          <circle class="rf-boot-halo" cx="466" cy="195" r="40" />
+          <circle class="rf-boot-halo" cx="466" cy="195" r="32" />
+          <rect
+            class="rf-boot-core"
+            x="442"
+            y="171"
+            width="48"
+            height="48"
+            rx="15"
+          />
+          <path
+            d="M466 180v8M466 202v8M451 195h8M473 195h8M456 185l5 5M471 200l5 5M456 205l5-5M471 190l5-5"
+            stroke="var(--boot-accent)"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+          <circle cx="466" cy="195" r="4" fill="var(--boot-signal)" />
+          <text class="rf-boot-small" x="466" y="254" text-anchor="middle">
+            AI, in your corner.
+          </text>
+        </svg>
+        <h1 class="rf-boot-title">
+          Your story,<br />
+          taking shape.
+        </h1>
+        <p class="rf-boot-subtitle">
+          Human experience. A little AI perspective.
+        </p>
+        <div class="rf-boot-status">
+          <div class="rf-boot-track" aria-hidden="true">
+            <span class="rf-boot-runner"></span>
+          </div>
+          <p role="status" aria-live="polite">Loading your workspace…</p>
+        </div>
+        <p class="rf-boot-retry">
+          Taking longer than expected? <a href="">Reload page</a>
+        </p>
+        <noscript><p>Enable JavaScript to open your workspace.</p></noscript>
+      </div>
+      <footer class="rf-boot-footer">
+        <span>Built around your experience.</span
+        ><span>Your next move starts here.</span>
+      </footer>
+    </section>
+    <script>
+      (() => {
+        const root = document.getElementById("root");
+        const boot = document.getElementById("rf-boot");
+        if (!root || !boot) return;
+        const pause = () => {
+          boot.dataset.paused = String(document.hidden);
+        };
+        pause();
+        document.addEventListener("visibilitychange", pause);
+        const retry = window.setTimeout(() => {
+          boot.dataset.waiting = "true";
+        }, 15000);
+        const observer = new MutationObserver(() => {
+          const main = root.querySelector("#main-content");
+          // Navigation can briefly render an empty outlet. Keep the first-load
+          // screen through that handoff, but reveal real pages and errors at once.
+          if (
+            !main?.textContent.trim() ||
+            main.querySelector(".rf-studio-loading")
+          )
+            return;
+          observer.disconnect();
+          window.clearTimeout(retry);
+          document.removeEventListener("visibilitychange", pause);
+          root.removeAttribute("inert");
+          root.removeAttribute("aria-hidden");
+          boot.remove();
+        });
+        observer.observe(root, { childList: true, subtree: true });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

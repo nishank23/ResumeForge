@@ -53,3 +53,6 @@ Desktop.ini
 
 # User-supplied private resumes are local manual-check inputs
 /check_resumes/
+
+# GitHub Actions short-lived credentials
+gha-creds-*.json
