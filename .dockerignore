@@ -31,3 +31,6 @@
 **/*.key
 **/generated
 **/check_resumes
+
+# GitHub Actions short-lived credentials
+**/gha-creds-*.json
