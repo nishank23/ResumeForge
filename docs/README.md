@@ -6,6 +6,7 @@
 
 - [Installation](../README.md), [Docker](docker-setup.md), [native database](database-foundation.md) and [runtime roles](runtime-database-roles.md).
 - [Google sign-in](google-login.md), [actor resolution](actor-resolution.md) and [deployment requirements](deployment.md).
+- [Public cold-visit loading](cold-start-loading.md): measured bootstrap fix, deployed web patch and rollback.
 
 ## Domain contracts
 

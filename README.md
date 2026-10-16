@@ -9,7 +9,7 @@ Key features:
 - Rich-text section editing, local undo/redo, three templates and saved appearance.
 - General readiness and job-description matching with actionable feedback.
 - Optional paid Gemini analysis and selected-description rewriting, reviewed before Apply.
-- JD-based full-resume proposals, per-change review and independent tailored-copy saving with recalculated checks and saved PDF.
+- JD-based tailoring with guided experience questions, confirmed facts, per-change review and an independent saved copy with recalculated checks and PDF.
 - Device-aware light/dark themes and an optional master professional profile.
 
 ## Tech stack

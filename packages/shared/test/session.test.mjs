@@ -294,3 +294,99 @@ test("PDF requests keep the bearer private and accept only one bounded version o
       /Invalid API path/,
     );
 });
+
+test("queued tailoring rotates a still-valid token before starting without exposing it", async () => {
+  const calls = [];
+  const queue = [
+    token(),
+    me(),
+    response({ data: { accessToken: "b".repeat(64), expiresIn: 300 } }),
+    me(),
+    response({ data: { queued: true } }),
+  ];
+  const client = make(async (url, options) => {
+    calls.push({ url, options });
+    return queue.shift();
+  });
+  await client.restore();
+  const path = `/api/v1/resume/${identity.id}/tailoring`;
+  assert.equal(
+    (await client.requestApi(path, { method: "POST", body: "{}" })).status,
+    200,
+  );
+  assert.equal(calls[2].url, "http://localhost:4001/api/v1/auth/refresh");
+  assert.equal(calls[3].url, "http://localhost:4001/api/v1/auth/me");
+  assert.equal(
+    calls[4].options.headers.get("Authorization"),
+    `Bearer ${"b".repeat(64)}`,
+  );
+  assert.equal(
+    calls.filter((c) => c.url === `http://localhost:4000${path}`).length,
+    1,
+  );
+  assert.ok(!JSON.stringify(client.getSnapshot()).includes("b".repeat(64)));
+});
+
+test("failed refresh and logout during tailoring refresh prevent queue submission", async () => {
+  for (const logout of [false, true]) {
+    let finish,
+      apiCalls = 0;
+    const queue = [token(), me()];
+    const client = make(async (url) => {
+      if (url.startsWith("http://localhost:4000")) {
+        apiCalls++;
+        return response({});
+      }
+      if (queue.length) return queue.shift();
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    await client.restore();
+    const pending = client.requestApi(
+      `/api/v1/resume/${identity.id}/tailoring`,
+      { method: "POST" },
+    );
+    while (!finish) await new Promise((resolve) => setTimeout(resolve, 0));
+    if (logout) client.receiveLogout();
+    finish(logout ? token() : response({}, 503));
+    await assert.rejects(pending, /Session unavailable/);
+    assert.equal(apiCalls, 0);
+    assert.equal(client.getSnapshot().status, logout ? "anonymous" : "error");
+  }
+});
+
+test("simultaneous tailoring submissions share one fresh grant and each submit once", async () => {
+  let refreshes = 0;
+  const submissions = [];
+  const client = make(async (url, options) => {
+    if (url.endsWith("/refresh")) {
+      refreshes++;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return response({
+        data: {
+          accessToken: (refreshes === 1 ? "a" : "b").repeat(64),
+          expiresIn: 300,
+        },
+      });
+    }
+    if (url.endsWith("/me")) return me();
+    submissions.push({
+      url,
+      authorization: options.headers.get("Authorization"),
+    });
+    return response({ data: { queued: true } });
+  });
+  await client.restore();
+  const paths = [identity.id, identity.workspaceId].map(
+    (id) => `/api/v1/resume/${id}/tailoring`,
+  );
+  await Promise.all(
+    paths.map((path) => client.requestApi(path, { method: "POST" })),
+  );
+  assert.equal(refreshes, 2);
+  assert.equal(submissions.length, 2);
+  assert.ok(
+    submissions.every((s) => s.authorization === `Bearer ${"b".repeat(64)}`),
+  );
+});

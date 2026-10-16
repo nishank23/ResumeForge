@@ -2,8 +2,12 @@ import { z } from "zod";
 import { containsTerm } from "@resume-forge/resume-core";
 import {
   applyTailoringPreview,
+  tailoringFactsSchema,
+  tailoringAnswerIssue,
+  tailoringSectionId,
   type EditorDocument,
   type TailoringChange,
+  type TailoringFact,
 } from "@resume-forge/shared-types";
 import { ResumeError } from "../contracts.js";
 import { assertContactFree, plain } from "../ats/rewrite.js";
@@ -66,8 +70,94 @@ function professionalOnly(text: string, doc: EditorDocument) {
 }
 
 /** Complete visible prose, with opaque IDs and entry-local professional context. No source/header/contact projection. */
-export function fullTailoringSource(doc: EditorDocument) {
-  const fields = tailoringFields(doc);
+export interface TailoringEvidence {
+  additionalFacts?: TailoringFact[];
+  complete?: boolean;
+}
+function factEntry(doc: EditorDocument, fact: TailoringFact) {
+  const entry = doc.sections
+    .find(
+      (s) =>
+        s.id === fact.sectionId &&
+        !s.hidden &&
+        ["experience", "projects"].includes(s.kind),
+    )
+    ?.entries.find((e) => e.id === fact.itemId && !e.hidden);
+  if (!entry)
+    throw new ResumeError(
+      "invalid_input",
+      "An experience answer targets an unavailable entry. Reopen the saved resume.",
+    );
+  return entry;
+}
+export function validateAdditionalFacts(
+  doc: EditorDocument,
+  input: TailoringFact[],
+) {
+  const facts = tailoringFactsSchema.parse(input);
+  for (const fact of facts) {
+    const issue = tailoringAnswerIssue(fact.text);
+    if (issue) throw new ResumeError("invalid_input", issue);
+    factEntry(doc, fact);
+    professionalOnly(fact.text, doc);
+    if (
+      fact.kind === "tools" &&
+      (fact.text.length > 500 ||
+        fact.text
+          .split(/[,;\n]/)
+          .some((v) => !v.trim() || v.trim().length > 60))
+    )
+      throw new ResumeError(
+        "invalid_input",
+        "List actual tools separated by commas, using 60 characters or fewer per tool.",
+      );
+  }
+  return facts;
+}
+export function fullTailoringSource(
+  doc: EditorDocument,
+  evidence: TailoringEvidence = {},
+) {
+  const additionalFacts = validateAdditionalFacts(
+    doc,
+    evidence.additionalFacts ?? [],
+  );
+  const fields = tailoringFields(doc, additionalFacts.length > 0);
+  for (const f of additionalFacts) {
+    if (
+      fields.some(
+        (v) =>
+          v.target.type === "entry" &&
+          v.target.sectionId === f.sectionId &&
+          v.target.itemId === f.itemId &&
+          v.field === "description",
+      )
+    )
+      continue;
+    const entry = factEntry(doc, f);
+    fields.push({
+      id: `additional-description-${String(fields.length)}`,
+      field: "description",
+      label: `${entry.title || "Experience"} · Description`,
+      original: plain(entry.description),
+      target: { type: "entry", sectionId: f.sectionId, itemId: f.itemId },
+    });
+  }
+  if (
+    evidence.complete &&
+    !doc.sections.some((s) => !s.hidden && s.kind === "summary") &&
+    doc.sections.length < 30
+  )
+    fields.unshift({
+      id: "added-summary",
+      field: "summary",
+      label: "Professional summary",
+      original: "",
+      target: {
+        type: "section",
+        sectionId: tailoringSectionId(doc, "summary"),
+      },
+    });
   for (const s of doc.sections.filter(
     (s) => !s.hidden && s.kind === "summary",
   )) {
@@ -83,24 +173,41 @@ export function fullTailoringSource(doc: EditorDocument) {
   const entryScopes = new Map<string, string>();
   for (const f of fields)
     if (f.target.type === "entry") {
-      const key = `${f.target.sectionId}:${f.target.itemId}`;
+      const key = JSON.stringify([f.target.sectionId, f.target.itemId]);
       if (!entryScopes.has(key))
         entryScopes.set(key, `entry-${String(entryScopes.size)}`);
     }
   const scope = (f: (typeof fields)[number]) => {
     if (f.target.type !== "entry") return "summary";
-    const value = entryScopes.get(`${f.target.sectionId}:${f.target.itemId}`);
+    const value = entryScopes.get(
+      JSON.stringify([f.target.sectionId, f.target.itemId]),
+    );
     if (!value) throw new ResumeError("invalid_input");
     return value;
   };
   const facts = fields
     .filter((f) => f.original.trim())
-    .map((f) => ({ id: f.id, scope: scope(f), text: f.original }));
+    .map((f) => ({
+      id: f.id,
+      scope: scope(f),
+      text: f.original,
+      origin: "saved-resume",
+    }));
+  additionalFacts.forEach((f, index) => {
+    const entryScope = entryScopes.get(JSON.stringify([f.sectionId, f.itemId]));
+    if (!entryScope) throw new ResumeError("invalid_input");
+    facts.push({
+      id: `confirmed-${String(index)}`,
+      scope: entryScope,
+      text: f.text,
+      origin: "user-confirmed",
+    });
+  });
   const contexts: { scope: string; kind: string; facts: string[] }[] = [];
   for (const s of doc.sections.filter((s) => !s.hidden)) {
     if (["experience", "projects"].includes(s.kind))
       for (const e of s.entries.filter((e) => !e.hidden)) {
-        const entryScope = entryScopes.get(`${s.id}:${e.id}`);
+        const entryScope = entryScopes.get(JSON.stringify([s.id, e.id]));
         if (!entryScope) continue;
         if (!fields.some((f) => scope(f) === entryScope)) continue;
         const ids: string[] = [];
@@ -111,7 +218,7 @@ export function fullTailoringSource(doc: EditorDocument) {
         ] as const)
           if (text.trim()) {
             const id = `context-${String(contexts.length)}-${key}`;
-            facts.push({ id, scope: entryScope, text });
+            facts.push({ id, scope: entryScope, text, origin: "saved-resume" });
             ids.push(id);
           }
         contexts.push({ scope: entryScope, kind: s.kind, facts: ids });
@@ -123,6 +230,7 @@ export function fullTailoringSource(doc: EditorDocument) {
             id: `skill-${String(facts.length)}`,
             scope: "skills",
             text: i.text,
+            origin: "saved-resume",
           });
   }
   for (const f of facts) professionalOnly(f.text, doc);
@@ -143,6 +251,11 @@ export function fullTailoringSource(doc: EditorDocument) {
         scope: scope(f),
         original: f.original,
         kind: f.field === "summary" ? "summary" : "description",
+        expandable:
+          f.field === "description" &&
+          facts.some(
+            (p) => p.scope === scope(f) && p.origin === "user-confirmed",
+          ),
       })),
       facts,
       contexts,
@@ -157,8 +270,9 @@ export type FullTailoringSource = ReturnType<
 export function inspectFullDraft(
   doc: EditorDocument,
   output: FullTailoringOutput,
+  evidence: TailoringEvidence = {},
 ) {
-  const source = fullTailoringSource(doc),
+  const source = fullTailoringSource(doc, evidence),
     rows = fullTailoringOutputSchema.parse(output).changes;
   if (
     rows.length !== source.fields.length ||
@@ -185,7 +299,7 @@ export function inspectFullDraft(
         /[<>]/.test(row.proposed) ||
         new Set(row.facts).size !== row.facts.length ||
         cited.length !== row.facts.length ||
-        (scope !== "summary" && !row.facts.includes(f.id))
+        (scope !== "summary" && f.original.trim() && !row.facts.includes(f.id))
       )
         throw new Error();
       professionalOnly(row.proposed, doc);
@@ -197,12 +311,19 @@ export function inspectFullDraft(
         throw new Error();
       if (
         scope !== "summary" &&
+        !providerField.expandable &&
         row.proposed.split("\n").length !== f.original.split("\n").length
       )
         throw new Error();
       if (f.field.startsWith("bullet:") && row.proposed.length > 2000)
         throw new Error();
       const supported = cited.map((p) => p.text).join("\n");
+      if (
+        providerField.expandable &&
+        row.proposed.split("\n").length >
+          Math.max(8, f.original.split("\n").length)
+      )
+        throw new Error();
       if (numbers(row.proposed).some((n) => !numbers(supported).includes(n)))
         throw new Error();
       if (
@@ -238,9 +359,10 @@ export function verifiedFullChanges(
   jd: string,
   output: FullTailoringOutput,
   verification: TailoringVerification,
+  evidence: TailoringEvidence = {},
 ) {
-  const source = fullTailoringSource(doc),
-    inspected = inspectFullDraft(doc, output);
+  const source = fullTailoringSource(doc, evidence),
+    inspected = inspectFullDraft(doc, output, evidence);
   const checks = tailoringVerificationSchema.parse(verification).checks;
   if (
     checks.length !== source.fields.length ||
@@ -281,6 +403,72 @@ export function verifiedFullChanges(
       },
     ];
   });
+  const toolFacts = (evidence.additionalFacts ?? []).filter(
+    (f) => f.kind === "tools",
+  );
+  for (const fact of toolFacts) {
+    const entry = factEntry(doc, fact);
+    const tools = fact.text.split(/[,;\n]/).map((v) => v.trim());
+    const existing = entry.technologies
+      .split(/[,;\n]/)
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const added = tools.filter(
+      (t) => !existing.some((v) => v.toLowerCase() === t.toLowerCase()),
+    );
+    const proposed = [...existing, ...added].join(", ");
+    if (added.length && proposed.length <= 500)
+      edits.push({
+        id: `confirmed-tools-${String(edits.length)}`,
+        kind: "text",
+        target: {
+          type: "entry",
+          sectionId: fact.sectionId,
+          itemId: fact.itemId,
+        },
+        field: "technologies",
+        label: `${entry.title || "Experience"} · Tools`,
+        original: entry.technologies,
+        proposed,
+        facts: [
+          `confirmed-${String((evidence.additionalFacts ?? []).indexOf(fact))}`,
+        ],
+        evidence: [fact.text],
+      });
+  }
+  const skillSection = doc.sections.find(
+    (s) => !s.hidden && s.kind === "skills",
+  );
+  const existingSkills = new Set(
+    doc.sections
+      .filter((s) => s.kind === "skills")
+      .flatMap((s) =>
+        s.groups.flatMap((g) => g.items.map((i) => i.text.toLowerCase())),
+      ),
+  );
+  const newSkills = [
+    ...new Set(
+      toolFacts.flatMap((f) => f.text.split(/[,;\n]/).map((t) => t.trim())),
+    ),
+  ].filter((t) => !existingSkills.has(t.toLowerCase()));
+  if (newSkills.length && (skillSection || doc.sections.length < 29))
+    edits.push({
+      id: "confirmed-skills",
+      kind: "text",
+      target: {
+        type: "section",
+        sectionId: skillSection?.id ?? tailoringSectionId(doc, "skills"),
+      },
+      field: "skills",
+      label: "Skills · confirmed tools",
+      original: "",
+      proposed: newSkills.join("\n"),
+      facts: toolFacts.map(
+        (f) =>
+          `confirmed-${String((evidence.additionalFacts ?? []).indexOf(f))}`,
+      ),
+      evidence: toolFacts.map((f) => f.text),
+    });
   const preview = applyTailoringPreview(
     doc,
     edits,
@@ -293,16 +481,28 @@ export function verifiedFullChanges(
     0,
   );
   return {
-    changes: [...edits, ...orderingChanges(preview, jd, true)],
+    changes: [
+      ...edits,
+      ...orderingChanges(preview, jd, true).filter(
+        (c) =>
+          c.kind !== "order" ||
+          (c.scope === "sections"
+            ? preview.sections.length === doc.sections.length
+            : c.scope !== "skills" || !newSkills.length),
+      ),
+    ],
     quality: {
       sourceWords,
       proposedWords,
       fieldsChecked: source.fields.length,
-      fieldsRewritten: edits.length,
+      fieldsRewritten: edits.filter(
+        (c) =>
+          c.kind === "text" && !["technologies", "skills"].includes(c.field),
+      ).length,
       retainedOriginal: retained.size,
     },
     warnings: [
-      ...(sourceWords < 150
+      ...(sourceWords < 150 && !evidence.additionalFacts?.length
         ? [
             "This source has fewer than 150 professional words. Add your actual responsibilities, tools and results in the editor, save, then tailor again. AI cannot invent missing experience to fill a page.",
           ]

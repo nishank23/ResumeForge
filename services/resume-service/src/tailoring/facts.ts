@@ -17,7 +17,7 @@ import {
   validateChanges,
 } from "../ats/rewrite.js";
 
-export function tailoringFields(doc: EditorDocument) {
+export function tailoringFields(doc: EditorDocument, allowEmpty = false) {
   const fields = doc.sections
     .filter((s) => !s.hidden)
     .flatMap((s) => {
@@ -47,7 +47,7 @@ export function tailoringFields(doc: EditorDocument) {
       );
     })
     .map((f, index) => ({ ...f, id: `fact-${String(index)}` }));
-  if (!fields.length)
+  if (!fields.length && !allowEmpty)
     throw new ResumeError(
       "invalid_input",
       "Add a saved professional summary, experience or project description first.",

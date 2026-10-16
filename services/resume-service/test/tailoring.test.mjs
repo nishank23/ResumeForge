@@ -247,11 +247,13 @@ test("tailored descriptions retain imported bullet-list layout and all source fi
  const result=verifiedFullChanges(d,jd,out,passed(source)),next=applyTailoringPreview(d,result.changes,result.changes.map(c=>c.id));
  assert.deepEqual(d,before);assert.deepEqual(next.header,d.header);assert.deepEqual(next.sections.find(s=>s.id===d.sections[2].id),d.sections[2]);assert.equal(next.sections[1].entries[0].description.content[0].type,"bulletList");assert.equal(next.sections[1].entries[0].description.content[0].content.length,2);
 });
-test("Gemini full writer and fact review use approved Flash with medium thinking, preserving the Lite small-edit model",async()=>{
+test("Gemini uses low thinking for the initial draft and medium thinking for fact review and repair",async()=>{
  const source=fullTailoringSource(draft()).provider,output=fullOutput(draft()),calls=[];
  const p=createAiProviders({geminiKey:"TEST",paidGemini:true},async(url,options)=>{const body=JSON.parse(options.body);calls.push({url,body});return new Response(JSON.stringify({candidates:[{finishReason:"STOP",content:{parts:[{thought:true,text:"private reasoning"},{text:JSON.stringify(calls.length===1?output:passed(source))}]}}]}));});
  assert.deepEqual(await p.tailor(source,{terms:["Python"],responsibilities:["Build APIs"]}),output);await p.verifyTailoring(source,output);
- assert.equal(GEMINI_MODEL,"gemini-3.5-flash-lite");assert.equal(TAILORING_MODEL,"gemini-3.8-flash");assert.ok(calls.every(c=>c.url.includes(TAILORING_MODEL)&&c.body.generationConfig.thinkingConfig.thinkingLevel==="medium"));
+ assert.equal(GEMINI_MODEL,"gemini-3.5-flash-lite");assert.equal(TAILORING_MODEL,"gemini-3.8-flash");assert.ok(calls.every(c=>c.url.includes(TAILORING_MODEL)));
+ assert.deepEqual(calls.map(c=>c.body.generationConfig.thinkingConfig.thinkingLevel),["low","medium"]);
+ assert.ok(calls.every(c=>c.body.generationConfig.maxOutputTokens===24000));
  assert.ok(calls[0].body.systemInstruction.parts[0].text.includes("Never invent"));assert.ok(calls[1].body.systemInstruction.parts[0].text.includes("independently"));
  const denied=createAiProviders({geminiKey:"TEST",paidGemini:false},async()=>{throw Error("must not call");});await assert.rejects(denied.tailor(source,{terms:[],responsibilities:[]}));
  const bad=createAiProviders({geminiKey:"TEST",paidGemini:true},async()=>new Response(JSON.stringify({candidates:[{finishReason:"MAX_TOKENS",content:{parts:[{text:JSON.stringify(output)}]}}]})));await assert.rejects(bad.tailor(source,{terms:[],responsibilities:[]}));
@@ -270,4 +272,15 @@ test("professional section ordering preserves every section and hidden position,
  assert.deepEqual(new Set(next.sections.map(s=>s.id)),new Set(d.sections.map(s=>s.id)));assert.deepEqual(next.sections.find(s=>s.id===d.sections[1].id),d.sections[1]);
  assert.deepEqual(applyTailoringPreview(d,[order],[]),d);
  assert.throws(()=>applyTailoringPreview(d,[{...order,proposedIds:["forged"]}],[order.id]));
+});
+
+
+test("full-tailoring correction retains medium thinking and independent output validation",async()=>{
+ const source=fullTailoringSource(draft()).provider,output=fullOutput(draft()),calls=[];
+ const provider=createAiProviders({geminiKey:"TEST",paidGemini:true},async(url,options)=>{
+  calls.push(JSON.parse(options.body));
+  return new Response(JSON.stringify({candidates:[{finishReason:"STOP",content:{parts:[{text:JSON.stringify(output)}]}}]}));
+ });
+ await provider.tailor(source,{terms:["Python"],responsibilities:[]},{previous:output,review:passed(source)});
+ assert.equal(calls[0].generationConfig.thinkingConfig.thinkingLevel,"medium");
 });

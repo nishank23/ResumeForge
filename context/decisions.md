@@ -14,6 +14,8 @@
 
 - The user approved Gemini 3.8 Flash for complete JD tailoring on 2026-10-14. Use medium thinking, independent fact/coverage review and one bounded correction pass. Keep Flash-Lite for small edits/semantic analysis. Preserve supported source detail instead of padding a page or promising 100 ATS. Existing private paid Gemini settings suffice.
 
+- On 2026-10-15 the user approved guided experience collection, explicit fact confirmation and fuller tailoring from those facts. Keep facts resume-local and entry-scoped; use existing Gemini 3.8 Flash and unchanged readiness/JD rubrics. No automatic master-profile merge or guaranteed score.
+
 ## Proposed on 2026-10-14
 
 [PLAN.md](../PLAN.md) records the approved first tailoring slice and later personal tracking, subscriptions/credits, cover-letter/message drafts, URL JD intake and DOCX output. Later phases remain planned scope.

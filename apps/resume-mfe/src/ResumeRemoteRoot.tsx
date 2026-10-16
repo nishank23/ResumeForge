@@ -1,6 +1,7 @@
 import type {
   RewriteTarget,
   RewriteProposal,
+  TailoringFact,
 } from "@resume-forge/shared-types";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
@@ -75,8 +76,22 @@ export function ResumeRemoteRoot({
             tailoring: {
               load: (signal?: AbortSignal) =>
                 api.tailoring(readinessId, signal),
-              start: (id: string, text: string) =>
-                api.startTailoring(readinessId, readinessVersion, id, text),
+              analyze: (text: string) =>
+                api.runJdMatch(
+                  readinessId,
+                  readinessVersion,
+                  text,
+                  false,
+                  false,
+                ),
+              start: (id: string, text: string, facts: TailoringFact[]) =>
+                api.startTailoring(
+                  readinessId,
+                  readinessVersion,
+                  id,
+                  text,
+                  facts,
+                ),
               cancel: (id: string) => api.cancelTailoring(readinessId, id),
               apply: (id: string, selected: string[], title: string) =>
                 api.applyTailoring(

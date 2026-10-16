@@ -3,6 +3,7 @@ import {
   tailoringStateSchema,
   rewriteProposalSchema,
   type RewriteTarget,
+  type TailoringFact,
 } from "@resume-forge/shared-types";
 import {
   readinessStateSchema,
@@ -350,6 +351,7 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
       expectedVersion: number,
       requestId: string,
       jdText: string,
+      additionalFacts: TailoringFact[] = [],
     ) => {
       savedTarget(id, expectedVersion);
       const data = tailoringState(
@@ -358,6 +360,7 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
           expectedVersion,
           jdText,
           consent: true,
+          additionalFacts,
         }),
       );
       if (

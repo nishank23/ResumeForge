@@ -6,6 +6,8 @@ Work on **feature** in /Users/nishankbansal/Downloads/ResumeBuilderv2 for this o
 
 The user approved the first Phase 1 slice on 2026-10-14: saved-resume + pasted-JD full tailoring, review, separate-copy save and PDF, using native pnpm development. [PLAN.md](PLAN.md) defines this bounded work. Master-profile import, URL intake, DOCX, tracker, billing and outreach remain later phases, not blanket implementation authorization. The user subsequently approved Gemini 3.8 Flash for whole-source writing and independent fact/coverage review with bounded correction. Flash-Lite remains for small edits. Existing approved personal functionality stays implemented. The old context-review gate was cleared; do not ask to approve all historical context again.
 
+On 2026-10-15 the user approved guided experience questions, explicit confirmation of additional entry-local facts, and fuller tailoring from those facts. Reuse the existing paid model, version-bound proposal queue and reviewed-copy save. Master-profile import and scoring-rubric changes remain separate scope.
+
 ## Read before work
 
 1. [Product plan](PLAN.md), [current audit](docs/implementation-audit.md), [progress](context/progress-tracker.md) and [task ownership](context/development-status.md).

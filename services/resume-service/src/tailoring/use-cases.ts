@@ -172,7 +172,10 @@ export function createTailoringUseCases(options: {
       throw new AiUnavailable(
         "Configure paid Gemini before full-resume tailoring.",
       );
-    const source = fullTailoringSource(b.doc);
+    const source = fullTailoringSource(b.doc, {
+      additionalFacts: r.additionalFacts,
+      complete: true,
+    });
     const assessed = localAssessment(b.doc, r.jdText, now());
     // Provider scope contains professional prose and parsed JD context, never identity, dates or raw source files.
     assertContactFree(
@@ -201,6 +204,7 @@ export function createTailoringUseCases(options: {
         sourceVersion: r.expectedVersion,
         model: TAILORING_MODEL,
         promptVersion: TAILORING_PROMPT_VERSION,
+        additionalFacts: r.additionalFacts,
         status: "queued",
         jobTitle: assessed.jd.jobTitle,
         jdText: r.jdText,
@@ -367,7 +371,7 @@ export function createTailoringUseCases(options: {
         if (!stored) return;
         stored.lease = randomUUID();
         stored.leaseUntil =
-          now() + (stored.run.promptVersion === "tailor-v2" ? 180_000 : 60_000);
+          now() + (stored.run.promptVersion !== "tailor-v1" ? 180_000 : 60_000);
         stored.attempts++;
         stored.run.status = "drafting";
         claimed = storedSchema.parse(stored);
@@ -407,8 +411,12 @@ export function createTailoringUseCases(options: {
         );
         if (b.snapshot.id !== stored.versionId)
           throw new ResumeError("revision_conflict");
-        if (stored.run.promptVersion === "tailor-v2") {
-          const source = fullTailoringSource(b.doc),
+        if (stored.run.promptVersion !== "tailor-v1") {
+          const evidence = {
+            additionalFacts: stored.run.additionalFacts,
+            complete: stored.run.promptVersion === "tailor-v3",
+          };
+          const source = fullTailoringSource(b.doc, evidence),
             jd = localAssessment(b.doc, stored.run.jdText, now()).jd;
           if (stored.run.batchesDone === 0) {
             draft = await providers.tailor(source.provider, {
@@ -417,7 +425,7 @@ export function createTailoringUseCases(options: {
               responsibilities: jd.responsibilities,
             });
             // Validate complete coverage now; untrusted draft stays private until the independent review finishes.
-            inspectFullDraft(b.doc, draft);
+            inspectFullDraft(b.doc, draft, evidence);
           } else if (stored.run.batchesDone === 2) {
             if (!draft || !review) throw new ResumeError("invalid_input");
             const ids = review.checks
@@ -459,19 +467,25 @@ export function createTailoringUseCases(options: {
                 (c) => revised.changes.find((v) => v.field === c.field) ?? c,
               ),
             };
-            inspectFullDraft(b.doc, draft);
+            inspectFullDraft(b.doc, draft, evidence);
           } else {
             if (!draft)
               throw new ResumeError(
                 "invalid_input",
                 "The draft was lost. Start a fresh request.",
               );
-            const inspected = inspectFullDraft(b.doc, draft);
+            const inspected = inspectFullDraft(b.doc, draft, evidence);
             const verdict = await providers.verifyTailoring(source.provider, {
               changes: inspected.changes,
             });
             // One bounded repair pass. Preserve originals after a second failed review.
-            verifiedFullChanges(b.doc, stored.run.jdText, draft, verdict);
+            verifiedFullChanges(
+              b.doc,
+              stored.run.jdText,
+              draft,
+              verdict,
+              evidence,
+            );
             review = {
               checks: verdict.checks.map((c) =>
                 inspected.rejected.includes(c.field)
@@ -490,6 +504,7 @@ export function createTailoringUseCases(options: {
                 stored.run.jdText,
                 draft,
                 verdict,
+                evidence,
               );
               changes = result.changes;
               quality = result.quality;
@@ -706,6 +721,13 @@ export function createTailoringUseCases(options: {
               model: stored.run.model,
               promptVersion: stored.run.promptVersion,
               selectedIds: selected,
+              confirmedFacts: stored.run.additionalFacts.filter((_, i) =>
+                stored.run.changes.some(
+                  (c) =>
+                    selected.includes(c.id) &&
+                    c.facts.includes(`confirmed-${String(i)}`),
+                ),
+              ),
             },
             jdMatching: {
               dismissed: [],

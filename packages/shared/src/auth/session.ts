@@ -33,6 +33,7 @@ export function createSessionController(transport: SessionTransport) {
   let token: string | undefined;
   let generation = 0;
   let request: Promise<void> | undefined;
+  let refreshingGrant = false;
   let logoutBlocked = false;
   const listeners = new Set<() => void>();
   const publish = (value: SessionState) => {
@@ -50,19 +51,24 @@ export function createSessionController(transport: SessionTransport) {
       credentials: "include",
       signal: AbortSignal.timeout(10000),
     });
-  function restore(): Promise<void> {
+  function restore(forceRefresh = false): Promise<void> {
     if (logoutBlocked) return Promise.resolve();
-    if (request) return request;
+    if (request)
+      return forceRefresh && !refreshingGrant
+        ? request.then(() => restore(true))
+        : request;
     const version = generation;
+    refreshingGrant = forceRefresh;
     request = transport
       .exclusive(async () => {
         if (version !== generation) return;
         try {
-          let me = token
-            ? await call("me", {
-                headers: { Authorization: `Bearer ${token}` },
-              })
-            : undefined;
+          let me =
+            token && !forceRefresh
+              ? await call("me", {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+              : undefined;
           if (version !== generation) return;
           if (!me || me.status === 401) {
             token = undefined;
@@ -106,6 +112,7 @@ export function createSessionController(transport: SessionTransport) {
       })
       .finally(() => {
         request = undefined;
+        refreshingGrant = false;
       });
     return request;
   }
@@ -154,6 +161,15 @@ export function createSessionController(transport: SessionTransport) {
       state.identity.id === actor &&
       state.identity.workspaceId === workspace &&
       Boolean(token);
+    // Queued tailoring must start with a fresh grant, not the last seconds of
+    // an existing token. The worker still enforces its original expiry.
+    if (
+      options.method?.toUpperCase() === "POST" &&
+      /^\/api\/v1\/resume\/[a-f0-9-]{36}\/tailoring$/i.test(path)
+    ) {
+      await restore(true);
+      if (!active()) throw new Error("Session unavailable");
+    }
     const timeout = path.includes("/pdf?version=") ? 30_000 : 10_000;
     const send = () => {
       const headers = new Headers(options.headers);

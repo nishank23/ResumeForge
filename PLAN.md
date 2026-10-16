@@ -1,6 +1,6 @@
 # Forge Studio Product Roadmap
 
-Updated 2026-10-14. **The first Phase 1 slice is approved and implemented as a bounded personal workflow.** This roadmap distinguishes that delivery from follow-on intake/export work and later commercial phases.
+Updated 2026-10-15. **The first Phase 1 slice is approved and implemented as a bounded personal workflow.** This roadmap distinguishes that delivery from follow-on intake/export work and later commercial phases.
 
 ## Product goal
 
@@ -14,7 +14,7 @@ Initial delivery focuses on the individual resume workflow. Shared-workspace fea
 | --- | --- | --- |
 | Sessions and saved resumes | [Auth](services/auth-service/src/app.ts), [resume use cases](services/resume-service/src/resume.ts): Google sign-in, owned library, immutable saves, delete/undo and current saved PDF. | Hosted/distributed session setup and commercial release checks. |
 | JD analysis and scores | [JD parser](services/resume-service/src/jd-parser.ts), [JD scorer](packages/resume-core/src/jd-scoring.ts), [active ATS use cases](services/resume-service/src/ats/use-cases.ts). Fixed rules plus optional Gemini evidence. | Structured required/preferred skills, soft-skill evidence, seniority/years analysis, profile-versus-resume gaps and calibration. |
-| AI rewriting and full tailoring | [Gemini adapter](services/resume-service/src/ats/ai.ts), [batch use cases](services/resume-service/src/tailoring/use-cases.ts): selected saved fields plus Gemini 3.8 Flash whole-source writing, independent fact/coverage review, bounded correction, supported ordering and copy-save. | Synthetic calibration, optional confirmed master facts and commercial usage/cost limits. |
+| AI rewriting and full tailoring | [Gemini adapter](services/resume-service/src/ats/ai.ts), [batch use cases](services/resume-service/src/tailoring/use-cases.ts): selected saved fields plus Gemini 3.8 Flash whole-source writing, independent fact/coverage review, bounded correction, supported ordering and copy-save. | Synthetic calibration, reviewed master-profile facts and commercial usage/cost limits. |
 | Profile and import | [Profile API](services/profile-service/src/profile.ts), [file import](services/resume-service/src/upload.ts): optional basic profile UI, professional section APIs, reviewed PDF/DOCX/TXT/Markdown resume import. | Full profile-section UI and explicit reviewed master-profile import/export. Upload currently does not populate the master profile. |
 | Clone/generation/history | Legacy handlers exist in [resume use cases](services/resume-service/src/resume.ts). | Safe contracts, gateway/runtime integration and UI. Legacy `tailorResume` scores an existing resume; it is not an AI full-resume rewrite. Do not enable legacy routes wholesale. |
 | Cover letters, outreach, billing and personal job tracker | No active product flow or corresponding persisted subscription/application/cover-letter models. See [schema](packages/prisma-client/prisma/schema.prisma). | Build the proposed phases below. User-confirmed plan approval still precedes implementation. |
@@ -113,6 +113,24 @@ Design review: the evidence-and-change comparison is the distinctive element. Ke
 
 ## Delivery and next action
 
-The saved-resume + pasted-JD slice is connected: requirements/gaps and dated-years evidence, whole-source Gemini 3.8 Flash writing and independent review/correction, synthesized supported summary and section/project/achievement/skill ordering, per-proposal review, separate-copy save, recalculated checks and saved PDF. Source dates, identity, contacts, hidden content and master profile remain unchanged. Scores use the same local rubric before/after; this flow does not claim full master-profile coverage or employer ATS equivalence.
+The saved-resume + pasted-JD slice now includes optional, explicitly confirmed entry-local experience answers and reviewed summary/tool/skill additions. It is connected: requirements/gaps and dated-years evidence, whole-source Gemini 3.8 Flash writing and independent review/correction, synthesized supported summary and section/project/achievement/skill ordering, per-proposal review, separate-copy save, recalculated checks and saved PDF. Source dates, identity, contacts, hidden content and master profile remain unchanged. Scores use the same local rubric before/after; this flow does not claim full master-profile coverage or employer ATS equivalence.
 
-Next: calibrate extraction and tailoring across a synthetic role corpus, then add reviewed additional facts/master-profile intake and DOCX/export compatibility checks. URL intake, tracker, billing and outreach follow their own phases. See the [tailoring contract and manual checklist](docs/full-resume-tailoring.md) for limits and verification.
+Guided, user-confirmed experience details are now part of tailoring. Next: calibrate extraction and writing across a synthetic role corpus, then add reviewed master-profile intake and DOCX/export compatibility checks. URL intake, tracker, billing and outreach follow their own phases. See the [tailoring contract and manual checklist](docs/full-resume-tailoring.md) for limits and verification.
+
+
+## Proposed vendor extension
+
+The vendor architecture is a follow-on proposal, not an active hiring workflow or approval to expose shared data. First finish personal tailoring calibration and import/export fidelity. The current three-question worksheet is optional; users can tailor using saved evidence without completing every entry. Keep fact confirmation and proposal review.
+
+The existing Vendor/WorkspaceType schema, permission catalog, bounded PDF/DOCX parsing workers, server PDF renderer and personal audit outbox provide useful seams. They do not provide VendorCandidate, ClientSubmission, bench ranking, blind exports or client share links. Current vector retrieval is restricted to one owned resume/version, not a bench index. Audit payload hashes detect conflicting retries; they do not establish a tamper-evident event chain.
+
+Recommended order after the personal quality gate:
+
+1. Resolve vendor roles, candidate ownership/consent and contact/output permissions. Test restricted views across APIs, versions, PDFs, tasks and retrieval before activating shared access. Candidate contact and vendor internal rates require distinct field policies.
+2. Add a small bench directory: VendorCandidate, explicit availability/status, skills, authorized candidate/resume linkage and restricted internal rates. Reuse the existing workspace/service boundaries; a new service is not required by the model names alone.
+3. Add pasted-JD bench matching with permission-filtered retrieval, evidence-linked rankings, genuine gaps and recruiter review. Reuse grounded tailoring to create separate candidate-specific copies. Ranking never supplies missing qualifications.
+4. Add server-produced blind/branded PDF variants with vendor recruiter details and explicit source/version/template/privacy identity. Redact protected contact values from headers, free text, links, document metadata and historical artifacts; visual hiding is insufficient.
+5. Add ClientSubmission and manually created expiring, revocable links backed by hashed tokens. Recheck current access and allowed artifact variant. Use private object storage with retention/deletion and authorized short-lived downloads when needed; caching and backup are separate concerns.
+6. Add bulk intake scheduling, per-tenant quotas/backpressure, retry/recovery and private artifact lifecycle when the single-candidate workflow is verified. Extend submission/export/link-access audit coverage; separately design tamper evidence and external verification rather than labeling the outbox alone tamper-evident.
+
+These steps leave tracker, billing, outreach, URL ingestion and DOCX output as separate product decisions. No vendor routes, tables, grants, provider or storage dependency are activated by this assessment.

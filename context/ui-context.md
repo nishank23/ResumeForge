@@ -13,4 +13,8 @@ The approved tailoring UI is described in [PLAN.md](../PLAN.md#approved-ui-direc
 
 Navigation/page requests share Loading your workspace…; task-specific saving/analysis messages retain their actual meaning. Status text is independent from decoration. Use visible focus, full-text comparisons, keyboard navigation, mobile sheets, reduced motion and static/offscreen decorative fallbacks. No fake percentages or hidden automatic Apply.
 
+The initial page uses an inline resume blueprint, an AI node and a coordinated scan in the existing violet palette. **Your story, taking shape.** is product copy; **Loading your workspace…** is the real status. The screen spans session/federation startup and disappears immediately when the main page or recovery UI is ready. It does not suggest that a visitor's resume is being processed before sign-in. Light/dark themes, reduced motion, hidden-tab pause and a slow-load reload link are supported. [Implementation and verification](../docs/cold-start-loading.md#resume-system-loading-design--2026-10-15).
+
 The user approved the first tailoring slice. Its evidence/review/export dialog is connected using the current theme, not a new color redesign. [Contract and manual checks](../docs/full-resume-tailoring.md).
+
+Tailoring optional details uses one locally selected question at a time, at most three total. Keep saved excerpts and added answers collapsed, preserve Back/Skip/edit, and retain the explicit grouped fact confirmation before provider processing. Detailed saved evidence can skip questions. Processing replaces the questionnaire/ledger with actual stage status.

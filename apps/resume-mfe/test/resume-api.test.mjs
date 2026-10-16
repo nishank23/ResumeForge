@@ -17,7 +17,7 @@ const tailoringFixture = () => ({
   currentVersion: 1, available: true,
   run: {
     id: "33333333-3333-4333-8333-333333333333", sourceVersion: 1, status: "ready",
-    model: "gemini-3.8-flash", promptVersion: "tailor-v2",
+    model: "gemini-3.8-flash", promptVersion: "tailor-v2", additionalFacts: [],
     quality: { sourceWords: 200, proposedWords: 210, fieldsChecked: 5, fieldsRewritten: 4, retainedOriginal: 1 }, warnings: ["Kept one original field."],
     jobTitle: "Backend Engineer", jdText: "Backend Engineer. Build Python APIs and PostgreSQL systems for operations.",
     requirements: [], responsibilities: [], createdAt: "2026-10-14T18:00:00.000Z", expiresAt: "2026-10-14T18:30:00.000Z",

@@ -8,19 +8,34 @@ import {
 import {
   applyTailoringPreview,
   type TailoringState,
+  type TailoringFact,
+  type JdState,
 } from "@resume-forge/shared-types";
 import type { SavedResume } from "./resume-api";
 import type { ResumeDraft } from "./editor-draft";
 import { RewriteTextChange } from "./RewriteTextChange";
 import { ResumePage } from "./ResumePage";
 import { ResumeDocument } from "./ResumeDocument";
+import { TailoringExperience } from "./TailoringExperience";
+import {
+  confirmExperience,
+  experienceEntries,
+  experiencePrompts,
+  experienceQuestionLabel,
+  type ExperienceAnswer,
+} from "./tailoring-experience";
 import { appearanceVariables, DEFAULT_APPEARANCE } from "./editor-appearance";
 import "./improve-with-ai.css";
 import "./tailoring.css";
 
 export interface TailoringServices {
   load: (signal?: AbortSignal) => Promise<TailoringState>;
-  start: (id: string, text: string) => Promise<TailoringState>;
+  analyze: (text: string) => Promise<JdState>;
+  start: (
+    id: string,
+    text: string,
+    facts: TailoringFact[],
+  ) => Promise<TailoringState>;
   cancel: (id: string) => Promise<TailoringState>;
   apply: (
     id: string,
@@ -51,14 +66,21 @@ export function TailoringDialog({
     [text, setText] = useState(initialJd),
     [selected, setSelected] = useState<string[]>([]),
     [title, setTitle] = useState(`${base.title} · tailored`.slice(0, 200)),
-    [step, setStep] = useState<"job" | "evidence" | "review" | "export">("job"),
+    [step, setStep] = useState<
+      "job" | "experience" | "evidence" | "review" | "export"
+    >("job"),
+    [preparation, setPreparation] = useState<JdState | null>(null),
+    [answers, setAnswers] = useState<ExperienceAnswer[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [copyId, setCopyId] = useState<string | null>(null);
   const live = useRef(true),
+    stages = useRef<HTMLElement>(null),
+    previousStep = useRef(step),
     submitted = useRef(false),
     initializedRun = useRef(""),
     initializedChoices = useRef(""),
+    initializedSaved = useRef(""),
     requestId = useRef<string | null>(null);
   const run = state?.run,
     running = run?.status === "queued" || run?.status === "drafting";
@@ -68,14 +90,30 @@ export function TailoringDialog({
     (run.sourceVersion !== savedVersion ||
       Date.now() > Date.parse(run.expiresAt));
   const blocked = busy || !!disabledReason || stale;
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    stages.current?.focus({ preventScroll: true });
+    stages.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [step]);
   const acceptState = useCallback((next: TailoringState) => {
     setState(next);
     if (next.run?.id !== initializedRun.current && next.run) {
       initializedRun.current = next.run.id;
       setText(next.run.jdText);
       setCopyId(next.run.copyId);
+      setAnswers(
+        next.run.additionalFacts.map(
+          ({ confirmed: _confirmed, ...fact }) => fact,
+        ),
+      );
+      if (["queued", "drafting"].includes(next.run.status)) setStep("evidence");
     }
-    if (next.run?.status === "saved") {
+    if (
+      next.run?.status === "saved" &&
+      initializedSaved.current !== next.run.id
+    ) {
+      initializedSaved.current = next.run.id;
       setCopyId(next.run.copyId);
       setStep("export");
     }
@@ -140,6 +178,13 @@ export function TailoringDialog({
     if (!run || stale || run.status !== "ready") return base;
     return applyTailoringPreview(base, run.changes, selected);
   }, [base, run, selected, stale]);
+  const missing =
+    preparation?.evaluation?.keywords
+      .filter((k) => !k.matched)
+      .map((k) => k.term) ??
+    run?.before.missing ??
+    [];
+  const pendingAnswers = answers.filter((a) => a.text.trim());
   const mutate = async (operation: () => Promise<TailoringState | null>) => {
     if (submitted.current) return;
     submitted.current = true;
@@ -171,10 +216,45 @@ export function TailoringDialog({
     const id = requestId.current ?? crypto.randomUUID();
     requestId.current = id;
     void mutate(async () => {
-      const next = await services.start(id, text);
+      const facts = confirmExperience(base, answers);
+      const next = await services.start(id, text, facts);
       requestId.current = null;
+      setPreparation(null);
       setStep("evidence");
       return next;
+    });
+  };
+  const analyze = () => {
+    if (
+      running ||
+      busy ||
+      disabledReason ||
+      text.trim().length < 50 ||
+      text.length > 12000
+    )
+      return;
+    void mutate(async () => {
+      const next = await services.analyze(text);
+      if (
+        next.currentVersion !== savedVersion ||
+        !next.evaluation ||
+        next.evaluation.resumeVersion !== savedVersion
+      )
+        throw new Error(
+          "Your saved version changed. Reopen the resume before tailoring.",
+        );
+      if (live.current) {
+        setPreparation(next);
+        setStep(
+          experiencePrompts(
+            base,
+            next.evaluation.keywords.map((k) => k.term),
+          ).length
+            ? "experience"
+            : "evidence",
+        );
+      }
+      return null;
     });
   };
   const save = () => {
@@ -182,6 +262,7 @@ export function TailoringDialog({
     void mutate(async () => {
       const copy = await services.apply(run.id, selected, title);
       if (live.current) {
+        initializedSaved.current = run.id;
         setCopyId(copy.id);
         setStep("export");
         setState((previous) =>
@@ -221,12 +302,46 @@ export function TailoringDialog({
               Cancel tailoring
             </Button>
           ) : null}
+          {step === "experience" && preparation && !running ? (
+            <Button
+              disabled={busy || !!disabledReason}
+              onClick={() => {
+                try {
+                  confirmExperience(base, answers);
+                  setError("");
+                  setStep("evidence");
+                } catch (e) {
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "Check the details you added.",
+                  );
+                }
+              }}
+            >
+              {pendingAnswers.length
+                ? "Review added facts"
+                : "Continue with saved facts"}
+            </Button>
+          ) : null}
+          {step === "evidence" && preparation && !running ? (
+            <Button
+              disabled={busy || !!disabledReason || !state?.available}
+              onClick={start}
+            >
+              {busy
+                ? "Starting tailoring…"
+                : pendingAnswers.length
+                  ? "Confirm facts and tailor"
+                  : "Tailor with saved facts"}
+            </Button>
+          ) : null}
           {step === "review" && run?.status === "ready" ? (
             <Button disabled={blocked || !title.trim()} onClick={save}>
               {busy ? "Saving…" : "Save tailored resume"}
             </Button>
           ) : null}
-          {copyId ? (
+          {copyId && step === "export" ? (
             <Button
               onClick={() => {
                 services.openCopy(copyId);
@@ -238,34 +353,44 @@ export function TailoringDialog({
         </>
       }
     >
-      <nav className="rf-tailoring-stages" aria-label="Tailoring stages">
-        {(["job", "evidence", "review", "export"] as const).map((s, i) => (
-          <button
-            key={s}
-            aria-current={step === s ? "step" : undefined}
-            disabled={
-              busy ||
-              (s === "evidence" && !run) ||
-              (s === "review" && run?.status !== "ready") ||
-              (s === "export" && !copyId)
-            }
-            onClick={() => {
-              setStep(s);
-            }}
-          >
-            <span aria-hidden="true">{i + 1}</span>
-            {s === "job"
-              ? "Job description"
-              : s === "evidence"
-                ? "Evidence"
-                : s === "review"
-                  ? "Review"
-                  : "Export"}
-          </button>
-        ))}
+      <nav
+        ref={stages}
+        tabIndex={-1}
+        className="rf-tailoring-stages"
+        aria-label="Tailoring stages"
+      >
+        {(["job", "experience", "evidence", "review", "export"] as const).map(
+          (s, i) => (
+            <button
+              key={s}
+              aria-current={step === s ? "step" : undefined}
+              disabled={
+                busy ||
+                (s === "experience" && !preparation && !run) ||
+                (s === "evidence" && !run && !preparation) ||
+                (s === "review" && run?.status !== "ready") ||
+                (s === "export" && !copyId)
+              }
+              onClick={() => {
+                setStep(s);
+              }}
+            >
+              <span aria-hidden="true">{i + 1}</span>
+              {s === "job"
+                ? "Job description"
+                : s === "experience"
+                  ? "Optional details"
+                  : s === "evidence"
+                    ? "Confirm facts"
+                    : s === "review"
+                      ? "Review"
+                      : "Export"}
+            </button>
+          ),
+        )}
       </nav>
       {disabledReason ? <p role="status">{disabledReason}</p> : null}
-      {stale ? (
+      {stale && (!preparation || step === "review") ? (
         <p role="status">
           Source version changed or suggestions expired. Start a fresh request
           from the Job description stage.
@@ -279,12 +404,15 @@ export function TailoringDialog({
       {running ? (
         <div className="rf-tailoring-progress" role="status">
           <RequestFeedback
+            key={`${run.status}:${String(run.batchesDone)}`}
             label={
-              run.status === "queued"
-                ? "Tailoring queued"
-                : run.promptVersion === "tailor-v2" &&
+              run.status === "queued" && run.batchesDone === 0
+                ? "Preparing your tailored resume"
+                : run.promptVersion !== "tailor-v1" &&
                     [1, 3].includes(run.batchesDone)
-                  ? "Checking facts and source coverage"
+                  ? run.batchesDone === 3
+                    ? "Final fact and coverage check"
+                    : "Checking facts and source coverage"
                   : run.batchesDone === 2
                     ? "Refining wording after fact review"
                     : "Writing your role-targeted resume"
@@ -297,28 +425,27 @@ export function TailoringDialog({
           </p>
         </div>
       ) : null}
-      {step === "job" ? (
+      {step === "job" && !running ? (
         <>
           <h3>Start with the role you want</h3>
           <p>
-            Use this saved resume as your fact source. Your original resume and
-            master profile stay unchanged.
+            Start with your saved resume. Add missing professional details
+            before Gemini writes a tailored copy. Your original and master
+            profile stay unchanged.
           </p>
           <StudioPrompt
             label="Target job description"
             value={text}
             onChange={(v) => {
               setText(v);
+              setPreparation(null);
               requestId.current = null;
             }}
             placeholder="Paste the role, responsibilities and required skills"
             disabled={busy || running}
             submitLabel={
-              run?.status === "failed" || stale
-                ? "Retry tailoring with Gemini"
-                : "Create full-resume suggestions"
+              busy ? "Checking job requirements…" : "Find gaps and continue"
             }
-            submitSparkle
             submitDisabled={
               busy ||
               running ||
@@ -327,18 +454,16 @@ export function TailoringDialog({
               text.trim().length < 50 ||
               text.length > 12000
             }
-            onSubmit={start}
+            onSubmit={analyze}
           />
           <p className="rf-ai-scope">
-            Create suggestions sends visible professional descriptions,
-            achievements, role titles, listed skills/tools and job requirements
-            to Gemini 3.8 Flash. Identity, contacts, dates, hidden content and
-            source files are excluded. Review every proposal before saving.
+            This first check uses local rules. Gemini receives professional
+            facts only after you confirm the next step. Identity, contacts,
+            dates, hidden content and source files are excluded.
           </p>
           <p className="rf-tool-hint">
-            Use your complete uploaded CV as the source. Add missing real
-            responsibilities and results in the editor, save, then tailor.
-            Resume length and JD match depend on your evidence.
+            Have a short resume? Describe work you left out in the next step.
+            Resume length and JD match depend on your actual evidence.
           </p>
           {state && !state.available ? (
             <p role="status">
@@ -348,12 +473,105 @@ export function TailoringDialog({
           ) : null}
         </>
       ) : null}
-      {step === "evidence" && run ? (
+      {step === "experience" && !running ? (
+        <TailoringExperience
+          doc={base}
+          answers={answers}
+          terms={
+            preparation?.evaluation?.keywords.map((k) => k.term) ??
+            run?.requirements.map((k) => k.name) ??
+            []
+          }
+          disabled={busy || running || !!disabledReason || !preparation}
+          onChange={(next) => {
+            setAnswers(next);
+            setError("");
+            requestId.current = null;
+          }}
+        />
+      ) : null}
+      {step === "evidence" && !running ? (
+        <div className="rf-experience-confirm">
+          <h3>
+            {preparation
+              ? "Check the facts you want to add"
+              : "Facts used for this tailoring"}
+          </h3>
+          <p>
+            {pendingAnswers.length
+              ? "Confirm that these details describe your own work. They will be used only for this tailored copy, with their original role or project."
+              : "No additional facts. Tailoring will use your saved professional experience only."}
+          </p>
+          {experienceEntries(base)
+            .filter((e) =>
+              pendingAnswers.some(
+                (a) => a.sectionId === e.sectionId && a.itemId === e.itemId,
+              ),
+            )
+            .map((entry) => (
+              <section className="rf-experience-confirm-row" key={entry.itemId}>
+                <h4>{entry.title}</h4>
+                <dl>
+                  {pendingAnswers
+                    .filter(
+                      (a) =>
+                        a.sectionId === entry.sectionId &&
+                        a.itemId === entry.itemId,
+                    )
+                    .map((a) => (
+                      <div key={a.kind}>
+                        <dt>{experienceQuestionLabel(a.kind)}</dt>
+                        <dd>{a.text}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </section>
+            ))}
+          {preparation ? (
+            <>
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setStep("experience");
+                }}
+              >
+                Edit answers
+              </Button>
+              <div className="rf-experience-match">
+                <h4>Job match before tailoring</h4>
+                <p>
+                  {preparation.evaluation?.score ?? "Partial assessment"}
+                  {preparation.evaluation?.score != null ? "/100" : ""} using
+                  local rules.
+                </p>
+                <p>
+                  <strong>Evidence still missing:</strong>{" "}
+                  {missing.join(", ") ||
+                    "No gaps among the extracted keywords."}
+                </p>
+                <p>
+                  Unconfirmed requirements stay gaps. Final checks use only the
+                  changes you accept.
+                </p>
+              </div>
+              <p className="rf-ai-scope">
+                Confirm facts and tailor sends these answers, saved professional
+                descriptions, role titles, skills/tools and job requirements to
+                Gemini 3.8 Flash. Keep contacts, links and personal identity out
+                of answers. Review every proposal before saving.
+              </p>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {step === "evidence" && run && !preparation && !running ? (
         <div className="rf-tailoring-evidence">
           <h3>{run.jobTitle}</h3>
           <p>
-            Saved resume evidence only. A missing qualification is a gap, never
-            permission to add it.
+            The initial match uses saved resume evidence. Confirmed answers can
+            add support in the tailored copy; remaining qualifications stay
+            gaps.
           </p>
           <dl>
             <div>
@@ -476,7 +694,7 @@ export function TailoringDialog({
                       ? c.scope === "sections"
                         ? "Professional evidence moves before education; all sections and hidden positions stay intact."
                         : "Existing visible items ranked by supported JD terms."
-                      : run.promptVersion === "tailor-v2"
+                      : run.promptVersion !== "tailor-v1"
                         ? "Checked against cited professional facts and original detail coverage. Review meaning before saving."
                         : c.id === "supported-summary"
                           ? "Complete supported sentences selected from your professional entries."

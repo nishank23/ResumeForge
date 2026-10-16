@@ -1,6 +1,6 @@
 # ATS, JD matching and Gemini wording — 2026-10-09
 
-Full saved-source JD tailoring was added on 2026-10-14 through separate /tailoring routes. [Scope, queue, review-copy contract and manual checks](full-resume-tailoring.md). Full tailoring uses approved Gemini 3.8 Flash with medium thinking, complete professional fact scope, independent coverage/fact review and one bounded correction pass. Existing Flash-Lite single-target rewrite and semantic-analysis contracts below remain unchanged.
+Full saved-source JD tailoring was added on 2026-10-14 through separate /tailoring routes. [Scope, queue, review-copy contract and manual checks](full-resume-tailoring.md). Full tailoring uses approved Gemini 3.8 Flash with low thinking for initial drafting and medium thinking for independent review/correction, complete professional fact scope, independent coverage/fact review and one bounded correction pass. Tailor-v3 adds an optional experience worksheet and explicit confirmation of entry-local facts before Gemini processing; missing summaries and confirmed tools/skills are independently reviewable additions. Existing Flash-Lite single-target rewrite and semantic-analysis contracts below remain unchanged.
 
 ## Rewrite quality — 2026-10-11
 

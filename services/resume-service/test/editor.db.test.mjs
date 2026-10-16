@@ -640,7 +640,7 @@ test("owned editor persistence through client, gateway, service and restricted P
       assert.equal(pending.status,"queued");assert.equal(pending.batchesDone,1);assert.deepEqual(pending.changes,[],"unverified draft is private");assert.equal(fullWriterCalls,calls+1,"concurrent workers respect persisted lease");
       await resumes.processTailoringJobs();
       const ready=(await a.tailoring(source.id)).run;
-      assert.equal(ready.status,"ready");assert.equal(fullReviewCalls,reviews+1);assert.equal(ready.model,"gemini-3.8-flash");assert.equal(ready.promptVersion,"tailor-v2");assert.equal(ready.quality.fieldsChecked,2);
+      assert.equal(ready.status,"ready");assert.equal(fullReviewCalls,reviews+1);assert.equal(ready.model,"gemini-3.8-flash");assert.equal(ready.promptVersion,"tailor-v3");assert.equal(ready.quality.fieldsChecked,2);
       assert.ok(ready.changes.some(c=>c.kind==="text"));assert.ok(ready.changes.some(c=>c.kind==="order"));
       await assert.rejects(b.applyTailoring(source.id,1,requestId,[],"forbidden"));
       await assert.rejects(a.applyTailoring(source.id,1,requestId,["forged"],"invalid"),e=>e.code==="invalid_input");
@@ -660,6 +660,39 @@ test("owned editor persistence through client, gateway, service and restricted P
       assert.equal(await owner.resume.count({where:{ownerUserId:alice.id}}),count+1);assert.equal(await owner.resumeVersion.count({where:{resumeId:source.id}}),1);
       await assert.rejects(a.applyTailoring(source.id,1,requestId,[],"Reviewed copy"),e=>e.code==="revision_conflict");
       const pdf=await a.download(copy.id,1);assert.equal(await pdf.slice(0,5).text(),"%PDF-");
+    });
+    await t.test("confirmed experience survives queue restart, stays entry-scoped and saves only in the reviewed copy", async () => {
+      const d=blankResume("Fictional Enrichment Person");
+      d.sections=fromResumeContent({sections:[{id:"enrich-projects",kind:"projects",label:"Projects",entries:[{id:"enrich-invoice",title:"Invoice application",description:"Built a Python invoice application."}]}]}).sections;
+      const source=await a.create(randomUUID(),d),runId=randomUUID();
+      const jd="Backend Engineer. Python and PostgreSQL required. Build invoice search APIs for operations.";
+      const facts=[{sectionId:"enrich-projects",itemId:"enrich-invoice",kind:"contribution",text:"Implemented invoice search using PostgreSQL.",confirmed:true},{sectionId:"enrich-projects",itemId:"enrich-invoice",kind:"tools",text:"PostgreSQL",confirmed:true}];
+      const calls=fullWriterCalls;
+      for(const invalid of [[{...facts[0],confirmed:false}],[{...facts[0],itemId:"forged"}],[{...facts[0],text:"fixture@example.invalid"}],[facts[0],facts[0]]]) await assert.rejects(a.startTailoring(source.id,1,randomUUID(),jd,invalid));
+      assert.equal(fullWriterCalls,calls);
+      const requested=await a.startTailoring(source.id,1,runId,jd,facts);
+      assert.deepEqual(requested.run.additionalFacts,facts);
+      await assert.rejects(a.startTailoring(source.id,1,runId,jd,[{...facts[0],text:"Different actual contribution."}]),e=>e.code==="revision_conflict");
+      await assert.rejects(b.startTailoring(source.id,1,randomUUID(),jd,facts));
+      const originalWriter=providers.tailor;
+      providers.tailor=async(input)=>({changes:input.fields.map(f=>({field:f.field,proposed:f.kind==="summary"?"Built a Python invoice application.":`${f.original}\nImplemented invoice search using PostgreSQL.`,facts:input.facts.filter(p=>f.kind==="summary"||p.scope===f.scope).map(p=>p.id)}))});
+      try {
+        const restarted=createResumeUseCases(runtime,Date.now,undefined,providers);
+        await restarted.processTailoringJobs();await restarted.processTailoringJobs();
+        const ready=(await a.tailoring(source.id)).run;
+        assert.equal(ready.status,"ready");assert.deepEqual(ready.additionalFacts,facts);
+        assert.ok(ready.changes.some(c=>c.field==="skills"));assert.ok(ready.changes.some(c=>c.field==="summary"));
+        const chosen=ready.changes.map(c=>c.id);
+        const copy=await a.applyTailoring(source.id,1,runId,chosen,"Enriched copy"),next=fromResumeContent(copy.content);
+        assert.equal(next.sections.find(s=>s.kind==="projects").entries[0].description.content[0].type,"bulletList");
+        assert.ok(next.sections.find(s=>s.kind==="skills").groups[0].items.some(i=>i.text==="PostgreSQL"));
+        assert.deepEqual((await a.load(source.id)).content,source.content);
+        assert.equal((await a.load(source.id)).currentVersion,1);
+        assert.equal((await a.applyTailoring(source.id,1,runId,chosen,"Enriched copy")).id,copy.id);
+        const stored=await owner.resume.findUnique({where:{id:copy.id}});
+        assert.deepEqual(stored.atsBreakdown.tailoringOrigin.confirmedFacts,facts);
+        const pdf=await a.download(copy.id,1);assert.equal(await pdf.slice(0,5).text(),"%PDF-");
+      } finally {providers.tailor=originalWriter;}
     });
     await t.test("tailoring cancellation, stale inputs, provider failure and restart recovery preserve the source", async () => {
       const d=blankResume("Synthetic Recovery");

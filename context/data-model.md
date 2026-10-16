@@ -167,3 +167,7 @@ All relations enforce tenant/profile scope through their parent. No Phase 6 tabl
 ## Implemented saved-source tailoring metadata
 
 `Resume.atsBreakdown.tailoring` holds bounded owned runs, source version/fingerprint, model/prompt version, stage progress, private draft/review, lease, stored validated operations, quality/warnings and idempotent copy linkage. `tailor-v2` uses Gemini 3.8 Flash and two or four stages; historical v1 defaults remain compatible. Unverified text is not a public proposal or new fact. New copies start at immutable version 1 and record source/model/prompt/selection provenance, with fresh local readiness/JD results. No new table/grant or master-profile write is required. [Detailed contract](../docs/full-resume-tailoring.md).
+
+## Confirmed tailoring evidence — 2026-10-15
+
+Tailor-v3 stores up to 30 confirmed professional answers (16,000 total characters) in each owned run's `additionalFacts`. Each answer binds a visible experience/project section and entry, question kind and explicit `confirmed: true`. Start validates target/privacy and fingerprints the complete provider fact bank with the immutable source version. Historical runs default to no additional facts. Independent copies retain only facts cited by selected proposals in `atsBreakdown.tailoringOrigin.confirmedFacts`. These are resume-local user assertions, not verified credentials or master-profile writes. No new table, migration or runtime grant is required.
