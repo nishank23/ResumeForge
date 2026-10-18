@@ -53,6 +53,31 @@ const words = (text: string) =>
   text.trim() ? text.trim().split(/\s+/).length : 0;
 const numbers = (text: string) =>
   text.match(/\b\d+(?:[.,]\d+)*\s*%?/g)?.map((v) => v.replace(/\s/g, "")) ?? [];
+const proseLines = (text: string) =>
+  text
+    .split(/\n|(?<=[.!?])\s+/)
+    .map((line) =>
+      line
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}+#%]+/gu, " ")
+        .trim(),
+    )
+    .filter((line) => line.split(/\s+/).length >= 3);
+function introducesRepeatedProse(
+  original: string,
+  proposed: string,
+  siblings: string[],
+) {
+  const before = proseLines(original),
+    after = proseLines(proposed);
+  const protectedLines = new Set(siblings.flatMap(proseLines));
+  return after.some(
+    (line) =>
+      (!before.includes(line) && protectedLines.has(line)) ||
+      after.filter((v) => v === line).length >
+        Math.max(1, before.filter((v) => v === line).length),
+  );
+}
 function professionalOnly(text: string, doc: EditorDocument) {
   assertContactFree(text, doc);
   const identity = [doc.header.firstName, doc.header.lastName]
@@ -203,7 +228,12 @@ export function fullTailoringSource(
       origin: "user-confirmed",
     });
   });
-  const contexts: { scope: string; kind: string; facts: string[] }[] = [];
+  const contexts: {
+    scope: string;
+    kind: string;
+    facts: string[];
+    achievements: string[];
+  }[] = [];
   for (const s of doc.sections.filter((s) => !s.hidden)) {
     if (["experience", "projects"].includes(s.kind))
       for (const e of s.entries.filter((e) => !e.hidden)) {
@@ -221,7 +251,16 @@ export function fullTailoringSource(
             facts.push({ id, scope: entryScope, text, origin: "saved-resume" });
             ids.push(id);
           }
-        contexts.push({ scope: entryScope, kind: s.kind, facts: ids });
+        contexts.push({
+          scope: entryScope,
+          kind: s.kind,
+          facts: ids,
+          achievements: fields
+            .filter(
+              (f) => scope(f) === entryScope && f.field.startsWith("bullet:"),
+            )
+            .map((f) => f.id),
+        });
       }
     if (s.kind === "skills")
       for (const g of s.groups)
@@ -250,7 +289,12 @@ export function fullTailoringSource(
         field: f.id,
         scope: scope(f),
         original: f.original,
-        kind: f.field === "summary" ? "summary" : "description",
+        kind:
+          f.field === "summary"
+            ? "summary"
+            : f.field.startsWith("bullet:")
+              ? "achievement"
+              : "description",
         expandable:
           f.field === "description" &&
           facts.some(
@@ -295,7 +339,7 @@ export function inspectFullDraft(
     const cited = allowed.filter((p) => row.facts.includes(p.id));
     try {
       if (
-        !row.proposed.trim() ||
+        (!row.proposed.trim() && f.original.trim()) ||
         /[<>]/.test(row.proposed) ||
         new Set(row.facts).size !== row.facts.length ||
         cited.length !== row.facts.length ||
@@ -303,6 +347,29 @@ export function inspectFullDraft(
       )
         throw new Error();
       professionalOnly(row.proposed, doc);
+      if (scope !== "summary") {
+        const siblings = source.fields.filter(
+          (other) =>
+            other.id !== f.id &&
+            source.provider.fields.find((p) => p.field === other.id)?.scope ===
+              scope,
+        );
+        // Check saved siblings too: users can reject any other proposal. Prefer
+        // standalone achievements when two proposed fields repeat a new line.
+        const protectedText = siblings.flatMap((other) => {
+          const proposed = rows.find((r) => r.field === other.id)?.proposed;
+          const preferOther =
+            other.field.startsWith("bullet:") &&
+            (f.field === "description" ||
+              source.fields.indexOf(other) < source.fields.indexOf(f));
+          return [
+            other.original,
+            ...(preferOther && proposed ? [proposed] : []),
+          ];
+        });
+        if (introducesRepeatedProse(f.original, row.proposed, protectedText))
+          throw new Error();
+      }
       if (
         scope !== "summary" &&
         /\b(?:not|never|without|no)\b/i.test(f.original) &&

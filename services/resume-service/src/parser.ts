@@ -393,6 +393,8 @@ const EMPLOYMENT =
 const LOCATION_TYPE = /\b(?:on[- ]site|remote|hybrid)\b/i;
 const TECHNOLOGIES =
   /^(?:technologies|technology|tech stack|tools)(?:\s*\/\s*(?:skills|tools))?(?:\s+used)?\s*:\s*(.*)$/i;
+const ACTION_START = /^(?:developed|built|created|managed|implemented|executed|delivered|led|designed|maintained|documented|added|supported|tested|integrated|worked|used)\b/i;
+const DEGREE = /\b(?:bachelor|master|doctor|b\.?\s?tech|m\.?\s?tech|b\.s\.|m\.s\.|b\.a\.|m\.a\.|ph\.d\.|associate|diploma|degree)/i;
 interface ParsedEntry {
   id: string;
   title: string;
@@ -451,10 +453,25 @@ function parseStructuredEntries(
       .some((l) => DATE_RANGE_REGEX.test(l));
     const titleWithDates =
       !!date && !dateOnly && line.length < 250 && !/[.!?]$/.test(line);
+    // Undated projects commonly use a short heading before bullets or a stack
+    // row. Require completed preceding content; narrative continuations stay put.
+    const next = lines[i + 1] ?? "";
+    const projectHeading =
+      kind === "projects" && entry && !metadata &&
+      entry.bullets.length > 0 && line.length <= 100 &&
+      line.split(/\s+/).length <= 12 &&
+      !/[.!?]$/.test(line) && !ACTION_START.test(line) &&
+      /^[\p{Lu}\d]/u.test(line) &&
+      (isBullet(next) || TECHNOLOGIES.test(next) ||
+        (!ACTION_START.test(next) && !/[.!?]$/.test(next) &&
+          isBullet(lines[i + 2] ?? ""))) &&
+      (TECHNOLOGIES.test(lines[i - 1] ?? "") ||
+        /[.!?]$/.test(entry.bullets.at(-1)?.text ?? ""));
     const startsEntry =
       !explicitBullet &&
       (!entry ||
         titleWithDates ||
+        projectHeading ||
         (upcoming &&
           !metadata &&
           !/[.!?]$/.test(line) &&
@@ -495,6 +512,10 @@ function parseStructuredEntries(
       };
       // Legacy project title | stack is technologies, not a project role.
       if (kind === "projects") entry.subtitle = "";
+      if (kind === "education" && parts[1] && DEGREE.test(parts[0] ?? "") && !DEGREE.test(parts[1])) {
+        entry.title = parts[1];
+        entry.subtitle = parts[0] ?? "";
+      }
       entries.push(entry);
       metadata = true;
       continue;
@@ -549,6 +570,7 @@ function parseStructuredEntries(
     }
     if (kind === "projects" && metadata && !explicitBullet && !entry.subtitle &&
       (line.includes(",") || /\b(?:Flutter|Android|React|Node\.?js|Python|Kotlin|JavaScript|TypeScript)\b/i.test(line)) &&
+      !ACTION_START.test(line) && !/[.!?]$/.test(line) &&
       !/\b(?:developer|engineer|designer|lead|project)\b/i.test(line)) {
       entry.technologies = line;
       continue;

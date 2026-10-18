@@ -255,9 +255,149 @@ test("entry IDs containing separators cannot mix confirmed evidence across entri
   );
 });
 
+test("accidental UI progress text is rejected before provider projection", () => {
+  const d = source(),
+    input = [
+      fact(
+        "contribution",
+        "3 of 4 stages complete. You can close this dialog and reopen it to check progress.",
+      ),
+    ];
+  assert.throws(() => validateAdditionalFacts(d, input), /actual work/);
+  assert.throws(
+    () => fullTailoringSource(d, { complete: true, additionalFacts: input }),
+    /actual work/,
+  );
+});
 
-test("accidental UI progress text is rejected before provider projection",()=>{
- const d=source(),input=[fact("contribution","3 of 4 stages complete. You can close this dialog and reopen it to check progress.")];
- assert.throws(()=>validateAdditionalFacts(d,input),/actual work/);
- assert.throws(()=>fullTailoringSource(d,{complete:true,additionalFacts:input}),/actual work/);
+test("provider identifies standalone achievements and keeps them visible during correction", () => {
+  const d = source();
+  d.sections[0].entries[0].bullets = [
+    {
+      id: "invoice-bullet",
+      text: "Created invoice search using Python.",
+      hidden: false,
+    },
+  ];
+  const { provider } = fullTailoringSource(d);
+  const achievement = provider.fields.find((f) =>
+    f.original.startsWith("Created invoice"),
+  );
+  assert.equal(achievement.kind, "achievement");
+  assert.ok(
+    provider.contexts
+      .find((c) => c.scope === achievement.scope)
+      .achievements.includes(achievement.field),
+  );
+});
+
+test("new descriptions cannot repeat retained achievements, even if that achievement rewrite is rejected", () => {
+  const d = source();
+  d.sections[0].entries[0].description = { type: "doc", content: [] };
+  d.sections[0].entries[0].bullets = [
+    {
+      id: "invoice-bullet",
+      text: "Created invoice search using Python.",
+      hidden: false,
+    },
+  ];
+  const before = structuredClone(d);
+  const evidence = {
+    additionalFacts: [
+      fact(
+        "contribution",
+        "Created invoice search using Python. Added invoice validation.",
+      ),
+    ],
+  };
+  const out = candidate(d, evidence);
+  const fields = fullTailoringSource(d, evidence).fields;
+  const description = fields.find(
+    (f) => f.field === "description" && f.target.itemId === "invoice",
+  );
+  const row = out.changes.find((r) => r.field === description.id);
+  row.proposed =
+    "Created invoice search using Python.\nAdded invoice validation.";
+  row.facts = ["confirmed-0"];
+  const inspected = inspectFullDraft(d, out, evidence);
+  assert.ok(inspected.rejected.includes(description.id));
+  const result = verifiedFullChanges(d, jd, out, review(d, evidence), evidence);
+  assert.ok(!result.changes.some((c) => c.id === description.id));
+  assert.deepEqual(d, before);
+  row.proposed = "Added invoice validation.";
+  const valid = verifiedFullChanges(d, jd, out, review(d, evidence), evidence);
+  assert.ok(valid.changes.some((c) => c.id === description.id));
+  const onlyDescription = applyTailoringPreview(d, valid.changes, [
+    description.id,
+  ]);
+  assert.deepEqual(
+    onlyDescription.sections[0].entries[0].bullets,
+    before.sections[0].entries[0].bullets,
+  );
+  assert.ok(
+    JSON.stringify(onlyDescription).includes("Added invoice validation."),
+  );
+});
+
+test("semantic duplication fails independent review while unchanged originals and different entries survive", () => {
+  const d = source();
+  const out = candidate(d);
+  const changed = out.changes.find((r) => r.field === "fact-0");
+  changed.proposed = "Developed a Python invoice application.";
+  const verdict = review(d);
+  verdict.checks.find((r) => r.field === changed.field).complete = false;
+  const result = verifiedFullChanges(d, jd, out, verdict);
+  assert.ok(!result.changes.some((c) => c.id === changed.field));
+  assert.ok(result.warnings.length);
+  // Identical prose in different jobs/projects is not a within-entry duplicate.
+  d.sections[0].entries[1].description = structuredClone(
+    d.sections[0].entries[0].description,
+  );
+  assert.deepEqual(inspectFullDraft(d, candidate(d)).rejected, []);
+});
+
+test("an empty description stays empty when confirmed facts only repeat its retained achievements", () => {
+  const d = source();
+  d.sections[0].entries[0].description = { type: "doc", content: [] };
+  d.sections[0].entries[0].bullets = [
+    {
+      id: "existing",
+      text: "Created invoice search using Python.",
+      hidden: false,
+    },
+  ];
+  const evidence = {
+    additionalFacts: [
+      fact("contribution", "Created invoice search using Python."),
+    ],
+  };
+  const out = candidate(d, evidence);
+  const description = fullTailoringSource(d, evidence).fields.find(
+    (f) => f.field === "description" && f.target.itemId === "invoice",
+  );
+  Object.assign(
+    out.changes.find((c) => c.field === description.id),
+    { proposed: "", facts: ["confirmed-0"] },
+  );
+  assert.deepEqual(inspectFullDraft(d, out, evidence).rejected, []);
+  const result = verifiedFullChanges(d, jd, out, review(d, evidence), evidence);
+  assert.ok(!result.changes.some((c) => c.id === description.id));
+});
+
+test("duplicate checks preserve distinct technology names rather than conflating C++ and C#", () => {
+  const d = source();
+  d.sections[0].entries[0].bullets = [
+    { id: "cpp", text: "Built C++ APIs for invoice search.", hidden: false },
+  ];
+  const evidence = {
+    additionalFacts: [
+      fact("contribution", "Built C# APIs for invoice search."),
+    ],
+  };
+  const out = candidate(d, evidence);
+  const row = out.changes.find((r) => r.field === "fact-0");
+  row.proposed =
+    "Built a Python invoice application.\nBuilt C# APIs for invoice search.";
+  row.facts = ["fact-0", "confirmed-0"];
+  assert.ok(!inspectFullDraft(d, out, evidence).rejected.includes(row.field));
 });
