@@ -168,5 +168,6 @@ export * from "./readiness.js";
 
 export * from "./jd-match.js";
 export * from "./ats-workflow.js";
+export * from "./tailoring.js";
 
 export { readinessHints } from "./readiness-hints.js";

@@ -68,8 +68,7 @@ export function generateSectionSuggestion(options: {
 
     case "quantify": {
       if (!/\b(\d+%|\$\d+|\d+\s*x|\d+\s*(?:users|clients|ms|percent))\b/i.test(suggested)) {
-        suggested = suggested.replace(/\.?$/, ", improving operational efficiency and reducing latency by 35%.");
-        reasoning = "Appended measurable performance metrics to demonstrate concrete business impact.";
+        reasoning = "Add a verified measure of impact if available. No metric was supplied, so the original content is preserved.";
       } else {
         reasoning = "Existing content already contains quantifiable achievements; refined for clarity.";
       }

@@ -20,7 +20,7 @@ These conventions govern existing code and future slices; current summaries dist
 ## React and microfrontends
 
 - Use Vite browser components, React Router, and explicit API calls. Do not introduce Next.js server/client directives or file-system route handlers.
-- Use TanStack Query for server state; include actor/workspace/resource identity in keys. Use Zustand for transient UI state, not a duplicate persistent database.
+- Current React/session controllers own browser state. Do not add TanStack Query or Zustand solely because the old target stack named them. Any future cache must include actor/workspace/resource identity; transient state must not duplicate persistent facts.
 - React Hook Form owns form interactions; shared schemas validate submissions. Handle loading, empty, error, saving, and access-denied states.
 - The shell owns global navigation/session/workspace context. Remotes do not create competing routers or silently use incompatible React instances.
 - Keep credentials and private business logic out of `VITE_*` variables and browser bundles.
@@ -56,7 +56,7 @@ These conventions govern existing code and future slices; current summaries dist
 
 ## Verification and records
 
-After implementation exists, provide workspace scripts for lint, typecheck, unit/integration tests, and production builds. Exact commands belong in the root README once real scripts are created. Do not invent passing command outputs now.
+After implementation exists, provide workspace scripts for lint, typecheck, unit/integration tests, and production builds. Use the existing root README/scripts for exact commands. Record actual current results; never invent passing outputs.
 
 Tests should exercise policy boundaries, durable workflows, contracts, and user outcomes. Prioritize cross-tenant denial, contact privacy across artifacts, version/concurrency integrity, and fault recovery over assertions that merely mirror implementation. See [validation-strategy.md](validation-strategy.md).
 

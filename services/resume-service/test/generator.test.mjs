@@ -133,15 +133,16 @@ test("generateSectionSuggestion improves impact with strong action verbs", () =>
   assert.ok(result.reasoning.includes("action verbs"));
 });
 
-test("generateSectionSuggestion quantifies achievements with measurable metrics", () => {
+test("generateSectionSuggestion never invents measurable metrics", () => {
   const result = generateSectionSuggestion({
     originalContent: "Optimized distributed caching layer across service fleet",
     action: "quantify",
     sectionKind: "experience",
   });
 
-  assert.ok(result.suggestedContent.includes("35%"));
-  assert.ok(result.reasoning.includes("measurable performance metrics"));
+  assert.equal(result.suggestedContent, result.originalContent.trim());
+  assert.ok(!result.suggestedContent.includes("35%"));
+  assert.ok(result.reasoning.includes("verified measure"));
 });
 
 test("generateSectionSuggestion tailors strictly to intersecting grounded skills without hallucination", () => {

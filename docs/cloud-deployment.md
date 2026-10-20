@@ -93,7 +93,9 @@ The archive and checksum remain root-only under `/var/backups/resumeforge`. They
 
 ## Remaining operational limits
 
-Heavy concurrency, maximum-size uploads, sustained resource use and complete restart/disaster-recovery rehearsal are unmeasured. Backup scheduling/retention and a CI deployment pipeline are not configured. The operator's live Google-backed session was verified, but account selection was not replayed by the agent.
+[Live concurrency checks](cloud-concurrency-2026-10-14.md) now cover five and ten isolated API users. Five-user ordinary work passed 120/120 requests (successful p95 681 ms). Ten-user ordinary work returned two 503s among 194 requests; eight users completed all cycles. PDF, parsing and AI each have a two-operation guard; simultaneous heavy bursts returned busy failures, and the ten-user PDF/upload sequence also had late failures with high I/O wait. No app restart/OOM was recorded. Queue/backpressure and memory/I/O tuning remain needed before claiming reliable five- or ten-user heavy workloads. No runtime bounds or product code were changed by those checks.
+
+Maximum-size uploads, sustained/soak use, simultaneous full browser flows and complete restart/disaster-recovery rehearsal remain unmeasured. Backup scheduling/retention remain unconfigured. The personal repository now uses the verified [CI/CD pipeline](ci-cd.md); the first automated release passed on 2026-10-15. The operator's live Google-backed session was verified, but account selection was not replayed by the agent.
 
 The $2.50 monthly Compute Engine budget sends alerts; it is not a spending cap. Free-tier eligibility is shared across the billing account. Egress, AI calls and other resources can add charges.
 

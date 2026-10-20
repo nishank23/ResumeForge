@@ -29,6 +29,7 @@
 **/*.log
 **/*.pem
 **/*.key
+**/gha-creds-*.json
 **/generated
 **/check_resumes
 

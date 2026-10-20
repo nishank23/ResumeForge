@@ -14,6 +14,31 @@ const db = createDatabaseClient(config.databaseUrl, { timeoutMs: 5_000 });
 
 await assertRuntimeDatabaseRole(db, "resume");
 
+const resumes = createResumeUseCases(
+  db,
+  Date.now,
+  undefined,
+  createAiProviders(loadAiSettings()),
+);
+let workerBusy = false;
+const worker = setInterval(() => {
+  if (workerBusy) return;
+  workerBusy = true;
+  void resumes
+    .processTailoringJobs()
+    .catch(() => {
+      console.error(
+        "Tailoring queue check failed; pending work will retry. No private request data was logged.",
+      );
+    })
+    .finally(() => {
+      workerBusy = false;
+    });
+}, 1000);
+worker.unref();
+process.once("exit", () => {
+  clearInterval(worker);
+});
 const app = createResumeApp({
   personalEditorOnly: true,
   appOrigin: config.appOrigin,
@@ -21,12 +46,7 @@ const app = createResumeApp({
     endpoint: config.endpoint,
     key: config.authKey,
   }),
-  resumes: createResumeUseCases(
-    db,
-    Date.now,
-    undefined,
-    createAiProviders(loadAiSettings()),
-  ),
+  resumes,
 });
 
 serve({ fetch: app.fetch, hostname: "127.0.0.1", port: config.port }, () => {

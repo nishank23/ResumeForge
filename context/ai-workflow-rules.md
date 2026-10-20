@@ -1,56 +1,20 @@
-# Development Workflow
-
-## Current audit snapshot — 2026-10-11
-
-Development is authorized on docker-setup in the existing frontend worktree for the requested full local Docker setup. Task state belongs in context/development-status.md. Preserve primary-checkout private configuration and avoid competing runtime credentials. Current audit status overrides obsolete next-slice and paused-design instructions.
-
-[Implementation audit](../docs/implementation-audit.md) provides completion checklists, source, gaps and priorities. Dated observations and original target designs below remain historical evidence or future acceptance.
+# Development workflow
 
 ## Current scope
 
-The context-review gate was cleared by the user on 2026-09-29. Development is authorized within the approved scope and current tracker; earlier planning-stage pauses do not reopen that gate. Follow dependencies and resolve open decisions at the slice that requires them.
+The canonical checkout is `/Users/nishankbansal/Downloads/ResumeForge` for personal private `nishank23/ResumeForge`. Publish through personal `origin`; use reviewed `codex/` branches and `main` for release. The user approved the full organization-feature transfer on 2026-10-20. Preserve private `.env`/`.local`, databases and credential volumes. Organization checkouts are historical transfer sources, not the current development target.
 
-The source plan is a working planning baseline. Current context documents resolve its ambiguities and define the intended implementation. Commands in planning documents describe future work; execute them only within the user's authorized scope. The 2026-10-03 request authorizes tracker-driven scheduled development and local PostgreSQL/pgvector setup, with AI credentials forthcoming. Follow the [internal task marker](development-status.md) and [scheduled development procedure](../docs/scheduled-development.md) to claim/release one slice and skip ongoing work.
+Branch preparation, documentation cleanup and the first [Phase 1 slice](../PLAN.md) are authorized: saved resume + pasted JD, grounded proposals, review, independent-copy save and PDF. Use pnpm watchers for development. This does not activate later roadmap phases, new providers, billing or shared access. Old context-review gates do not need reopening; archived phase instructions do not authorize new work.
 
-## Before a feature
+## Work loop
 
-1. Read root AGENTS.md, core context, the tracker, and the feature's phase plan.
-2. Confirm development is authorized and the feature's dependencies are complete.
-3. Review decision IDs referenced by the feature. Resolve blockers before implementing dependent behavior; do not silently choose a consent or sharing policy.
-4. Inspect relevant code with CodeGraph when indexed. Docs and unindexed configuration can be read directly.
-5. Identify the smallest verifiable slice, its affected services, contracts, and meaningful checks.
+1. Inspect status/diff and [task ownership](development-status.md). Preserve others' changes.
+2. Read AGENTS.md, PLAN.md, the [current audit](../docs/implementation-audit.md), [tracker](progress-tracker.md) and relevant live domain contracts.
+3. Use CodeGraph first for indexed code. Trace the responsible owner/seam; choose a bounded end-to-end slice with observable acceptance.
+4. After approval, claim the task. Keep types, Zod validation, ownership/privacy, immutable versions, provider limits and audit atomicity intact.
+5. Verify the meaningful success, invalid, unauthorized, stale/replay and failure cases appropriate to the change. Record actual commands and limitations.
+6. Update affected contracts and the tracker, then finish only the owned task. Plans, handlers and historical tests do not prove a released feature.
 
-Feature numbers identify scope, not an unconditional execution order. F03 database contracts precede persisted F02 OAuth/F04 onboarding, while F01 UI foundation can be developed independently after its design decision is settled.
+Ask about product decisions at dependent boundaries. Routine reversible implementation details can use judgment. Do not add services, providers, dependencies or feature modes without a lifecycle/acceptance reason.
 
-## Implementation loop after authorization
-
-1. Mark the feature or slice in progress and record the intended change.
-2. Update contracts when needed, then implement the slice against its acceptance checklist.
-3. Verify successful, unauthorized, invalid-input, and relevant failure/retry cases.
-4. Run affected type/lint/build checks and the feature's meaningful tests. Fix failures caused by the change.
-5. Update specs, decisions, phase task checkboxes, and the canonical tracker with evidence.
-6. Move to the next dependent slice only when the current contract is usable and no invariant is violated.
-
-Split work at a coherent outcome: for example, task creation/token authorization before AI generation, or contact-free rendering before privacy-specific PDF persistence. Avoid unrelated refactors during a feature.
-
-## Missing requirements and changes
-
-Classify uncertainty as an implementation choice, a proposed design detail, or an open product decision. Routine reversible implementation details can use engineering judgment once development is authorized. Product decisions affecting consent, ownership, contact visibility, or scope need an explicit recorded resolution.
-
-If a new requirement changes a confirmed decision, update decisions.md, the affected specification, and the build plan together. Keep any changes to the source-plan baseline explicit. Do not silently add features or promote deferred work into an earlier release.
-
-## Done means evidenced
-
-A feature is complete only when its acceptance criteria are implemented, relevant checks are recorded, known limitations are stated, and dependent docs are updated. A stub, mock, written spec, or successful compile alone does not prove end-to-end behavior.
-
-Use separate states for context drafting, user approval, implementation, and verification. Status must reflect work actually performed and verified in resume-forge.
-
-## End of session
-
-Update [progress-tracker.md](progress-tracker.md) with changed files/slices, checks run, unresolved decisions, and one concrete next step. Keep the root [project-tracker.md](../project-tracker.md) as a link rather than duplicating progress. Do not store credentials or personal data in session notes.
-
-## Current frontend requirement
-
-The 2026-09-29 request selects Performative UI, requests section-context resume prompts, and originally paused concepts; later requests approved Forge Studio. Read [frontend integration](frontend-integration.md) and [editing contract](resume-editing-contract.md) before F01/F06/F08 work. These are approved direction inputs; implement only the authorized slice. Distinguish directly observed reference behavior from public advertising and inaccessible editor behavior. Do not add reference-platform features outside resume scope or treat new documentation as approval of open decisions.
-
-The later U06 [capability register](resume-capability-coverage.md) records comprehensive observed resume scope. F19/F20 and Phase 6 are proposed allocations. Review them explicitly before dependent implementation; do not interpret a complete matrix as tested parity, approved technical decisions or authorization to start development.
+Scheduled work must respect the approved slice, active task lock and allowed paths. Parallel agents need explicit assignment and branch/path ownership; do not dispatch them automatically. README contains only product overview, stack, setup and run/build; task state belongs here.

@@ -6,7 +6,7 @@ Not started: the seven-tool contract below has no MCP server/SDK/registered tool
 
 See the [full source-linked audit](implementation-audit.md). Dated checkpoints below remain history.
 
-**Phase 5 design; no MCP server/tools are implemented.** Use [F18](../context/feature-specs/18-mcp-integration.md) as the feature checklist and [authorization-model.md](../context/authorization-model.md) as policy authority.
+**Phase 5 design; no MCP server/tools are implemented.** Use [F18](archive/2026-10-14/context/feature-specs/18-mcp-integration.md) as the feature checklist and [authorization-model.md](../context/authorization-model.md) as policy authority.
 
 ## Adapter boundary
 

@@ -343,3 +343,53 @@ JLPT N5 (Learning)`);
  assert.deepEqual(r.sections[4].groups.map(g=>[g.label,g.items.map(i=>i.text)]),[["Mobile",["Flutter","Android (Kotlin, Java)","REST API Integration"]],["Backend",["Node.js","Express","MongoDB"]]]);
  assert.deepEqual(r.sections[5].entries[0].bullets.map(b=>b.text),["English — Fluent","Japanese — JLPT N5 (Learning)"]);
 });
+
+test("undated project headings keep separate stacks and achievement lists", () => {
+  const result = parseResumeText(`Alex Example
+PROJECTS
+Python Invoice Search
+- Created invoice search using Python.
+Technologies: Python
+Python Reporting Tool
+- Built reporting scripts using Python.
+Technologies: Python
+Operations Dashboard | React, SQL
+- Created an operations dashboard.
+- Documented dashboard filters.`);
+  const projects = result.sections[0].entries;
+  assert.deepEqual(projects.map((e) => e.title), [
+    "Python Invoice Search", "Python Reporting Tool", "Operations Dashboard",
+  ]);
+  assert.deepEqual(projects.map((e) => e.bullets.length), [1, 1, 2]);
+  assert.deepEqual(projects.map((e) => e.technologies), ["Python", "Python", "React, SQL"]);
+});
+
+test("project prose mentioning a technology or comma remains prose, including wrapped lines", () => {
+  const result = parseResumeText(`Alex Example
+PROJECTS
+Invoice Application
+Built a Python invoice application.
+Created invoice endpoints, validation and exports.
+- Documented request rules using
+Python and SQL.
+Reporting Tool
+Python, PostgreSQL
+- Built reporting scripts.`);
+  const projects = result.sections[0].entries;
+  assert.equal(projects.length, 2);
+  assert.equal(projects[0].technologies, "");
+  assert.deepEqual(projects[0].bullets.map((b) => b.text), [
+    "Built a Python invoice application.",
+    "Created invoice endpoints, validation and exports.",
+    "Documented request rules using Python and SQL.",
+  ]);
+  assert.equal(projects[1].technologies, "Python, PostgreSQL");
+});
+
+test("degree-first education headers map degree and institution without changing institution-first rows", () => {
+  for (const heading of ["Bachelor of Technology | Example Institute", "Example Institute | Bachelor of Technology"]) {
+    const result = parseResumeText(`Alex Example\nEDUCATION\n${heading}\n2021 - 2025`);
+    assert.equal(result.sections[0].entries[0].title, "Example Institute");
+    assert.equal(result.sections[0].entries[0].subtitle, "Bachelor of Technology");
+  }
+});
