@@ -25,7 +25,7 @@ This is an app workspace, which design-taste-frontend explicitly excludes from i
 
 ## Connected behavior
 
-- The library keeps Upload resume and Start from scratch. Each saved resume has a direct Tailor for a job action. Its `?action=tailor` link opens the existing editor directly into tailoring; the query grants no resource access.
+- The library keeps Upload resume and Start from scratch. Each saved resume has a direct Tailor for a job action. Text actions use their content width; only download/delete icon controls use fixed square sizing. Its `?action=tailor` link opens the existing editor directly into tailoring; the query grants no resource access.
 - Import review occupies the page rather than nesting a full editor inside a modal. The import stays unsaved until Confirm import. Existing discard confirmation, editable fields and optional extracted-text reference remain. Upload copy correctly says server processing and no AI-provider transmission during import.
 - Feedback leads with up to three existing pending checks, prioritizing existing scored component weights and distinct rule families. It does not change the rubric or promise a score gain. Complete checks, original reasons, per-entry targets, dismissal and restore remain under All checks. Score details are secondary and explicitly separate internal checks from employer ATS results.
 - A recommendation opens its scoped editor. Missing experience/skills can open the appropriate section/entry editor directly instead of making the user find it in section controls.
@@ -33,11 +33,11 @@ This is an app workspace, which design-taste-frontend explicitly excludes from i
 
 ## Three tailoring phases
 
-**Job:** paste a JD. Optional experience questions are collapsed. Opening them with a valid JD uses local preflight to retain relevant question selection; the result is reused when starting. Added facts stay tied to the original visible entry and need a separate inline confirmation checkbox. Editing facts or the JD clears that confirmation. The primary Tailor my resume action states the Gemini processing scope. A saved-facts-only request has no empty confirmation page.
+**Job description:** paste a JD. Optional experience questions are collapsed. Opening them with a valid JD uses local preflight to retain relevant question selection; the result is reused when starting. Added facts stay tied to the original visible entry and need a separate inline confirmation checkbox. Editing facts or the JD clears that confirmation. The primary Tailor my resume action has one fixed footer location. The full Gemini processing scope is available under What is sent to AI?. A saved-facts-only request has no empty confirmation page.
 
-**Review:** real queued/writing/fact-review status appears until the stored proposals are ready. Users see full original/suggested text, may reject each suggestion, name the copy and inspect the selected result. Narrow screens switch between Changes and Preview. Detailed job-fit scores, required evidence and quality metadata remain available without dominating the review. Unsupported requirements remain gaps.
+**Review changes:** real queued/writing/fact-review status appears until the stored proposals are ready. Users review one suggestion at a time with Previous/Next or the shared suggestion selector. Full original/suggested text stays visible, and each accepted/rejected choice persists while navigating. Users name the copy and inspect the selected result. Desktop input and review keep the resume beside the controls; each pane scrolls independently beneath compact phase navigation and above persistent footer actions. Narrow screens can switch between controls and Preview during job input as well as review. Detailed job-fit scores, required evidence and quality metadata remain available without dominating the review. Unsupported requirements remain gaps.
 
-**Ready:** Save copy & download PDF first uses the existing idempotent Apply, then downloads that returned saved copy/version. A failed PDF request leaves the copy saved. Retry only exports; it does not rerun AI or Apply. A reopened saved run can load the owned copy metadata and export it. Closing queued work allows later resumption; cancellation, stale versions, expired proposals and errors remain explicit.
+**Saved copy:** Save copy & download PDF first uses the existing idempotent Apply, then downloads that returned saved copy/version. A failed PDF request leaves the copy saved. Retry only exports; it does not rerun AI or Apply. A reopened saved run can load the owned copy metadata and export it. Closing queued work allows later resumption; cancellation, stale versions, expired proposals and errors remain explicit.
 
 ## Shared components
 

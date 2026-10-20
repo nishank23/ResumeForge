@@ -205,12 +205,19 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.rf-library-row-actions button {
+.rf-library-row-actions .rf-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 44px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+.rf-library-row-actions .rf-button[data-size="icon"] {
   width: 44px;
   height: 44px;
-  min-height: 44px;
   padding: 0;
 }
 .rf-library-row-actions .rf-button.rf-library-delete {

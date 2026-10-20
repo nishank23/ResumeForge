@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
@@ -5,6 +6,7 @@ import {
   Dialog,
   Input,
   RequestFeedback,
+  Select,
   StudioPrompt,
 } from "@resume-forge/shared";
 import {
@@ -87,6 +89,8 @@ export function TailoringDialog({
   const [reviewView, setReviewView] = useState<"changes" | "preview">(
     "changes",
   );
+  const [activeChange, setActiveChange] = useState(0);
+  const controls = useRef<HTMLDivElement>(null);
   const live = useRef(true),
     stages = useRef<HTMLElement>(null),
     previousStep = useRef(step);
@@ -117,7 +121,8 @@ export function TailoringDialog({
     if (previousStep.current === step) return;
     previousStep.current = step;
     stages.current?.focus({ preventScroll: true });
-    stages.current?.scrollIntoView({ block: "start", behavior: "auto" });
+    if (controls.current) controls.current.scrollTop = 0;
+    setReviewView("changes");
   }, [step]);
   const acceptState = useCallback((next: TailoringState) => {
     setState(next);
@@ -145,6 +150,7 @@ export function TailoringDialog({
     ) {
       initializedChoices.current = next.run.id;
       setSelected(next.run.changes.map((c) => c.id));
+      setActiveChange(0);
       setStep("review");
     }
   }, []);
@@ -200,10 +206,10 @@ export function TailoringDialog({
   }, [services, running, acceptState]);
   const preview = useMemo(
     () =>
-      run && !stale && run.status === "ready"
+      step === "review" && run && !stale && run.status === "ready"
         ? applyTailoringPreview(base, run.changes, selected)
         : base,
-    [base, run, selected, stale],
+    [base, run, selected, stale, step],
   );
   const mutate = async (operation: () => Promise<TailoringState | null>) => {
     if (submitted.current) return;
@@ -312,6 +318,8 @@ export function TailoringDialog({
   };
   const reset = () => {
     setStep("job");
+    setReviewView("changes");
+    setActiveChange(0);
     setAnswers([]);
     setFactsConfirmed(false);
     setPreparation(null);
@@ -377,393 +385,463 @@ export function TailoringDialog({
         </>
       }
     >
-      <nav
-        ref={stages}
-        tabIndex={-1}
-        className="rf-tailoring-stages"
-        aria-label="Tailoring stages"
-      >
-        {(["job", "review", "ready"] as const).map((s) => (
-          <Button
-            key={s}
-            variant="ghost"
-            aria-current={step === s ? "step" : undefined}
-            disabled={
-              busy ||
-              running ||
-              (s === "review" && run?.status !== "ready") ||
-              (s === "ready" && !copy)
-            }
-            onClick={() => {
-              setStep(s);
-            }}
-          >
-            {s === "job" ? "Job" : s === "review" ? "Review" : "Ready"}
-          </Button>
-        ))}
-      </nav>
-      {disabledReason ? <p role="status">{disabledReason}</p> : null}
-      {stale ? (
-        <p role="status">
-          Source version changed or suggestions expired. Start a fresh request
-          using your latest saved resume.
-        </p>
-      ) : null}
-      {run?.status === "cancelled" ? (
-        <p role="status">
-          Tailoring cancelled. Your original resume is unchanged.
-        </p>
-      ) : null}
-      {error || run?.error ? (
-        <p role="alert" className="rf-ai-error">
-          {error || run?.error}
-        </p>
-      ) : null}
-      {running ? (
-        <div className="rf-tailoring-progress">
-          <RequestFeedback
-            key={`${run.status}:${String(run.batchesDone)}`}
-            label={
-              run.status === "queued" && run.batchesDone === 0
-                ? "Preparing your tailored resume"
-                : run.promptVersion !== "tailor-v1" &&
-                    [1, 3].includes(run.batchesDone)
-                  ? run.batchesDone === 3
-                    ? "Final fact and coverage check"
-                    : "Checking facts and source coverage"
-                  : run.batchesDone === 2
-                    ? "Refining wording after fact review"
-                    : "Writing your role-targeted resume"
-            }
-            reducedMotion={reducedMotion}
-          />
-          <p>
-            {run.batchesDone} of {run.batchesTotal} processing stages complete.
-            You can close and return while this continues.
-          </p>
-        </div>
-      ) : null}
-      {step === "job" && !running ? (
-        <div className="rf-tailoring-job">
-          <h3>A resume for this role</h3>
-          <p>
-            Paste the job description. Review changes before saving a separate
-            copy. Your original stays unchanged.
-          </p>
-          <StudioPrompt
-            label="Target job description"
-            value={text}
-            onChange={(v) => {
-              setText(v);
-              setFactsConfirmed(false);
-              setPreparation(null);
-              requestId.current = null;
-            }}
-            placeholder="Paste the role, responsibilities and required skills"
-            disabled={busy}
-            submitLabel="Tailor my resume"
-            submitDisabled={!canStart}
-            hideSubmit
-            onSubmit={start}
-          />
-          <details
-            className="rf-tailoring-optional"
-            onToggle={(event) => {
-              if (
-                event.currentTarget.open &&
-                text.trim().length >= 50 &&
-                text.length <= 12000 &&
-                !busy &&
-                !disabledReason &&
-                state?.available
-              )
-                void mutate(async () => {
-                  await prepare();
-                  return null;
-                });
-            }}
-          >
-            <summary>Add experience I left out (optional)</summary>
-            <TailoringExperience
-              doc={base}
-              answers={answers}
-              terms={
-                preparation?.text === text
-                  ? (preparation.state.evaluation?.keywords.map(
-                      (keyword) => keyword.term,
-                    ) ?? [])
-                  : []
-              }
-              disabled={busy || !!disabledReason}
-              onChange={(next) => {
-                setAnswers(next);
-                setFactsConfirmed(false);
-                setError("");
-                requestId.current = null;
-              }}
-            />
-          </details>
-          {pendingAnswers.length ? (
-            <section
-              className="rf-experience-confirm"
-              aria-label="Confirm added facts"
-            >
-              <h4>Your added facts</h4>
-              {experienceEntries(base)
-                .filter((e) =>
-                  pendingAnswers.some(
-                    (a) => a.sectionId === e.sectionId && a.itemId === e.itemId,
-                  ),
-                )
-                .map((entry) => (
-                  <div className="rf-experience-confirm-row" key={entry.itemId}>
-                    <h4>{entry.title}</h4>
-                    <dl>
-                      {pendingAnswers
-                        .filter(
-                          (a) =>
-                            a.sectionId === entry.sectionId &&
-                            a.itemId === entry.itemId,
-                        )
-                        .map((a) => (
-                          <div key={a.kind}>
-                            <dt>{experienceQuestionLabel(a.kind)}</dt>
-                            <dd>{a.text}</dd>
-                          </div>
-                        ))}
-                    </dl>
-                  </div>
-                ))}
-              <Checkbox
-                label="I confirm these added facts describe my own work."
-                description="Use them only for this tailored copy, tied to the original role or project."
-                checked={factsConfirmed}
-                disabled={busy}
-                onChange={(event) => {
-                  setFactsConfirmed(event.target.checked);
-                }}
-              />
-            </section>
-          ) : null}
-          <p className="rf-ai-scope">
-            Tailor my resume sends saved professional facts, job requirements
-            and any confirmed additions to Gemini. Identity, contacts, dates,
-            hidden content and original files stay out. Unsupported
-            qualifications remain gaps.
-          </p>
-          {text.length > 12000 ? (
-            <p role="alert">
-              Keep the job description within 12,000 characters.
-            </p>
-          ) : text.trim().length > 0 && text.trim().length < 50 ? (
-            <p className="rf-tool-hint">
-              Paste at least 50 characters from the job description.
-            </p>
-          ) : null}
-          {state && !state.available ? (
-            <p role="status">
-              AI tailoring is unavailable. You can still edit your resume and
-              check job fit.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-      {step === "review" && run?.status === "ready" ? (
-        <>
-          <div className="rf-tailoring-review-heading">
-            <h3>Review what changed</h3>
-            <p>
-              {selected.length} of {run.changes.length} suggestions selected.
-              Keep your original wherever you prefer.
-            </p>
-          </div>
-          <label className="rf-tailoring-title">
-            Copy name
-            <Input
-              value={title}
-              maxLength={200}
-              disabled={busy}
-              onChange={(event) => {
-                setTitle(event.target.value);
-              }}
-            />
-          </label>
-          {run.warnings.map((warning) => (
-            <p key={warning} role="status" className="rf-tool-hint">
-              {warning}
-            </p>
-          ))}
-          <details className="rf-tailoring-check-details">
-            <summary>Job fit and fact-check details</summary>
-            <p>
-              Internal job-fit check: {run.before.score ?? "partial"} before;{" "}
-              {run.after?.score ?? "partial"} with all suggestions. This is not
-              an employer ATS rating. Selected changes are reassessed after
-              saving.
-            </p>
-            <p>
-              Evidence still missing:{" "}
-              {run.before.missing.join(", ") ||
-                "No gaps among extracted terms."}{" "}
-              Missing qualifications are not added to your resume.
-            </p>
-            <p>
-              Requested seniority: {run.before.experienceLevel}. Requested
-              experience:{" "}
-              {run.before.statedYears == null
-                ? "Not stated"
-                : `${String(run.before.statedYears)}+ years`}
-              . These are evidence details, not score multipliers.
-            </p>
-            {run.responsibilities.map((responsibility, i) => (
-              <p key={`responsibility-${String(i)}`}>{responsibility}</p>
-            ))}
-            {run.quality ? (
-              <p>
-                {run.model}: {run.quality.fieldsChecked} fields checked,{" "}
-                {run.quality.fieldsRewritten} rewritten.{" "}
-                {run.quality.sourceWords} original words;{" "}
-                {run.quality.proposedWords} with all suggestions. Original work,
-                projects, education and skills remain in the copy.
-              </p>
-            ) : null}
-            {run.requirements.map((k) => (
-              <p key={k.name}>
-                <strong>{k.name}</strong> —{" "}
-                {k.required ? "Required" : "Preferred or unspecified"}
-                <br />
-                {k.evidence}
-              </p>
-            ))}
-          </details>
-          <div className="rf-tailoring-view-switch" aria-label="Review view">
+      <div className="rf-tailoring-toolbar">
+        <nav
+          ref={stages}
+          tabIndex={-1}
+          className="rf-tailoring-stages"
+          aria-label="Tailoring stages"
+        >
+          {(["job", "review", "ready"] as const).map((s) => (
             <Button
-              variant={reviewView === "changes" ? "default" : "outline"}
-              aria-pressed={reviewView === "changes"}
+              key={s}
+              variant="ghost"
+              aria-current={step === s ? "step" : undefined}
+              disabled={
+                busy ||
+                running ||
+                (s === "review" && run?.status !== "ready") ||
+                (s === "ready" && !copy)
+              }
               onClick={() => {
+                setStep(s);
                 setReviewView("changes");
               }}
             >
-              Changes
+              {s === "job"
+                ? "Job description"
+                : s === "review"
+                  ? "Review changes"
+                  : "Saved copy"}
             </Button>
-            <Button
-              variant={reviewView === "preview" ? "default" : "outline"}
-              aria-pressed={reviewView === "preview"}
-              onClick={() => {
-                setReviewView("preview");
-              }}
-            >
-              Preview
-            </Button>
-          </div>
-          <div className="rf-tailoring-review" data-review-view={reviewView}>
-            <div className="rf-tailoring-changes">
-              {!run.changes.length ? (
-                <p>
-                  No supported changes were needed. You can still save a
-                  separate named copy.
-                </p>
-              ) : null}
-              {run.changes.map((c) => (
-                <section
-                  key={c.id}
-                  className={`rf-tailoring-proposal${selected.includes(c.id) ? "" : " is-excluded"}`}
-                >
-                  <Checkbox
-                    label={`Use suggestion: ${c.label}`}
-                    description={
-                      selected.includes(c.id)
-                        ? "Uncheck to keep your original wording."
-                        : "Your original wording is kept."
-                    }
-                    checked={selected.includes(c.id)}
-                    disabled={busy || stale}
-                    onChange={() => {
-                      setSelected((value) =>
-                        value.includes(c.id)
-                          ? value.filter((id) => id !== c.id)
-                          : [...value, c.id],
-                      );
-                    }}
-                  />
-                  <RewriteTextChange change={c} expanded />
-                  <details>
-                    <summary>Why this change?</summary>
-                    <p>
-                      {c.kind === "order"
-                        ? "Reorders existing content using supported job requirements. Nothing is removed."
-                        : "Checked against professional facts and original coverage. Review the meaning before saving."}
-                    </p>
-                    {(c.evidence.length ? c.evidence : [c.original]).map(
-                      (evidence, i) => (
-                        <p key={i}>{evidence}</p>
-                      ),
-                    )}
-                  </details>
-                </section>
-              ))}
-            </div>
-            <aside
-              className="rf-tailoring-preview"
-              aria-label="Selected changes preview"
-              style={appearanceVariables(
-                preview.appearance ?? DEFAULT_APPEARANCE,
-              )}
-            >
-              <h4>Preview of selected changes</h4>
-              <ResumePage>
-                <ResumeDocument
-                  draft={preview}
-                  editable={false}
-                  selected={{ type: "header" }}
-                  onPending={noop}
-                  onSelect={noop}
-                  onHover={noop}
-                  onHoverExit={noop}
-                  onEdit={noop}
-                  onActions={noop}
-                  onInlineCommit={() => false}
-                  onRichChange={noop}
-                />
-              </ResumePage>
-            </aside>
-          </div>
-        </>
-      ) : null}
-      {step === "ready" && copy ? (
-        <section className="rf-tailoring-ready">
-          <h3>Your tailored copy is saved</h3>
-          <p>
-            {pdfStarted
-              ? "PDF download started. Your original resume is unchanged."
-              : "Your original is unchanged. Download the saved copy or open it to keep editing."}
-          </p>
-          {pdfError ? (
-            <p role="alert" className="rf-ai-error">
-              {pdfError} Your copy is already saved; retrying downloads it
-              without creating another copy.
-            </p>
-          ) : null}
+          ))}
+        </nav>
+        <div className="rf-tailoring-view-switch" aria-label="Tailoring view">
           <Button
-            variant="outline"
-            disabled={busy}
+            variant="ghost"
+            aria-pressed={reviewView === "changes"}
             onClick={() => {
-              services.openCopy(copy.id);
+              setReviewView("changes");
             }}
           >
-            Open tailored resume
+            {step === "job"
+              ? "Job details"
+              : step === "review"
+                ? "Changes"
+                : "Saved copy"}
           </Button>
-          <Button variant="ghost" disabled={busy} onClick={reset}>
-            Tailor for another job
+          <Button
+            variant="ghost"
+            aria-pressed={reviewView === "preview"}
+            onClick={() => {
+              setReviewView("preview");
+            }}
+          >
+            Preview
           </Button>
-        </section>
-      ) : null}
-      {(run?.status === "failed" || run?.status === "cancelled" || stale) &&
-      !running ? (
-        <Button variant="outline" disabled={busy} onClick={reset}>
-          Start a fresh request
-        </Button>
-      ) : null}
+        </div>
+      </div>
+      <div className="rf-tailoring-layout" data-review-view={reviewView}>
+        <div
+          className="rf-tailoring-controls"
+          ref={controls}
+          tabIndex={0}
+          aria-label="Tailoring details"
+        >
+          {disabledReason ? <p role="status">{disabledReason}</p> : null}
+          {stale ? (
+            <div className="rf-tailoring-blocked" role="status">
+              <p>These suggestions expired or use an older version.</p>
+              <Button variant="outline" disabled={busy} onClick={reset}>
+                Start a fresh request
+              </Button>
+            </div>
+          ) : null}
+          {run?.status === "cancelled" ? (
+            <p role="status">
+              Tailoring cancelled. Your original resume is unchanged.
+            </p>
+          ) : null}
+          {error || run?.error ? (
+            <p role="alert" className="rf-ai-error">
+              {error || run?.error}
+            </p>
+          ) : null}
+          {running ? (
+            <div className="rf-tailoring-progress">
+              <RequestFeedback
+                key={`${run.status}:${String(run.batchesDone)}`}
+                label={
+                  run.status === "queued" && run.batchesDone === 0
+                    ? "Preparing your tailored resume"
+                    : run.promptVersion !== "tailor-v1" &&
+                        [1, 3].includes(run.batchesDone)
+                      ? run.batchesDone === 3
+                        ? "Final fact and coverage check"
+                        : "Checking facts and source coverage"
+                      : run.batchesDone === 2
+                        ? "Refining wording after fact review"
+                        : "Writing your role-targeted resume"
+                }
+                reducedMotion={reducedMotion}
+              />
+              <p>
+                {run.batchesDone} of {run.batchesTotal} processing stages
+                complete. You can close and return while this continues.
+              </p>
+            </div>
+          ) : null}
+          {step === "job" && !running ? (
+            <div className="rf-tailoring-job">
+              <h3>Which job are you applying for?</h3>
+              <p>
+                Paste the job description. Your original resume stays unchanged.
+              </p>
+              <StudioPrompt
+                label="Target job description"
+                value={text}
+                onChange={(v) => {
+                  setText(v);
+                  setFactsConfirmed(false);
+                  setPreparation(null);
+                  requestId.current = null;
+                }}
+                placeholder="Paste the role, responsibilities and required skills"
+                disabled={busy}
+                submitLabel="Tailor my resume"
+                submitDisabled={!canStart}
+                hideSubmit
+                onSubmit={start}
+              />
+              <details
+                className="rf-tailoring-optional"
+                onToggle={(event) => {
+                  if (
+                    event.currentTarget.open &&
+                    text.trim().length >= 50 &&
+                    text.length <= 12000 &&
+                    !busy &&
+                    !disabledReason &&
+                    state?.available
+                  )
+                    void mutate(async () => {
+                      await prepare();
+                      return null;
+                    });
+                }}
+              >
+                <summary>Add experience I left out (optional)</summary>
+                <TailoringExperience
+                  doc={base}
+                  answers={answers}
+                  terms={
+                    preparation?.text === text
+                      ? (preparation.state.evaluation?.keywords.map(
+                          (keyword) => keyword.term,
+                        ) ?? [])
+                      : []
+                  }
+                  disabled={busy || !!disabledReason}
+                  onChange={(next) => {
+                    setAnswers(next);
+                    setFactsConfirmed(false);
+                    setError("");
+                    requestId.current = null;
+                  }}
+                />
+              </details>
+              {pendingAnswers.length ? (
+                <section
+                  className="rf-experience-confirm"
+                  aria-label="Confirm added facts"
+                >
+                  <h4>Your added facts</h4>
+                  {experienceEntries(base)
+                    .filter((e) =>
+                      pendingAnswers.some(
+                        (a) =>
+                          a.sectionId === e.sectionId && a.itemId === e.itemId,
+                      ),
+                    )
+                    .map((entry) => (
+                      <div
+                        className="rf-experience-confirm-row"
+                        key={entry.itemId}
+                      >
+                        <h4>{entry.title}</h4>
+                        <dl>
+                          {pendingAnswers
+                            .filter(
+                              (a) =>
+                                a.sectionId === entry.sectionId &&
+                                a.itemId === entry.itemId,
+                            )
+                            .map((a) => (
+                              <div key={a.kind}>
+                                <dt>{experienceQuestionLabel(a.kind)}</dt>
+                                <dd>{a.text}</dd>
+                              </div>
+                            ))}
+                        </dl>
+                      </div>
+                    ))}
+                  <Checkbox
+                    label="I confirm these added facts describe my own work."
+                    description="Use them only for this tailored copy, tied to the original role or project."
+                    checked={factsConfirmed}
+                    disabled={busy}
+                    onChange={(event) => {
+                      setFactsConfirmed(event.target.checked);
+                    }}
+                  />
+                </section>
+              ) : null}
+              <details className="rf-tailoring-privacy">
+                <summary>What is sent to AI?</summary>
+                <p className="rf-ai-scope">
+                  Tailor my resume sends saved professional facts, job
+                  requirements and any confirmed additions to Gemini. Identity,
+                  contacts, dates, hidden content and original files stay out.
+                  Unsupported qualifications remain gaps.
+                </p>
+              </details>
+              {text.length > 12000 ? (
+                <p role="alert">
+                  Keep the job description within 12,000 characters.
+                </p>
+              ) : text.trim().length > 0 && text.trim().length < 50 ? (
+                <p className="rf-tool-hint">
+                  Paste at least 50 characters from the job description.
+                </p>
+              ) : null}
+              {state && !state.available ? (
+                <p role="status">
+                  AI tailoring is unavailable. You can still edit your resume
+                  and check job fit.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {step === "review" && run?.status === "ready" ? (
+            <section className="rf-tailoring-review">
+              <div className="rf-tailoring-changes">
+                <div className="rf-tailoring-review-heading">
+                  <h3>Review what changed</h3>
+                  <p>
+                    {selected.length} of {run.changes.length} suggestions
+                    selected. Unchecked suggestions keep your original wording.
+                  </p>
+                </div>
+                <label className="rf-tailoring-title">
+                  Copy name
+                  <Input
+                    value={title}
+                    maxLength={200}
+                    disabled={busy}
+                    onChange={(event) => {
+                      setTitle(event.target.value);
+                    }}
+                  />
+                </label>
+                {run.warnings.map((warning) => (
+                  <p key={warning} role="status" className="rf-tool-hint">
+                    {warning}
+                  </p>
+                ))}
+
+                {run.changes.length > 1 ? (
+                  <div className="rf-tailoring-change-navigation">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Previous suggestion"
+                      disabled={activeChange === 0}
+                      onClick={() => {
+                        setActiveChange((i) => i - 1);
+                      }}
+                    >
+                      <ChevronLeft size={18} aria-hidden="true" />
+                    </Button>
+                    <Select
+                      aria-label="Choose suggestion"
+                      value={String(activeChange)}
+                      onChange={(event) => {
+                        setActiveChange(Number(event.target.value));
+                      }}
+                      options={run.changes.map((change, i) => ({
+                        value: String(i),
+                        label: `${String(i + 1)} of ${String(run.changes.length)} · ${change.label}`,
+                      }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Next suggestion"
+                      disabled={activeChange === run.changes.length - 1}
+                      onClick={() => {
+                        setActiveChange((i) => i + 1);
+                      }}
+                    >
+                      <ChevronRight size={18} aria-hidden="true" />
+                    </Button>
+                  </div>
+                ) : null}
+                {!run.changes.length ? (
+                  <p>
+                    No supported changes were needed. You can still save a
+                    separate named copy.
+                  </p>
+                ) : null}
+                {run.changes.slice(activeChange, activeChange + 1).map((c) => (
+                  <section
+                    key={c.id}
+                    className={`rf-tailoring-proposal${selected.includes(c.id) ? "" : " is-excluded"}`}
+                  >
+                    <Checkbox
+                      label={`Use suggestion: ${c.label}`}
+                      description={
+                        selected.includes(c.id)
+                          ? "Uncheck to keep your original wording."
+                          : "Your original wording is kept."
+                      }
+                      checked={selected.includes(c.id)}
+                      disabled={busy || stale}
+                      onChange={() => {
+                        setSelected((value) =>
+                          value.includes(c.id)
+                            ? value.filter((id) => id !== c.id)
+                            : [...value, c.id],
+                        );
+                      }}
+                    />
+                    <RewriteTextChange change={c} expanded />
+                    <details>
+                      <summary>Why this change?</summary>
+                      <p>
+                        {c.kind === "order"
+                          ? "Reorders existing content using supported job requirements. Nothing is removed."
+                          : "Checked against professional facts and original coverage. Review the meaning before saving."}
+                      </p>
+                      {(c.evidence.length ? c.evidence : [c.original]).map(
+                        (evidence, i) => (
+                          <p key={i}>{evidence}</p>
+                        ),
+                      )}
+                    </details>
+                  </section>
+                ))}
+                <details className="rf-tailoring-check-details">
+                  <summary>Job fit and fact-check details</summary>
+                  <p>
+                    Internal job-fit check: {run.before.score ?? "partial"}{" "}
+                    before; {run.after?.score ?? "partial"} with all
+                    suggestions. This is not an employer ATS rating. Selected
+                    changes are reassessed after saving.
+                  </p>
+                  <p>
+                    Evidence still missing:{" "}
+                    {run.before.missing.join(", ") ||
+                      "No gaps among extracted terms."}{" "}
+                    Missing qualifications are not added to your resume.
+                  </p>
+                  <p>
+                    Requested seniority: {run.before.experienceLevel}. Requested
+                    experience:{" "}
+                    {run.before.statedYears == null
+                      ? "Not stated"
+                      : `${String(run.before.statedYears)}+ years`}
+                    . These are evidence details, not score multipliers.
+                  </p>
+                  {run.responsibilities.map((responsibility, i) => (
+                    <p key={`responsibility-${String(i)}`}>{responsibility}</p>
+                  ))}
+                  {run.quality ? (
+                    <p>
+                      {run.model}: {run.quality.fieldsChecked} fields checked,{" "}
+                      {run.quality.fieldsRewritten} rewritten.{" "}
+                      {run.quality.sourceWords} original words;{" "}
+                      {run.quality.proposedWords} with all suggestions. Original
+                      work, projects, education and skills remain in the copy.
+                    </p>
+                  ) : null}
+                  {run.requirements.map((k) => (
+                    <p key={k.name}>
+                      <strong>{k.name}</strong> —{" "}
+                      {k.required ? "Required" : "Preferred or unspecified"}
+                      <br />
+                      {k.evidence}
+                    </p>
+                  ))}
+                </details>
+              </div>
+            </section>
+          ) : null}
+          {step === "ready" && copy ? (
+            <section className="rf-tailoring-ready">
+              <h3>Your tailored copy is saved</h3>
+              <p>
+                {pdfStarted
+                  ? "PDF download started. Your original resume is unchanged."
+                  : "Your original is unchanged. Download the saved copy or open it to keep editing."}
+              </p>
+              {pdfError ? (
+                <p role="alert" className="rf-ai-error">
+                  {pdfError} Your copy is already saved; retrying downloads it
+                  without creating another copy.
+                </p>
+              ) : null}
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  services.openCopy(copy.id);
+                }}
+              >
+                Open tailored resume
+              </Button>
+              <Button variant="ghost" disabled={busy} onClick={reset}>
+                Tailor for another job
+              </Button>
+            </section>
+          ) : null}
+          {(run?.status === "failed" || run?.status === "cancelled") &&
+          !running ? (
+            <Button variant="outline" disabled={busy} onClick={reset}>
+              Start a fresh request
+            </Button>
+          ) : null}
+        </div>
+        <aside
+          className="rf-tailoring-preview"
+          aria-label="Selected changes preview"
+          style={appearanceVariables(preview.appearance ?? DEFAULT_APPEARANCE)}
+          tabIndex={0}
+        >
+          <div className="rf-tailoring-preview-heading">
+            <h3>
+              {step === "review" && run?.status === "ready" && !stale
+                ? "Preview of selected changes"
+                : "Original saved resume"}
+            </h3>
+            <span>Read-only · PDF layout</span>
+          </div>
+          <ResumePage>
+            <ResumeDocument
+              draft={preview}
+              editable={false}
+              selected={{ type: "header" }}
+              onPending={noop}
+              onSelect={noop}
+              onHover={noop}
+              onHoverExit={noop}
+              onEdit={noop}
+              onActions={noop}
+              onInlineCommit={() => false}
+              onRichChange={noop}
+            />
+          </ResumePage>
+        </aside>
+      </div>
     </Dialog>
   );
 }

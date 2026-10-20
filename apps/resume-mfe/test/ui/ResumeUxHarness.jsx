@@ -30,7 +30,9 @@ const params = new URLSearchParams(location.search),
   mode = params.get("view") ?? "editor";
 const fixture = blankResume("Morgan Example");
 fixture.synthetic = true;
-fixture.title = "Backend resume";
+fixture.title = params.has("long-title")
+  ? "Backend engineering resume · tailored · tailored · tailored"
+  : "Backend resume";
 const summary = fixture.sections.find((s) => s.kind === "summary");
 summary.summary = summaryFromText(
   "Backend developer building Python APIs and SQL data services.",
@@ -218,6 +220,29 @@ function Harness() {
                   "Wrote automated tests with pytest.",
                 ],
               },
+              ...(params.get("case") === "multiple"
+                ? [
+                    {
+                      id: "role-change",
+                      kind: "text",
+                      target: {
+                        type: "entry",
+                        sectionId: work.id,
+                        itemId: entry.id,
+                      },
+                      field: "description",
+                      label: "Backend Developer",
+                      original: richTextPlain(entry.description),
+                      proposed:
+                        "Built Python APIs for invoice review, maintained PostgreSQL queries and wrote automated tests with pytest.",
+                      facts: ["work-description"],
+                      evidence: [
+                        "Built Python APIs for invoice review.",
+                        "Maintained PostgreSQL queries and wrote automated tests with pytest.",
+                      ],
+                    },
+                  ]
+                : []),
             ],
       copyId: status === "saved" ? ids.copy : null,
       error: null,
@@ -225,9 +250,15 @@ function Harness() {
   const services = useMemo(() => {
     if (
       !storedRun.current &&
-      ["ready", "empty", "stale", "expired", "saved", "queued"].includes(
-        params.get("case") ?? "",
-      )
+      [
+        "ready",
+        "empty",
+        "stale",
+        "expired",
+        "saved",
+        "queued",
+        "multiple",
+      ].includes(params.get("case") ?? "")
     )
       storedRun.current = makeRun(
         params.get("case") === "saved"

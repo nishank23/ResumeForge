@@ -112,7 +112,7 @@ const events = (name) =>
   `window.__resumeUx.events.filter(e=>e.name===${JSON.stringify(name)})`;
 try {
   for (const [width, height] of [
-    [1440, 1000],
+    [1440, 800],
     [768, 1024],
     [390, 844],
   ]) {
@@ -203,6 +203,53 @@ try {
       `${width}: one visible generation action`,
       '[...document.querySelectorAll("button")].filter(b=>b.textContent.trim()==="Tailor my resume"&&b.getClientRects().length).length===1',
     );
+    await check(
+      page,
+      `${width}: phase labels have no circular text containers`,
+      () =>
+        [
+          ...document.querySelectorAll(".rf-tailoring-stages button span"),
+        ].every((el) => getComputedStyle(el).borderRadius !== "50%"),
+    );
+    await check(
+      page,
+      `${width}: dialog body does not scroll as a whole`,
+      () => {
+        const el = document.querySelector(".rf-ai-dialog-body");
+        return el.scrollHeight <= el.clientHeight + 1;
+      },
+    );
+    if (width > 1000) {
+      await check(
+        page,
+        `${width}: source resume visible beside job input`,
+        () => {
+          const preview = document
+            .querySelector(".rf-tailoring-preview")
+            .getBoundingClientRect();
+          const input = document
+            .querySelector(".rf-tailoring-job")
+            .getBoundingClientRect();
+          return (
+            preview.top < 220 &&
+            preview.left >= input.right &&
+            preview.bottom <= innerHeight
+          );
+        },
+      );
+    } else {
+      await click(page, "Preview");
+      await check(
+        page,
+        `${width}: job input can switch to source resume`,
+        () =>
+          getComputedStyle(document.querySelector(".rf-tailoring-controls"))
+            .display === "none" &&
+          document.querySelector(".rf-tailoring-preview").getClientRects()
+            .length > 0,
+      );
+      await click(page, "Job details");
+    }
     await page.screenshot({
       path: resolve(out, `tailor-job-${width}.jpg`),
       quality: 88,
@@ -227,6 +274,34 @@ try {
       `${width}: review fits viewport`,
       "document.documentElement.scrollWidth<=innerWidth",
     );
+    await check(page, `${width}: save action stays on screen`, () => {
+      const rect = document
+        .querySelector(".rf-ai-dialog-footer button:last-child")
+        .getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= innerHeight;
+    });
+    if (width > 1000) {
+      await check(
+        page,
+        `${width}: resume stays visible while reviewing lower details`,
+        () => {
+          const preview = document.querySelector(".rf-tailoring-preview");
+          const top = preview.getBoundingClientRect().top;
+          document.querySelector(".rf-tailoring-check-details").open = true;
+          const panel = document.querySelector(".rf-tailoring-controls");
+          panel.scrollTop = panel.scrollHeight;
+          return (
+            panel.scrollTop > 0 &&
+            Math.abs(preview.getBoundingClientRect().top - top) < 1 &&
+            preview.getBoundingClientRect().top < 220
+          );
+        },
+      );
+      await page.eval(() => {
+        document.querySelector(".rf-tailoring-check-details").open = false;
+        document.querySelector(".rf-tailoring-controls").scrollTop = 0;
+      });
+    }
     await page.screenshot({
       path: resolve(out, `tailor-review-${width}.jpg`),
       quality: 88,
@@ -505,6 +580,109 @@ try {
     page,
     "reopened saved copy exports without another generation or Apply",
     events("start") + ".length===0 && " + events("apply") + ".length===0",
+  );
+  await page.close();
+  for (const width of [1366, 1024, 768, 390]) {
+    page = await open("?view=library&long-title", width, 800);
+    await wait(page, '!!document.querySelector(".rf-library-name")');
+    await check(
+      page,
+      `${width}: library text action contains its label and cannot overlap icons`,
+      () => {
+        const buttons = [
+          ...document.querySelectorAll(".rf-library-row-actions button"),
+        ];
+        const first = buttons[0],
+          next = buttons[1];
+        const a = first.getBoundingClientRect(),
+          b = next.getBoundingClientRect();
+        return (
+          first.scrollWidth <= first.clientWidth + 1 &&
+          (a.right <= b.left || a.bottom <= b.top) &&
+          document.documentElement.scrollWidth <= innerWidth
+        );
+      },
+    );
+    await page.screenshot({
+      path: resolve(out, `library-actions-${width}.jpg`),
+      quality: 88,
+    });
+    await page.close();
+  }
+  page = await open("?view=tailoring&case=multiple", 1366, 768);
+  await wait(
+    page,
+    () => !!document.querySelector("[aria-label='Choose suggestion']"),
+  );
+  await check(
+    page,
+    "review shows one suggestion while keeping all choices",
+    () =>
+      document.querySelectorAll(".rf-tailoring-proposal").length === 1 &&
+      document.querySelector("[aria-label='Choose suggestion']").options
+        .length === 2,
+  );
+  await page.eval(() =>
+    document
+      .querySelector(".rf-tailoring-proposal input[type=checkbox]")
+      .click(),
+  );
+  await page.eval(() =>
+    document.querySelector("[aria-label='Next suggestion']").click(),
+  );
+  await wait(
+    page,
+    'document.querySelector(".rf-tailoring-proposal").textContent.includes("Backend Developer")',
+  );
+  await check(
+    page,
+    "next suggestion preserves unseen choice and source preview",
+    () =>
+      document.querySelector(".rf-tailoring-proposal input").checked &&
+      document
+        .querySelector(".rf-tailoring-preview")
+        .textContent.includes(
+          "Backend developer building Python APIs and SQL data services.",
+        ),
+  );
+  await page.eval(() =>
+    document.querySelector("[aria-label='Previous suggestion']").click(),
+  );
+  await wait(
+    page,
+    'document.querySelector(".rf-tailoring-proposal").textContent.includes("Use suggestion: Summary")',
+  );
+  await check(
+    page,
+    "returning to suggestion preserves rejection",
+    () => !document.querySelector(".rf-tailoring-proposal input").checked,
+  );
+  await page.eval(
+    () =>
+      (document.querySelector("[aria-label='Choose suggestion']").value = "1"),
+  );
+  await page.eval(() =>
+    document
+      .querySelector("[aria-label='Choose suggestion']")
+      .dispatchEvent(new Event("change", { bubbles: true })),
+  );
+  await wait(
+    page,
+    'document.querySelector(".rf-tailoring-proposal").textContent.includes("Backend Developer")',
+  );
+  await page.screenshot({
+    path: resolve(out, "tailor-multiple-1366.jpg"),
+    quality: 88,
+  });
+  await click(page, "Save copy & download PDF");
+  await wait(page, '!!document.querySelector(".rf-tailoring-ready")');
+  await check(
+    page,
+    "save uses all review choices after navigation",
+    events("apply") +
+      "[0].selected.length===1 && " +
+      events("apply") +
+      '[0].selected[0]==="role-change"',
   );
   await page.close();
   page = await open("?view=library");
