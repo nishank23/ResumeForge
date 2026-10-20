@@ -11,7 +11,7 @@ import {
 import type { ReadinessCheck } from "@resume-forge/resume-core";
 import type { JdState } from "@resume-forge/shared-types";
 import { targetLabel, type ResumeDraft } from "./editor-draft";
-import { TailoringDialog, type TailoringServices } from "./TailoringDialog";
+import type { TailoringServices } from "./TailoringDialog";
 export interface JdServices {
   tailoring?: TailoringServices;
   load: (signal?: AbortSignal) => Promise<JdState>;
@@ -29,6 +29,7 @@ export function JdMatchPanel({
   reducedMotion,
   disabledReason,
   onTarget,
+  onTailor,
 }: {
   draft: ResumeDraft;
   services?: JdServices;
@@ -36,6 +37,7 @@ export function JdMatchPanel({
   reducedMotion?: boolean;
   disabledReason?: string;
   onTarget: (check: ReadinessCheck, edit: boolean) => void;
+  onTailor?: (jd: string) => void;
 }) {
   const [state, setState] = useState<JdState | null>(null),
     [text, setText] = useState(""),
@@ -43,7 +45,6 @@ export function JdMatchPanel({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [editingJd, setEditingJd] = useState(true);
-  const [tailoringOpen, setTailoringOpen] = useState(false);
   const identity = useRef(0),
     submitted = useRef(false),
     hydrated = useRef(false);
@@ -190,7 +191,7 @@ export function JdMatchPanel({
                 setSemantic(false);
               }}
             >
-              Local rules
+              Quick check
             </Button>
             <Button
               size="sm"
@@ -201,7 +202,7 @@ export function JdMatchPanel({
                 setSemantic(true);
               }}
             >
-              Gemini + rules
+              AI review
             </Button>
           </div>
           <p className="rf-tool-hint">
@@ -238,29 +239,15 @@ export function JdMatchPanel({
             tailored copy.
           </p>
           <Button
-            glow
             disabled={!!disabledReason || busy}
             onClick={() => {
-              setTailoringOpen(true);
+              onTailor?.(text);
             }}
           >
-            Tailor full resume
+            Tailor for a job
           </Button>
           {disabledReason ? <p role="status">{disabledReason}</p> : null}
         </section>
-      ) : null}
-      {tailoringOpen && services?.tailoring ? (
-        <TailoringDialog
-          base={draft}
-          savedVersion={savedVersion}
-          initialJd={text}
-          services={services.tailoring}
-          disabledReason={disabledReason}
-          reducedMotion={reducedMotion}
-          onClose={() => {
-            setTailoringOpen(false);
-          }}
-        />
       ) : null}
       {error && !editingJd ? (
         <p role="alert" className="rf-ai-error">

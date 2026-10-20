@@ -102,6 +102,21 @@ export function ResumeRemoteRoot({
                   selected,
                   title,
                 ),
+              downloadCopy: async (
+                id: string,
+                version?: number,
+                title?: string,
+              ) => {
+                if (version && title)
+                  return downloadResumePdf(api, id, version, title);
+                const copy = await api.load(id);
+                await downloadResumePdf(
+                  api,
+                  copy.id,
+                  copy.currentVersion,
+                  copy.title,
+                );
+              },
               openCopy: (id: string) =>
                 context?.onNavigate?.(`/w/${workspaceId}/resumes/${id}`),
             },
@@ -241,8 +256,12 @@ export function ResumeRemoteRoot({
           readiness={readiness}
           jdMatch={jdMatch}
           rewrite={rewrite}
-          onDownload={() =>
-            downloadResumePdf(api, saved.id, saved.currentVersion, saved.title)
+          initialTailoringOpen={
+            new URLSearchParams(window.location.search).get("action") ===
+            "tailor"
+          }
+          onDownload={(version, title) =>
+            downloadResumePdf(api, saved.id, version, title)
           }
           onSave={async (draft) => {
             const next = await api.save(
@@ -253,7 +272,9 @@ export function ResumeRemoteRoot({
                 ? saved.content.rawText
                 : undefined,
             );
-            setSaved(next);
+            setSaved((previous) =>
+              previous?.id === next.id ? next : previous,
+            );
             return next.currentVersion;
           }}
         />

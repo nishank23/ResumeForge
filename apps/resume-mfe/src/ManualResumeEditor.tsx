@@ -1,5 +1,6 @@
 import { readinessHints } from "@resume-forge/shared-types";
 import { JdMatchPanel, type JdServices } from "./JdMatchPanel";
+import { TailoringDialog } from "./TailoringDialog";
 import {
   ServerRewriteDialog,
   rewriteTarget,
@@ -23,8 +24,6 @@ import {
 } from "react";
 import {
   ArrowLeft,
-  Moon,
-  Sun,
   ArrowDown,
   ArrowUp,
   Check,
@@ -32,16 +31,16 @@ import {
   Eye,
   EyeOff,
   Pencil,
-  Redo2,
   Trash2,
-  Undo2,
+  BriefcaseBusiness,
 } from "lucide-react";
 import {
   Button,
-  NodeGraphBackdrop,
   DocumentStatus,
   ConfirmDeleteDialog,
   Dialog,
+  DropdownMenu,
+  useMobileOrTouchViewport,
   StatusBanner,
   type SummaryDocument,
   type ShellFederationContext,
@@ -86,6 +85,7 @@ import {
 } from "./editor-appearance";
 import "./manual-editor.css";
 import "./editor-tool-panels.css";
+import "./workspace-ux.css";
 
 interface EditSession {
   base: ResumeDraft;
@@ -103,17 +103,20 @@ export function ManualResumeEditor({
   rewrite,
   savedVersion = 0,
   saveLabel = "Save changes",
+  initialTailoringOpen = false,
 }: {
   context?: ShellFederationContext;
   initialDraft: ResumeDraft;
   onSave: (draft: ResumeDraft) => Promise<number>;
-  onDownload?: () => Promise<void>;
+  onDownload?: (version: number, title: string) => Promise<void>;
+  initialTailoringOpen?: boolean;
   readiness?: Pick<ReadinessPanelProps, "load" | "run" | "dismiss">;
   jdMatch?: JdServices;
   rewrite?: RewriteServices;
   savedVersion?: number;
   saveLabel?: string;
 }) {
+  const { isCompact } = useMobileOrTouchViewport();
   const [sampleDraft] = useState(() => structuredClone(initialDraft));
   const [history, dispatch] = useReducer(
     editorHistory<ResumeDraft>,
@@ -132,6 +135,7 @@ export function ManualResumeEditor({
     historyRef.current = history;
   }, [history]);
   const [mode, setMode] = useState<"editor" | "preview">("editor");
+  const [actionsVisible, setActionsVisible] = useState(false);
   const [selected, setSelected] = useState<DraftTarget>({
     type: "section",
     sectionId: "sec-summary",
@@ -151,6 +155,11 @@ export function ManualResumeEditor({
     readiness ? "ats" : "content",
   );
   const [panelOpen, setPanelOpen] = useState(true);
+  const [mobileView, setMobileView] = useState<"resume" | "tools">("resume");
+  const [tailoringOpen, setTailoringOpen] = useState(initialTailoringOpen);
+  const [tailoringJd, setTailoringJd] = useState("");
+  const [tailoringVersion, setTailoringVersion] = useState<number | null>(null);
+  const preparingTailoring = useRef(false);
   const [leaving, setLeaving] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const [barHeight, setBarHeight] = useState(72);
@@ -204,6 +213,15 @@ export function ManualResumeEditor({
     setNotice({ message, error });
     setNoticeKey((key) => key + 1);
   }, []);
+  useEffect(() => {
+    if (!notice || notice.error) return;
+    const timer = setTimeout(() => {
+      setNotice(null);
+    }, 4500);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [notice, noticeKey]);
   const error = useCallback(
     (message: string) => {
       announce(message, true);
@@ -235,6 +253,7 @@ export function ManualResumeEditor({
       const version = await onSave(snapshot);
       dispatch({ type: "checkpoint", value: snapshot });
       announce(`Saved version ${String(version)} to your account.`);
+      return { version, draft: snapshot };
     } catch (e) {
       setSaveFailure(
         e instanceof Error ? e.message : "Save failed. Your edits are kept.",
@@ -251,25 +270,90 @@ export function ManualResumeEditor({
       !onDownload ||
       downloadingRef.current ||
       savingRef.current ||
-      dirty ||
-      inlinePending ||
-      !savedVersion
+      conflict ||
+      session ||
+      aiSession
     )
       return;
     downloadingRef.current = true;
     setDownloading(true);
     try {
-      await onDownload();
+      const saved =
+        isDirty(historyRef.current) || inlinePending || !savedVersion
+          ? await saveCurrent()
+          : { version: savedVersion, draft: historyRef.current.current };
+      if (!saved) return;
+      await onDownload(saved.version, saved.draft.title);
       announce(
-        `PDF download started for saved version ${String(savedVersion)}.`,
+        `PDF download started for saved version ${String(saved.version)}.`,
       );
     } catch (e) {
-      error(e instanceof Error ? e.message : "Could not download PDF. Retry.");
+      error(
+        e instanceof Error
+          ? e.message
+          : "Your resume is saved, but PDF download failed. Retry download.",
+      );
     } finally {
       downloadingRef.current = false;
       setDownloading(false);
     }
   };
+  const requestTailoring = async (jd = "") => {
+    if (
+      !jdMatch?.tailoring ||
+      preparingTailoring.current ||
+      savingRef.current ||
+      downloadingRef.current ||
+      conflict ||
+      session ||
+      aiSession
+    )
+      return;
+    preparingTailoring.current = true;
+    setTailoringJd(jd);
+    const saved =
+      isDirty(historyRef.current) || inlinePending || !savedVersion
+        ? await saveCurrent()
+        : { version: savedVersion, draft: historyRef.current.current };
+    if (!saved) {
+      preparingTailoring.current = false;
+      return;
+    }
+    // Wait for the owner to bind its API callbacks to the newly returned revision.
+    setTailoringVersion(saved.version);
+  };
+  useEffect(() => {
+    if (tailoringVersion === null || savedVersion !== tailoringVersion) return;
+    if (
+      !dirty &&
+      !inlinePending &&
+      !session &&
+      !aiSession &&
+      !deleting &&
+      !leaving &&
+      !conflict &&
+      jdMatch?.tailoring
+    )
+      setTailoringOpen(true);
+    else
+      announce(
+        "Your draft changed while saving, or an edit dialog is open. Finish editing, then save and tailor again.",
+      );
+    preparingTailoring.current = false;
+    setTailoringVersion(null);
+  }, [
+    tailoringVersion,
+    savedVersion,
+    dirty,
+    inlinePending,
+    jdMatch,
+    session,
+    aiSession,
+    deleting,
+    leaving,
+    conflict,
+    announce,
+  ]);
   const closeAiPreview = () => {
     if (!aiSession) return;
     const target = aiSession.target;
@@ -293,6 +377,7 @@ export function ManualResumeEditor({
   }, [cancelHover, mode, session, aiSession]);
   const select = (target: DraftTarget) => {
     cancelHover();
+    setActionsVisible(true);
     setSelected((current) =>
       JSON.stringify(current) === JSON.stringify(target) ? current : target,
     );
@@ -521,6 +606,31 @@ export function ManualResumeEditor({
   const onAtsTarget = (check: ReadinessCheck, edit: boolean) => {
     const target = check.target;
     if (!target) {
+      const rule = check.id.split(":")[0];
+      const kind = ["professional-section", "entry-details"].includes(
+        rule ?? "",
+      )
+        ? "experience"
+        : ["skills-section", "listed-skills"].includes(rule ?? "")
+          ? "skills"
+          : null;
+      if (edit && kind) {
+        const next = structuredClone(history.current);
+        let targetSection = next.sections.find(
+          (item) => item.kind === kind && !item.hidden,
+        );
+        if (!targetSection) {
+          targetSection = emptySection(kind, crypto.randomUUID());
+          next.sections.push(targetSection);
+        }
+        setMobileView("resume");
+        startEdit(
+          { type: "section", sectionId: targetSection.id },
+          next,
+          check,
+        );
+        return;
+      }
       setPanel("content");
       setPanelOpen(true);
       announce(
@@ -532,13 +642,35 @@ export function ManualResumeEditor({
       error("This assessment target is no longer present. Save and recheck.");
       return;
     }
+    setMobileView("resume");
     select(target);
     if (edit) startEdit(target, history.current, check);
     else focusActions();
   };
+  const documentBody = (
+    <ResumeDocument
+      draft={draft}
+      selected={selection}
+      editable={mode === "editor" && !session && !aiSession}
+      onPending={setInlinePending}
+      onSelect={select}
+      onHover={hover}
+      onHoverExit={cancelHover}
+      onEdit={(target) => {
+        requestAnimationFrame(() => {
+          startEdit(target, historyRef.current.current);
+        });
+      }}
+      onActions={focusActions}
+      onInlineCommit={editInline}
+      onRichChange={editRich}
+    />
+  );
   return (
     <div
-      className={`rf-manual-workspace rf-tools-workspace${panelOpen ? " has-tool-panel" : ""}`}
+      className={`rf-manual-workspace rf-tools-workspace rf-ux-workspace${panelOpen ? " has-tool-panel" : ""}`}
+      data-mobile-view={mobileView}
+      data-target-active={actionsVisible}
       style={
         { "--editor-header-height": `${String(barHeight)}px` } as CSSProperties
       }
@@ -572,99 +704,116 @@ export function ManualResumeEditor({
             </Button>
           </div>
           <div className="rf-editor-actions">
-            {context?.onToggleTheme ? (
+            <DropdownMenu
+              ariaLabel="Edit actions"
+              triggerLabel="Edit actions"
+              items={[
+                {
+                  id: "undo",
+                  label: "Undo",
+                  disabled: !history.past.length && !inlinePending,
+                  onSelect: () => {
+                    change({ type: "undo" }, "Undid the last draft change.");
+                  },
+                },
+                {
+                  id: "redo",
+                  label: "Redo",
+                  disabled: !history.future.length,
+                  onSelect: () => {
+                    change({ type: "redo" }, "Redid the draft change.");
+                  },
+                },
+                {
+                  id: "cancel",
+                  label: "Discard unsaved edits",
+                  disabled: saving || (!dirty && !inlinePending),
+                  onSelect: () => {
+                    change(
+                      { type: "cancel" },
+                      "Restored your saved draft. Undo is available.",
+                    );
+                  },
+                },
+                ...(context?.onToggleTheme
+                  ? [
+                      {
+                        id: "theme",
+                        label:
+                          context.theme === "dark"
+                            ? "Switch to light theme"
+                            : "Switch to dark theme",
+                        onSelect: context.onToggleTheme,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+            {jdMatch?.tailoring ? (
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={context.onToggleTheme}
-                aria-label={
-                  context.theme === "dark"
-                    ? "Switch to light theme"
-                    : "Switch to dark theme"
+                className="rf-direct-tailor"
+                size="sm"
+                disabled={
+                  saving ||
+                  downloading ||
+                  conflict ||
+                  !!session ||
+                  !!aiSession ||
+                  tailoringVersion !== null
                 }
+                onClick={() => void requestTailoring()}
               >
-                {context.theme === "dark" ? (
-                  <Sun size={18} />
-                ) : (
-                  <Moon size={18} />
-                )}
+                <BriefcaseBusiness size={16} aria-hidden="true" />
+                {saving || tailoringVersion !== null
+                  ? "Preparing…"
+                  : dirty || inlinePending
+                    ? "Save & tailor"
+                    : "Tailor for a job"}
               </Button>
             ) : null}
-            <div className="rf-history-actions">
-              <button
-                type="button"
-                disabled={!history.past.length && !inlinePending}
-                aria-label="Undo"
-                title="Undo (⌘/Ctrl Z outside a text field)"
+            {dirty || inlinePending || !onDownload ? (
+              <Button
+                className="rf-explicit-save"
+                variant={onDownload ? "ghost" : "default"}
+                size="sm"
+                disabled={
+                  saving ||
+                  conflict ||
+                  (savedVersion > 0 && !dirty && !inlinePending)
+                }
                 onClick={() => {
-                  change({ type: "undo" }, "Undid the last draft change.");
+                  void saveCurrent();
                 }}
               >
-                <Undo2 size={17} />
-              </button>
-              <button
-                type="button"
-                disabled={!history.future.length}
-                aria-label="Redo"
+                <Check size={14} /> {saving ? "Saving…" : saveLabel}
+              </Button>
+            ) : null}
+            {onDownload ? (
+              <Button
+                className="rf-save-download"
+                size="sm"
+                variant="outline"
+                disabled={
+                  conflict || saving || downloading || !!session || !!aiSession
+                }
+                title={
+                  dirty || inlinePending
+                    ? "Save your changes, then download this version"
+                    : `Download saved version ${String(savedVersion)}`
+                }
+                aria-describedby="rf-pdf-limit"
                 onClick={() => {
-                  change({ type: "redo" }, "Redid the draft change.");
+                  void download();
                 }}
               >
-                <Redo2 size={17} />
-              </button>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={saving || (!dirty && !inlinePending)}
-              onClick={() => {
-                change(
-                  { type: "cancel" },
-                  "Restored your last saved draft. Undo is available.",
-                );
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={
-                saving ||
-                conflict ||
-                (savedVersion > 0 && !dirty && !inlinePending)
-              }
-              onClick={() => {
-                void saveCurrent();
-              }}
-            >
-              <Check size={14} /> {saving ? "Saving…" : saveLabel}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={
-                !onDownload ||
-                !savedVersion ||
-                saving ||
-                downloading ||
-                dirty ||
-                inlinePending ||
-                !!session ||
-                !!aiSession
-              }
-              title={
-                dirty || inlinePending
-                  ? "Save changes before downloading PDF"
-                  : `Download saved version ${String(savedVersion)}`
-              }
-              aria-describedby="rf-pdf-limit"
-              onClick={() => {
-                void download();
-              }}
-            >
-              <Download size={14} />{" "}
-              {downloading ? "Preparing PDF…" : "Download PDF"}
-            </Button>
+                <Download size={14} />{" "}
+                {downloading
+                  ? "Preparing PDF…"
+                  : dirty || inlinePending
+                    ? "Save & download"
+                    : "Download PDF"}
+              </Button>
+            ) : null}
           </div>
         </header>
         <div className="rf-local-draft-note">
@@ -682,11 +831,28 @@ export function ManualResumeEditor({
           <span id="rf-pdf-limit">
             {onDownload
               ? dirty || inlinePending
-                ? "Save changes before downloading PDF."
-                : `PDF uses saved version ${String(savedVersion)}. ATS actions use this saved version.`
-              : "Save this resume to enable PDF download, JD matching and AI requests."}
+                ? "Save & download includes your latest edits."
+                : `PDF uses saved version ${String(savedVersion)}.`
+              : "Review the fields, then confirm this import."}
           </span>
         </div>
+        {notice &&
+        !session &&
+        !aiSession &&
+        !deleting &&
+        !leaving &&
+        !tailoringOpen ? (
+          <div className="rf-editor-inline-notice" key={noticeKey}>
+            <StatusBanner
+              tone={notice.error ? "error" : "info"}
+              showToneLabel={notice.error}
+              title={notice.message}
+              onDismiss={() => {
+                setNotice(null);
+              }}
+            />
+          </div>
+        ) : null}
         {saveFailure ? (
           <div className="rf-save-error" role="alert">
             <p>{saveFailure}</p>
@@ -703,39 +869,249 @@ export function ManualResumeEditor({
             )}
           </div>
         ) : null}
+        <nav className="rf-workspace-mobile-nav" aria-label="Workspace view">
+          <Button
+            variant={mobileView === "resume" ? "default" : "outline"}
+            aria-pressed={mobileView === "resume"}
+            onClick={() => {
+              setMobileView("resume");
+            }}
+          >
+            Resume
+          </Button>
+          <Button
+            variant={mobileView === "tools" ? "default" : "outline"}
+            aria-pressed={mobileView === "tools"}
+            onClick={() => {
+              setPanel("ats");
+              setPanelOpen(true);
+              setMobileView("tools");
+            }}
+          >
+            Feedback & tools
+          </Button>
+        </nav>
         <EditorRail
           active={panel}
           open={panelOpen}
           onSelect={(key) => {
             setPanel(key);
             setPanelOpen(true);
+            setMobileView("tools");
           }}
           onToggle={() => {
             setPanelOpen((open) => !open);
+            setMobileView("resume");
           }}
-        >
-          <div className="rf-mode-switch" aria-label="Resume view">
-            <button
-              type="button"
-              aria-pressed={mode === "editor"}
-              onClick={() => {
-                setMode("editor");
-              }}
-            >
-              Editor
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "preview"}
-              onClick={() => {
-                setMode("preview");
-              }}
-            >
-              Preview
-            </button>
-          </div>
-        </EditorRail>
+        ></EditorRail>
         <div className={`rf-tools-layout${panelOpen ? " has-panel" : ""}`}>
+          <nav className="rf-section-navigation" aria-label="Resume sections">
+            <h2>Your resume</h2>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                startEdit({ type: "header" });
+              }}
+            >
+              Personal details
+            </Button>
+            {history.current.sections.map((item) => (
+              <Button
+                key={item.id}
+                variant="ghost"
+                aria-current={
+                  selection.type !== "header" && selection.sectionId === item.id
+                    ? "location"
+                    : undefined
+                }
+                onClick={() => {
+                  const target: DraftTarget = {
+                    type: "section",
+                    sectionId: item.id,
+                  };
+                  setMobileView("resume");
+                  select(target);
+                  requestAnimationFrame(() => {
+                    const element = [
+                      ...(canvasRef.current?.querySelectorAll<HTMLElement>(
+                        "[data-editor-target]",
+                      ) ?? []),
+                    ].find(
+                      (el) =>
+                        el.dataset.editorTarget === JSON.stringify(target),
+                    );
+                    element?.scrollIntoView({ block: "center" });
+                    element
+                      ?.querySelector<HTMLElement>(
+                        '[contenteditable="true"],button',
+                      )
+                      ?.focus({ preventScroll: true });
+                  });
+                }}
+              >
+                {SECTION_LABELS[item.kind]}
+                {item.hidden ? " (hidden)" : ""}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPanel("content");
+                setPanelOpen(true);
+                setMobileView("tools");
+              }}
+            >
+              Manage sections
+            </Button>
+          </nav>
+          <div
+            className="rf-paper-stage"
+            aria-label="Resume document workspace"
+            data-editor-mode={mode}
+            style={appearanceVariables(appearance)}
+          >
+            <div className="rf-paper-meta">
+              <span>
+                {mode === "editor"
+                  ? isCompact
+                    ? "Editing view · Preview shows PDF layout"
+                    : "Edit directly on your resume"
+                  : "Preview of visible content"}
+              </span>
+              <div className="rf-mode-switch" aria-label="Resume view">
+                <button
+                  type="button"
+                  aria-pressed={mode === "editor"}
+                  onClick={() => {
+                    setMode("editor");
+                  }}
+                >
+                  Editor
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={mode === "preview"}
+                  onClick={() => {
+                    setMode("preview");
+                  }}
+                >
+                  Preview
+                </button>
+              </div>
+            </div>
+            {mode === "editor" &&
+            actionsVisible &&
+            section?.kind !== "skills" ? (
+              <SectionActions
+                inline
+                containerRef={canvasRef}
+                toolbarRef={toolbarRef}
+                target={selection}
+                layoutKey={`${String(panelOpen)}:${panel}`}
+                draft={draft}
+                hidden={!!session || !!aiSession}
+                onPointerEnter={cancelHover}
+              >
+                <span
+                  className="rf-floating-target"
+                  title={targetLabel(history.current, selection)}
+                >
+                  {targetLabel(history.current, selection)}
+                </span>
+                {selection.type !== "header" &&
+                rewriteTarget(history.current, selection) ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    glow
+                    className="rf-ai-entry-action"
+                    onClick={() => {
+                      setAiSession({
+                        base: structuredClone(historyRef.current.current),
+                        target: structuredClone(selection),
+                      });
+                    }}
+                  >
+                    Improve with AI
+                  </Button>
+                ) : null}
+                {itemArrows ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Move selected item up"
+                      onClick={() => {
+                        act("up");
+                      }}
+                    >
+                      <ArrowUp size={15} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Move selected item down"
+                      onClick={() => {
+                        act("down");
+                      }}
+                    >
+                      <ArrowDown size={15} />
+                    </Button>
+                  </>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-selection-edit
+                  aria-label="Edit selected content"
+                  onClick={() => {
+                    startEdit();
+                  }}
+                >
+                  <Pencil size={15} />
+                </Button>
+                {selection.type !== "header" ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={
+                        hidden
+                          ? "Show selected content in preview"
+                          : "Hide selected content from preview"
+                      }
+                      onClick={() => {
+                        act("hide");
+                      }}
+                    >
+                      {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete selected content"
+                      onClick={() => {
+                        setDeleting(selection);
+                      }}
+                    >
+                      <Trash2 size={15} />
+                    </Button>
+                  </>
+                ) : null}
+              </SectionActions>
+            ) : null}
+            <div className="rf-document-container" ref={canvasRef}>
+              {isCompact && mode === "editor" ? (
+                <div className="rf-mobile-document">{documentBody}</div>
+              ) : (
+                <ResumePage>{documentBody}</ResumePage>
+              )}
+            </div>
+            <p className="rf-paper-caption">
+              Edits stay in your draft until saved. AI suggestions require
+              review.
+            </p>
+          </div>
           {panelOpen ? (
             <aside
               key={panel}
@@ -744,10 +1120,6 @@ export function ManualResumeEditor({
               aria-labelledby="rf-tool-panel-heading"
             >
               <div className="rf-inspector-heading">
-                <NodeGraphBackdrop
-                  density={18}
-                  reducedMotion={context?.reducedMotion}
-                />
                 <h2 id="rf-tool-panel-heading">
                   {panel === "ats" || panel === "jd"
                     ? "Resume review"
@@ -790,7 +1162,7 @@ export function ManualResumeEditor({
                       setPanel("ats");
                     }}
                   >
-                    ATS readiness
+                    Resume checks
                   </button>
                   <button
                     type="button"
@@ -799,7 +1171,7 @@ export function ManualResumeEditor({
                       setPanel("jd");
                     }}
                   >
-                    Tailor to job
+                    Job fit
                   </button>
                 </div>
               ) : null}
@@ -865,165 +1237,25 @@ export function ManualResumeEditor({
                       : undefined)
                   }
                   onTarget={onAtsTarget}
+                  onTailor={(jd) => void requestTailoring(jd)}
                 />
               ) : null}
             </aside>
           ) : null}
-          <div
-            className="rf-paper-stage"
-            aria-label="Resume document workspace"
-            data-editor-mode={mode}
-            style={appearanceVariables(appearance)}
-          >
-            <div className="rf-paper-meta">
-              <span>
-                {mode === "editor"
-                  ? "Click text to type · Preview shows document spacing"
-                  : "Preview · hidden content excluded"}
-              </span>
-              <span>Document layout</span>
-            </div>
-            <div className="rf-document-container" ref={canvasRef}>
-              <ResumePage>
-                <ResumeDocument
-                  draft={draft}
-                  selected={selection}
-                  editable={mode === "editor" && !session && !aiSession}
-                  onPending={setInlinePending}
-                  onSelect={select}
-                  onHover={hover}
-                  onHoverExit={cancelHover}
-                  onEdit={(target) => {
-                    requestAnimationFrame(() => {
-                      startEdit(target, historyRef.current.current);
-                    });
-                  }}
-                  onActions={focusActions}
-                  onInlineCommit={editInline}
-                  onRichChange={editRich}
-                />
-              </ResumePage>
-              {mode === "editor" && section?.kind !== "skills" ? (
-                <SectionActions
-                  containerRef={canvasRef}
-                  toolbarRef={toolbarRef}
-                  target={selection}
-                  layoutKey={`${String(panelOpen)}:${panel}`}
-                  draft={draft}
-                  hidden={!!session || !!aiSession}
-                  onPointerEnter={cancelHover}
-                >
-                  <span
-                    className="rf-floating-target"
-                    title={targetLabel(history.current, selection)}
-                  >
-                    {targetLabel(history.current, selection)}
-                  </span>
-                  {selection.type !== "header" &&
-                  rewriteTarget(history.current, selection) ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      glow
-                      className="rf-ai-entry-action"
-                      onClick={() => {
-                        setAiSession({
-                          base: structuredClone(historyRef.current.current),
-                          target: structuredClone(selection),
-                        });
-                      }}
-                    >
-                      Improve with AI
-                    </Button>
-                  ) : null}
-                  {itemArrows ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Move selected item up"
-                        onClick={() => {
-                          act("up");
-                        }}
-                      >
-                        <ArrowUp size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Move selected item down"
-                        onClick={() => {
-                          act("down");
-                        }}
-                      >
-                        <ArrowDown size={15} />
-                      </Button>
-                    </>
-                  ) : null}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    data-selection-edit
-                    aria-label="Edit selected content"
-                    onClick={() => {
-                      startEdit();
-                    }}
-                  >
-                    <Pencil size={15} />
-                  </Button>
-                  {selection.type !== "header" ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={
-                          hidden
-                            ? "Show selected content in preview"
-                            : "Hide selected content from preview"
-                        }
-                        onClick={() => {
-                          act("hide");
-                        }}
-                      >
-                        {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Delete selected content"
-                        onClick={() => {
-                          setDeleting(selection);
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </>
-                  ) : null}
-                </SectionActions>
-              ) : null}
-            </div>
-            <p className="rf-paper-caption">
-              Save changes stores a new version in your account. Text edits
-              apply on blur or Enter; Escape cancels the active text edit. Alt
-              Enter opens details. AI suggestions require review before saving.
-              General readiness checks show draft previews and automatically
-              check saved versions. JD matching and PDF downloads use your saved
-              version and exclude unsaved edits.
-            </p>
-          </div>
         </div>
       </div>
-      {notice && !session && !aiSession && !deleting && !leaving ? (
-        <div className="rf-editor-toast" key={noticeKey}>
-          <StatusBanner
-            tone={notice.error ? "error" : "info"}
-            showToneLabel={notice.error}
-            title={notice.message}
-            onDismiss={() => {
-              setNotice(null);
-            }}
-          />
-        </div>
+      {tailoringOpen && jdMatch?.tailoring ? (
+        <TailoringDialog
+          base={history.current}
+          savedVersion={savedVersion}
+          initialJd={tailoringJd}
+          services={jdMatch.tailoring}
+          disabledReason={actionDisabled}
+          reducedMotion={context?.reducedMotion}
+          onClose={() => {
+            setTailoringOpen(false);
+          }}
+        />
       ) : null}
       {aiSession && aiTarget ? (
         <ServerRewriteDialog

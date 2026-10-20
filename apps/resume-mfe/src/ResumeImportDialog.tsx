@@ -25,19 +25,23 @@ export function ResumeImportDialog({
     text: string;
   } | null>(null);
   const [fileName, setFileName] = useState("");
-  const [reading, setReading] = useState(false);
-  const [error, setError] = useState("");
+  const [reading, setReading] = useState(false),
+    [error, setError] = useState("");
   const [discarding, setDiscarding] = useState(false);
-  const busy = useRef(false);
-  const saving = useRef(false);
-  const active = useRef(true);
-  const createId = useRef(crypto.randomUUID());
+  const busy = useRef(false),
+    saving = useRef(false),
+    active = useRef(true);
+  const createId = useRef(crypto.randomUUID()),
+    reviewHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     active.current = true;
     return () => {
       active.current = false;
     };
   }, []);
+  useEffect(() => {
+    if (staged) reviewHeading.current?.focus();
+  }, [staged]);
   const close = () => {
     if (saving.current) return;
     if (staged) setDiscarding(true);
@@ -66,84 +70,96 @@ export function ResumeImportDialog({
   };
   return (
     <>
-      <Dialog
-        open
-        onOpenChange={(open) => {
-          if (!open) close();
-        }}
-        title={staged ? "Review your imported resume" : "Upload your resume"}
-        description={
-          staged
-            ? `${fileName} · Check the extracted fields before saving.`
-            : "Bring your experience into Forge Studio."
-        }
-        className={`rf-import-dialog${staged ? " is-review" : ""}`}
-        bodyClassName="rf-import-dialog-body"
-        footer={
-          !staged ? (
+      {staged ? (
+        <section
+          className="rf-import-fullpage"
+          aria-labelledby="rf-import-review-heading"
+        >
+          <div className="rf-import-review-banner">
+            <div>
+              <h2
+                id="rf-import-review-heading"
+                ref={reviewHeading}
+                tabIndex={-1}
+              >
+                Review your import
+              </h2>
+              <p>
+                {fileName} · Unsaved import. Check names, dates and sections
+                before confirming.
+              </p>
+            </div>
+            <Button variant="outline" onClick={close}>
+              Discard upload
+            </Button>
+          </div>
+          {RESUME_UI_FEATURES.showExtractedText ? (
+            <details className="rf-import-source">
+              <summary>
+                <FileCheck2 size={16} aria-hidden="true" />
+                Read extracted text
+              </summary>
+              <textarea
+                aria-label="Extracted resume text"
+                readOnly
+                value={staged.text}
+              />
+              <p>
+                Original layout is not preserved. Correct the fields below, then
+                confirm the import.
+              </p>
+            </details>
+          ) : null}
+          <ManualResumeEditor
+            context={{
+              ...context,
+              onNavigate: () => {
+                if (!saving.current) onClose();
+              },
+            }}
+            initialDraft={staged.draft}
+            savedVersion={0}
+            saveLabel="Confirm import"
+            onSave={async (draft) => {
+              saving.current = true;
+              try {
+                const next = await api.create(
+                  createId.current,
+                  draft,
+                  staged.text,
+                );
+                context.onNavigate?.(
+                  `/w/${context.activeWorkspace.id}/resumes/${next.id}`,
+                );
+                return next.currentVersion;
+              } finally {
+                saving.current = false;
+              }
+            }}
+          />
+        </section>
+      ) : (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) close();
+          }}
+          title="Upload your resume"
+          description="Bring your experience into Forge Studio."
+          className="rf-import-dialog"
+          bodyClassName="rf-import-dialog-body"
+          footer={
             <Button variant="outline" onClick={close}>
               Cancel
             </Button>
-          ) : undefined
-        }
-      >
-        {staged ? (
-          <>
-            {RESUME_UI_FEATURES.showExtractedText ? (
-              <details className="rf-import-source">
-                <summary>
-                  <FileCheck2 size={16} aria-hidden="true" /> Review extracted
-                  text
-                </summary>
-                <textarea
-                  aria-label="Extracted resume text"
-                  readOnly
-                  value={staged.text}
-                />
-                <p>
-                  Original layout is not preserved. Correct the fields below,
-                  then confirm and save.
-                </p>
-              </details>
-            ) : null}
-            <ManualResumeEditor
-              context={{
-                ...context,
-                onNavigate: () => {
-                  if (!saving.current) onClose();
-                },
-              }}
-              initialDraft={staged.draft}
-              savedVersion={0}
-              saveLabel="Confirm and save resume"
-              onSave={async (draft) => {
-                saving.current = true;
-                try {
-                  const next = await api.create(
-                    createId.current,
-                    draft,
-                    staged.text,
-                  );
-                  context.onNavigate?.(
-                    `/w/${context.activeWorkspace.id}/resumes/${next.id}`,
-                  );
-                  return next.currentVersion;
-                } finally {
-                  saving.current = false;
-                }
-              }}
-            />
-          </>
-        ) : (
+          }
+        >
           <div className="rf-import-pick">
             <div className="rf-import-mark" aria-hidden="true">
               <Upload size={28} />
             </div>
-            <h3>A fresh start for your resume</h3>
-            <p>
-              Choose a file. Review and edit the imported fields before anything
-              is saved.
-            </p>
+            <h3>Start with your experience</h3>
+            <p>Choose a file, review the imported fields, then save.</p>
             <label className="rf-import-file">
               <span>Choose resume file</span>
               <input
@@ -160,8 +176,8 @@ export function ResumeImportDialog({
             </label>
             <small>Text-based PDF, DOCX, TXT or Markdown · up to 10 MB</small>
             <p className="rf-import-privacy">
-              Processed on your local server. No AI provider receives the
-              upload. Scanned or encrypted PDFs need a text-based copy.
+              Processed on the server. Your upload is not sent to an AI provider
+              during import. Scanned or encrypted PDFs need a text-based copy.
             </p>
             {reading ? (
               <RequestFeedback
@@ -175,8 +191,8 @@ export function ResumeImportDialog({
               </p>
             ) : null}
           </div>
-        )}
-      </Dialog>
+        </Dialog>
+      )}
       <Dialog
         open={discarding}
         onOpenChange={setDiscarding}
@@ -184,12 +200,7 @@ export function ResumeImportDialog({
         description="Your imported review has not been saved. Discarding returns to your resumes."
         footer={
           <>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDiscarding(false);
-              }}
-            >
+            <Button variant="outline" onClick={() => { setDiscarding(false); }}>
               Keep reviewing
             </Button>
             <Button variant="destructive" onClick={onClose}>

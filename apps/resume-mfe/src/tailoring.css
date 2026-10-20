@@ -378,3 +378,238 @@
 .rf-experience-complete {
   padding: 20px 0;
 }
+
+/* Three user phases; the provider's processing stages remain actual status. */
+.rf-tailoring-ux {
+  width: min(1240px, calc(100vw - 40px));
+  max-width: 1240px;
+  max-height: calc(100dvh - 40px);
+}
+.rf-tailoring-ux .rf-tailoring-stages {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 24px;
+  flex-wrap: nowrap;
+}
+.rf-tailoring-ux .rf-tailoring-stages .rf-button {
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 14px;
+}
+.rf-tailoring-ux .rf-tailoring-stages .rf-button[aria-current] {
+  color: var(--primary);
+  background: var(--surface-muted);
+}
+.rf-tailoring-job {
+  max-width: 740px;
+  margin-inline: auto;
+}
+.rf-tailoring-job > h3 {
+  font-size: 26px;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+.rf-tailoring-job > p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.rf-tailoring-job .rf-studio-prompt textarea {
+  min-height: 220px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.rf-tailoring-optional {
+  margin: 24px 0;
+  background: var(--surface-muted);
+  padding: 16px 20px;
+}
+.rf-tailoring-optional > summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  padding-block: 10px;
+}
+.rf-tailoring-job .rf-ai-scope {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+.rf-tailoring-ux .rf-experience-confirm {
+  padding: 20px;
+  background: var(--surface-muted);
+  margin-bottom: 24px;
+}
+.rf-tailoring-check-details {
+  font-size: 14px;
+  line-height: 1.65;
+  margin-top: 20px;
+}
+.rf-tailoring-check-details > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+}
+.rf-tailoring-ux .rf-tailoring-title {
+  font-size: 14px;
+  gap: 8px;
+}
+.rf-tailoring-ux .rf-tailoring-review-heading h3 {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+.rf-tailoring-ux .rf-tailoring-proposal {
+  padding: 22px;
+  background: var(--surface-muted);
+  border: 0;
+  margin-bottom: 16px;
+}
+.rf-tailoring-ux .rf-tailoring-proposal.is-excluded {
+  border: 0;
+  opacity: 0.8;
+}
+.rf-tailoring-ux .rf-tailoring-proposal > .rf-ai-change {
+  margin-top: 18px;
+}
+.rf-tailoring-ux .rf-tailoring-proposal > .rf-ai-change p {
+  font-size: 16px;
+  line-height: 1.7;
+}
+.rf-tailoring-ux .rf-tailoring-proposal summary {
+  font-size: 14px;
+  min-height: 44px;
+  padding-block: 12px;
+}
+.rf-tailoring-ux .rf-tailoring-proposal label {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.rf-tailoring-view-switch {
+  display: none;
+}
+.rf-tailoring-ready {
+  padding: 24px 0 36px;
+  max-width: 720px;
+  margin: auto;
+}
+.rf-tailoring-ready h3 {
+  font-size: 26px;
+  margin-bottom: 14px;
+}
+.rf-tailoring-ready p {
+  font-size: 16px;
+  line-height: 1.65;
+  margin-bottom: 22px;
+}
+.rf-tailoring-ready > .rf-button {
+  margin: 0 10px 10px 0;
+}
+@media (max-width: 760px) {
+  .rf-tailoring-ux {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 18px 16px;
+    display: flex;
+  }
+  .rf-tailoring-ux .rf-ai-dialog-body {
+    flex: 1;
+    min-height: 0;
+  }
+  .rf-tailoring-ux .rf-ai-dialog-footer {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    background: var(--surface);
+  }
+  .rf-tailoring-ux .rf-ai-dialog-footer .rf-button {
+    min-height: 44px;
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 14px;
+  }
+  .rf-tailoring-ux .rf-ai-dialog-footer .rf-button:last-child {
+    flex: 1 1 100%;
+  }
+  .rf-tailoring-ux .rf-tailoring-stages {
+    gap: 6px;
+    padding-bottom: 18px;
+  }
+  .rf-tailoring-ux .rf-tailoring-stages .rf-button {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .rf-tailoring-view-switch {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .rf-tailoring-view-switch .rf-button {
+    flex: 1;
+    min-height: 44px;
+  }
+  .rf-tailoring-review[data-review-view="changes"] > .rf-tailoring-preview {
+    display: none;
+  }
+  .rf-tailoring-review[data-review-view="preview"] > .rf-tailoring-changes {
+    display: none;
+  }
+  .rf-tailoring-ux .rf-tailoring-review {
+    display: block;
+    margin-top: 20px;
+  }
+  .rf-tailoring-job > h3 {
+    font-size: 23px;
+  }
+  .rf-tailoring-optional {
+    padding: 12px 16px;
+  }
+  .rf-tailoring-ux .rf-tailoring-proposal {
+    padding: 18px;
+  }
+}
+.rf-tailoring-ux .rf-tailoring-proposal .rf-text-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.rf-tailoring-ux .rf-tailoring-review-heading {
+  border: 0;
+  box-shadow: none;
+}
+@media (max-width: 1000px) {
+  .rf-tailoring-view-switch {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .rf-tailoring-view-switch .rf-button {
+    flex: 1;
+    min-height: 44px;
+  }
+  .rf-tailoring-review[data-review-view="changes"] > .rf-tailoring-preview {
+    display: none;
+  }
+  .rf-tailoring-review[data-review-view="preview"] > .rf-tailoring-changes {
+    display: none;
+  }
+  .rf-tailoring-ux .rf-tailoring-review {
+    display: block;
+    margin-top: 20px;
+  }
+}
+
+.rf-tailoring-ux .rf-tailoring-proposal label,
+.rf-tailoring-ux .rf-experience-confirm label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

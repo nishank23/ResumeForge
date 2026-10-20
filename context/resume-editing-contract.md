@@ -29,3 +29,7 @@ Legacy quantify no longer fabricates numeric claims; other legacy suggestions/cl
 Check keyboard/focus restoration, mobile review, quiet motion, stale targets, cross-owner denial and source/contact exclusion. Application decoration never enters paper, PDFs or other exports.
 
 New import heuristics separate supported undated project headings and map degree-first education; existing saved versions are never reparsed or rewritten automatically. Full-tailoring prose fields identify standalone achievements. Added descriptions must remain distinct from saved sibling text even when another proposal is rejected. Repetition failures use the existing bounded correction/original-retention path; source bullets are never removed to conceal duplication. Summary synthesis may intentionally repeat supported strengths. Exact line checks complement fallible semantic review, not a guarantee against every paraphrase.
+
+## Save-before-action UX — 2026-10-20
+
+Save & download exports the exact version returned by saving. Save & tailor waits for revision-bound owner callbacks and refuses to use an older snapshot if newer unsaved edits appeared during save. Conflicts/failures stop either follow-up. Tailoring has three presentation phases; optional added facts still require explicit confirmation before provider processing, and reviewed changes still save a separate copy. PDF retry does not repeat Apply. Compact readable editing changes only the view; saved appearance, exact A4 preview, paper identity and PDF rendering remain separate.

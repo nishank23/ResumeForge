@@ -38,7 +38,7 @@ import { TemplateGallery } from "./templates/TemplateGallery";
 import { matchingTemplate, RESUME_TEMPLATES } from "./templates/registry";
 
 export const EDITOR_PANELS = {
-  content: { label: "Content", icon: FileText },
+  content: { label: "Sections", icon: FileText },
   design: { label: "Template", icon: Palette },
   ats: { label: "ATS readiness", icon: Gauge },
   jd: { label: "Tailor to job", icon: Briefcase },
@@ -76,7 +76,7 @@ export function EditorRail({
               }}
             >
               <Icon size={21} aria-hidden="true" />
-              <span>{key === "ats" ? "Review" : label}</span>
+              <span>{key === "ats" ? "Feedback" : label}</span>
             </button>
           );
         })}

@@ -6,7 +6,7 @@ import {
 } from "react";
 import type { DraftTarget, ResumeDraft } from "./editor-draft";
 
-/** Actions use screen coordinates and never contribute to printable page height. */
+/** App-only actions; inline mode keeps controls outside printable paper. */
 export function SectionActions({
   containerRef,
   toolbarRef,
@@ -16,6 +16,7 @@ export function SectionActions({
   hidden,
   onPointerEnter,
   children,
+  inline = false,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   toolbarRef: RefObject<HTMLDivElement | null>;
@@ -25,13 +26,14 @@ export function SectionActions({
   hidden: boolean;
   onPointerEnter: () => void;
   children: ReactNode;
+  inline?: boolean;
 }) {
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(
     null,
   );
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || hidden) return;
+    if (!container || hidden || inline) return;
     const sectionId = target.type === "header" ? null : target.sectionId;
     const entryId =
       target.type === "entry"
@@ -84,16 +86,16 @@ export function SectionActions({
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [containerRef, target, layoutKey, draft, hidden]);
+  }, [containerRef, target, layoutKey, draft, hidden, inline]);
   return (
     <div
       ref={toolbarRef}
-      className="rf-floating-actions"
+      className={inline ? "rf-selected-actions" : "rf-floating-actions"}
       onPointerEnter={onPointerEnter}
       role="group"
       aria-label="Selected content actions"
-      hidden={hidden || !anchor}
-      style={anchor ?? undefined}
+      hidden={hidden || (!inline && !anchor)}
+      style={inline ? undefined : (anchor ?? undefined)}
     >
       {children}
     </div>

@@ -2,10 +2,10 @@
 
 Forge Studio's current app uses Sora headings and DM Sans body text, shared shadcn-style controls, Performative UI adapters, Tiptap and independent printable templates.
 
-| Theme | Existing tokens |
-| --- | --- |
-| Dark | Carbon #111014, panel #1b1921, text #f8f6fd, violet #b89aff, border #393341 |
-| Light | Mist #f5f3f8, white #ffffff, ink #271f35, violet #6631c2, border #ded7e8 |
+| Theme | Existing tokens                                                             |
+| ----- | --------------------------------------------------------------------------- |
+| Dark  | Carbon #111014, panel #1b1921, text #f8f6fd, violet #b89aff, border #393341 |
+| Light | Mist #f5f3f8, white #ffffff, ink #271f35, violet #6631c2, border #ded7e8    |
 
 Source: [shared stylesheet](../packages/shared/src/styles/styles.css). Device theme is the default unless explicitly overridden. The sign-in ASCII scene is full-screen; signed-in users enter My resumes. Paper remains white in either app theme.
 
@@ -15,6 +15,6 @@ Navigation/page requests share Loading your workspace…; task-specific saving/a
 
 The initial page uses an inline resume blueprint, an AI node and a coordinated scan in the existing violet palette. **Your story, taking shape.** is product copy; **Loading your workspace…** is the real status. The screen spans session/federation startup and disappears immediately when the main page or recovery UI is ready. It does not suggest that a visitor's resume is being processed before sign-in. Light/dark themes, reduced motion, hidden-tab pause and a slow-load reload link are supported. [Implementation and verification](../docs/cold-start-loading.md#resume-system-loading-design--2026-10-15).
 
-The user approved the first tailoring slice. Its evidence/review/export dialog is connected using the current theme, not a new color redesign. [Contract and manual checks](../docs/full-resume-tailoring.md).
+The user approved the three-phase UX on 2026-10-20: **Job, Review, Ready**. Keep direct tailoring entry points, optional collapsed questions, inline entry-local fact confirmation and real processing feedback. Full original/suggested text and individual rejection remain mandatory before copy-save. Save-copy/export is one user action; failed export retries without another copy or AI run. The current theme and shared Performative adapters remain. [UI behavior and verification](../docs/ux-ui-improvements.md).
 
-Tailoring optional details uses one locally selected question at a time, at most three total. Keep saved excerpts and added answers collapsed, preserve Back/Skip/edit, and retain the explicit grouped fact confirmation before provider processing. Detailed saved evidence can skip questions. Processing replaces the questionnaire/ledger with actual stage status.
+Desktop uses section navigation, the document and a feedback panel. Narrow screens show Resume or Feedback/tools; readable editing reflows while Preview preserves A4 layout. Display-only mobile typography never changes saved appearance/PDF settings. Prioritized feedback reuses existing checks/weights and preserves the full detailed list and dismissal semantics. Import review is full-page and explicitly unsaved until confirmation.
