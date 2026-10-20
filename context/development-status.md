@@ -3,14 +3,16 @@
 Internal task ownership for scripts/development-task.mjs. Private locks stay local to this checkout.
 
 <!-- BEGIN:CURRENT_TASK -->
+
 ```json
 {
-  "status": "ongoing",
-  "task": "Verify personal tailoring release and retire preserved organization checkouts",
-  "owner": "a8812756-3cd8-43dd-9e1c-ac2cc006d96f",
-  "startedAt": "2026-10-20T09:10:43.947Z",
-  "updatedAt": "2026-10-20T09:10:43.947Z",
-  "lastResult": "Personal migration checks in progress; source checkout lock is retained until handoff."
+  "status": "idle",
+  "task": null,
+  "owner": null,
+  "startedAt": null,
+  "updatedAt": "2026-10-20T14:01:41.788Z",
+  "lastResult": "Personal main deployed; live synthetic tailoring/copy/PDF passed; updated Gemini secret verified; old checkouts retired with recovery preserved; temporary SSH removed."
 }
 ```
+
 <!-- END:CURRENT_TASK -->

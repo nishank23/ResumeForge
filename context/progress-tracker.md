@@ -109,7 +109,6 @@ Two clearly named synthetic QA resumes remain locally for inspection. No real re
 
 Local image-check limitation: an earlier emulated build had already snapshotted the initial checksum-test shim and failed because Debian slim lacks shasum. The published candidate uses the corrected Node checksum fixture; its complete GitHub Linux check/build/integration run passed. No final local image rebuild was repeated after that green CI result.
 
-
 ## Shorter tailoring intake and vendor assessment — 2026-10-15
 
 - [x] Reduced new intake from five questions to three optional prompts per selected visible work/project entry: personal contribution/problem context, actual tools and real result/extra detail. Users can leave all answers blank and continue using saved facts. Earlier context/detail answers remain editable in a collapsed disclosure and retain labels in confirmation; server fact kinds, version binding, confirmation and provider privacy rules are unchanged.
@@ -123,7 +122,6 @@ Local image-check limitation: an earlier emulated build had already snapshotted 
 
 Questionnaire/navigation changes remain uncommitted on feature. Deployment work and private configuration/data were preserved. The current contract and [manual checklist](../docs/full-resume-tailoring.md#manual-checklist) reflect the shorter flow.
 
-
 ## Personal automated deployment activated — 2026-10-15
 
 - [x] Applied the user's approved deployment exception to personal private `nishank23/ResumeForge`. Merged personal PR #2 and the narrow test-fixture repair PR #3. The primary checkout remains `feature`; its index, unrelated product changes and other worktrees were preserved.
@@ -135,7 +133,6 @@ Questionnaire/navigation changes remain uncommitted on feature. Deployment work 
 - [ ] Real-VM failure/rollback has not been fault-injected. The 12 mocked deployment cases cover rollback and preflight failures; they do not establish production failure recovery. Releases restart the app, and no zero-downtime claim is made. Images/private backups are retained without automatic pruning; review disk before frequent releases.
 
 The initial merged-main run failed before deployment because checksum/backup mocks raced with the Docker mock over shared JSON state. PR #3 confined that state to the Docker mock, after which PR verification and the complete automatic release passed. Operational details and retained recovery images are in [CI/CD operations](../docs/ci-cd.md). Personal main includes the verified operations guide in documentation-only commit `b72e2c575fb73534bcc134a7ef317cd7797b46dd` (`[skip ci]`); no additional release ran. Public API health returned HTTP 200 again at 17:38:18 UTC. Unrelated organization tailoring changes remain uncommitted on `feature` and were not deployed.
-
 
 ## Faster adaptive tailoring and full local verification — 2026-10-16
 
@@ -153,7 +150,6 @@ The initial merged-main run failed before deployment because checksum/backup moc
 
 The native app remains at http://localhost:3000. Synthetic source/copy records remain local for manual testing. [Updated manual checklist](../docs/full-resume-tailoring.md#manual-checklist).
 
-
 ## Published baseline and tailoring quality — 2026-10-16
 
 - [x] Committed the adaptive intake, confirmed experience, session-grant refresh and startup UI as `f95e3aa1428430a8d9966a91cb89de060e84ef5d`. Pushed explicitly to `organization/feature` in resuming-v2/ResumeForge and verified matching local/remote tracking SHA. Main was not merged. Personal deployment workflows/scripts and their ownership notes remain separate and preserved.
@@ -167,7 +163,6 @@ The native app remains at http://localhost:3000. Synthetic source/copy records r
 
 The parser/prose-quality changes were local and uncommitted when the 2026-10-16 task finished. Their publication follow-up is recorded below. Native development remains at http://localhost:3000. The synthetic source and reviewed copy remain available for manual inspection; private provider configuration, deployment work and real user records were preserved.
 
-
 ## Quality fixes publication — 2026-10-18
 
 - [x] Reviewed the completed resume import and tailoring-quality changes against the current `feature` checkout and organization remote. The changes separate undated projects, keep action sentences out of technology metadata, map degree-first education, distinguish standalone achievements in AI input, and reject newly repeated entry prose while preserving original facts and independent proposal selection.
@@ -175,11 +170,15 @@ The parser/prose-quality changes were local and uncommitted when the 2026-10-16 
 - [x] Fresh checks passed on 2026-10-18: resume-service TypeScript build, lint, 93 service tests and 26 separate tailoring tests. Database, live paid-provider and signed-in browser checks above remain dated 2026-10-16 evidence; they were not repeated for this unchanged-code publication.
 - [x] Publication scope is the product changes on `organization/feature` in `resuming-v2/ResumeForge`. Main merge/deployment were not requested. Separate personal deployment workflows/scripts and their documentation remain preserved outside this organization changeset. Private `.env`, `.local` and real resume files remain excluded.
 
-
 ## Complete personal repository transfer — 2026-10-20
 
-- User approved transferring the complete organization `feature` release (`c1b7982197fa5bcaccc8d7d01fe6cecc8b727215`) into private personal `nishank23/ResumeForge`, then retiring local organization checkouts. Canonical personal clone: `/Users/nishankbansal/Downloads/ResumeForge`.
-- Integrated the organization history with personal `main` `b72e2c575fb73534bcc134a7ef317cd7797b46dd`. Preserved the cloud runtime, static loader/preloads, exact-origin federation, keyless CI/CD and guarded update/backup logic. Product source merged without conflicts; documentation now points to personal development and release.
-- Fresh personal-clone verification passed: all 15 workspace builds, all 34 lint/typecheck/dependency tasks, 329 unit tests, 24 disposable restricted-database editor/tailoring cases and 24 deployment/configuration/task orchestration cases. The standard resume-service test now includes all 26 tailoring regressions. A cloud-image integration case checks queue/review, cross-owner denial, independent idempotent copy save, unchanged source and PDF without real provider calls; its actual Linux CI result remains pending.
-- Schema, migrations, bootstrap and runtime-grant definitions match the current cloud release. No database migration or provider credential rotation is needed. Private `.env` and managed environment files were copied byte-for-byte and remain ignored. Existing Git refs, dirty patches, untracked files and per-checkout private settings are preserved in ignored private migration evidence. Private manual-check resumes were copied without entering Git or provider tests.
-- Pending: private-repo PR checks, merge/deployment, live tailoring smoke check, consistent local PostgreSQL handoff and final old-checkout retirement. Historical production concurrency and real-VM rollback limitations remain; this transfer does not claim commercial readiness.
+- [x] Transferred the complete organization `feature` history (`c1b7982197fa5bcaccc8d7d01fe6cecc8b727215`) into private personal `nishank23/ResumeForge` through [PR #4](https://github.com/nishank23/ResumeForge/pull/4). Merge commit `a2881dfcace096f23729bb0db7cd1b1f2ffac74b` includes that source commit as an ancestor. Organization remote branches were not changed or deleted.
+- [x] Canonical independent local clone is `/Users/nishankbansal/Downloads/ResumeForge`, branch `main`, with only personal `origin`. Preserved the cloud runtime, static loader/preloads, exact-origin federation, keyless CI/CD and guarded backup/update logic. Product source merged without conflicts; active checkout instructions now authorize personal development and release.
+- [x] Fresh verification passed: 15 workspace builds, 34 lint/typecheck/dependency tasks, 329 unit tests, 24 disposable restricted-database editor/tailoring cases and 24 deployment/configuration/task orchestration cases (377 local tests total). The standard resume-service test includes all 26 tailoring regressions. PR and main Linux amd64 CI also passed the isolated cloud-image integration, including queue/review, foreign-owner denial, idempotent independent-copy save, unchanged source and PDF with mocked providers.
+- [x] [Production run 39399489007](https://github.com/nishank23/ResumeForge/actions/runs/39399489007) succeeded at 09:35:12 UTC. Installed release: `a2881dfcace096f23729bb0db7cd1b1f2ffac74b-39399489007-1`. The private cloud backup passed restoration verification before the update. Schema/migrations/bootstrap/runtime grants are unchanged; database and credential volumes were preserved.
+- [x] Applied the user's later local `.env` update separately from the code release. Only changed production-supported `GEMINI_API_KEY` was synchronized to root-owned mode `0600` `/etc/resumeforge/provider.env`. Existing OAuth and paid mode remained unchanged. The actual backend key matched the approved local value; app image, database container/start time, web container and other provider settings were unchanged. Local-only settings and the removed unused `OPENCODE_API_KEY` were not uploaded. Exact provider-secret scans found no values in 470 tracked files. No secrets entered Git, GitHub variables/artifacts, build arguments or frontend assets.
+- [x] Fresh signed-in live smoke test used a clearly labeled synthetic resume only. Updated Gemini key completed writing, independent review and bounded correction (four stages). Review returned one selectable summary proposal and retained one original field after fact/coverage checks. Selection off/on updated the preview. Saved `Personal release QA - tailored` as an independent version-1 copy, reloaded it and downloaded a valid 15,502-byte one-page A4 PDF. Original stayed version 1 with its original summary and entries. JD score was 83 before/after; no score gain is claimed. Existing real resumes were not submitted to the provider test.
+- [x] Local PostgreSQL handoff used a restore-tested private dump and a cold cluster copy to the canonical checkout. Before/restore/after counts matched: 2 users, 37 resumes, 59 versions and 2 profiles. Native PostgreSQL runs from the new `.local/postgres`, independent of the removed source repository.
+- [x] Retired `/Users/nishankbansal/Downloads/ResumeBuilderv2`, `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`, `/Users/nishankbansal/Downloads/backend` and the old cloud-deploy checkout. Managed cloud worktree was archived first. All paths are absent. Verified Git bundles, tracked patches, untracked archives, per-checkout private files and manual-check inputs remain in ignored, private `.local/migration-20261020`; native data/settings also remain usable in the canonical checkout. No private symlinks point into retired paths.
+- [x] Removed this task's temporary OS Login SSH key, local SSH material, remote helper and transfer payload. The user's pre-existing global Google CLI login was preserved. A root-only prior-provider backup remains on the VM for rollback; it contains secrets and must stay private.
+- Limitations observed today: degree-first pipe-delimited education required correction during mandatory import review. During the secret-only app restart, audit-worker initialization failed transiently and app readiness flapped; no OOM event was observed. Automatic restoration recovered the prior configuration, then a bounded 420-second operator grace allowed retry to become healthy with the new key. No resource size, Compose health policy or CI deadline was changed. Deployment still restarts the app; real-VM failure/rollback has not been fault-injected. Historical concurrency limits still apply.

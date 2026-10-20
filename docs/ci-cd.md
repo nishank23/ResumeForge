@@ -2,9 +2,9 @@
 
 ## Scope
 
-The deployment target is the private `nishank23/ResumeForge` repository and the existing `resume-forge-dev/us-central1-a/resumeforge-demo` VM. On 2026-10-15 the user explicitly overrode the organization-only publication rule for this deployment task. The primary `feature` checkout and other worktrees remain in place. Unrelated feature changes are not part of this release.
+The deployment target is private `nishank23/ResumeForge` and the existing `resume-forge-dev/us-central1-a/resumeforge-demo` VM. On 2026-10-20 the user approved transferring the full organization `feature` release into personal `main`, superseding the earlier deployment-only exception. The canonical local checkout is `/Users/nishankbansal/Downloads/ResumeForge`; the old organization and cloud-development checkouts were retired after preservation. The organization GitHub repository remains intact.
 
-The existing cloud runtime is already merged into personal `main` at `df3b866`. The deployment candidate started from that release. It requires that branch's Dockerfile cloud targets, `compose.cloud.yaml`, cloud runtime guards and isolated integration override. Copying only the workflow into the organization checkout does not supply those prerequisites. The deployment candidate also carries the already-live first-load screen and bootstrap preloads so a full rebuild preserves them.
+The personal release combines the complete tailoring implementation with the existing Docker cloud targets, Compose guards, isolated integration suite, static first-load screen and bootstrap preloads. Copying the workflow alone into another checkout does not supply those runtime prerequisites.
 
 ## Release behavior
 
@@ -99,3 +99,24 @@ Local deployment orchestration tests use mocked Docker/backup/network commands; 
 - The dedicated identity audit confirmed the exact repository/main/workflow admission condition, VM-scoped SSH/IAP grants and zero user-managed service-account keys. The temporary human CLI login was revoked after verification; its one-hour SSH key was already absent from OS Login. Existing human GitHub login and application provider credentials were preserved.
 
 The first merged-main check exposed a race in the test mocks before any deployment. The repair gives only the Docker mock ownership of its state file. PR and main verification then passed. A real success path and backup restoration do not prove failure recovery on the production VM; retain that limitation when assessing readiness.
+
+## Full tailoring release and private environment update — 2026-10-20
+
+[PR #4](https://github.com/nishank23/ResumeForge/pull/4) merged complete organization feature history into personal `main`. [Production run 39399489007](https://github.com/nishank23/ResumeForge/actions/runs/39399489007) passed all verification, Linux amd64 image builds, isolated integration, IAP upload, backup restoration and runtime health gates. It installed source `a2881dfcace096f23729bb0db7cd1b1f2ffac74b`, release `a2881dfcace096f23729bb0db7cd1b1f2ffac74b-39399489007-1`, at 09:35:12 UTC. The pre-update verified backup is `/var/backups/resumeforge/resumeforge-20261020T093125Z-2257359.tar.gz`. Database migrations/bootstrap/runtime grants did not change.
+
+The user subsequently updated the canonical local `.env`. A separate private operation synchronized only the changed production-supported `GEMINI_API_KEY`; existing Google OAuth values and `GEMINI_DATA_MODE=paid` matched and were preserved. The removed unused `OPENCODE_API_KEY` and local development URLs/ports were not production configuration. The full `.env` was never uploaded.
+
+Secret handling for this operation:
+
+1. Read values in memory and compare key names/changed state without printing values. Keep local `.env` mode `0600`, `.local` private and both ignored. Scan tracked content for the actual provider secret values before publication.
+2. Transfer only the approved server-key change through encrypted IAP SSH into a private temporary payload. Do not place secrets in command arguments, GitHub variables, build arguments, Dockerfiles, logs or browser code.
+3. On the VM, acquire the deployment lock, retain a root-only rollback copy, atomically update root-owned mode `0600` `/etc/resumeforge/provider.env`, then recreate only the app with the same image. Keep production database passwords, internal service keys, session settings, origins and mounts unchanged.
+4. Verify the runtime key against the approved value in memory, application health, unchanged image, database/web containers and other provider settings. Remove the transfer payload/helper and task-generated OS Login key and local SSH files.
+
+Compose injects provider values only into the owning backend processes: Google OAuth into auth-service and Gemini into resume-service. They do not enter the separately served frontend. Future CI image deployments preserve the VM provider file; editing a local `.env` alone does not synchronize production secrets. Secret changes require this separate authorized private operation. `/etc/resumeforge/provider.env` is a plaintext root-private file, not Secret Manager; root and authorized deployment administrators can read it, including values in the backend container environment. Retain only necessary root-private rollback copies and review their retention separately.
+
+Verification after the update confirmed the exact approved key reached the backend, unchanged app image/database/web and other provider values, root UID `0`, mode `0600`, and public HTTP 200. A real synthetic-only live tailoring flow completed writing, independent review, bounded correction, proposal selection, separate-copy save, reload and a valid one-page PDF; original source version/content remained unchanged. Score stayed 83 before/after, and one unsafe candidate field was retained as original. Degree-first pipe-delimited education needed correction in import review; this is not proof of universal import accuracy.
+
+The first secret-only restart hit transient audit-worker initialization failure/readiness flaps. Automatic configuration restoration recovered the previous configuration. A retry using a bounded 420-second operator grace became healthy with the new key; no OOM event was observed. This was an operator procedure adjustment only: current Compose health policy and the automated deployment deadline remain unchanged. Cold-start hardening remains follow-up work, and neither this recovery nor successful release proves fault-injected rollback on the real VM. Application restarts still cause an interruption.
+
+Private, value-free test/transfer evidence and preserved local recovery bundles are under `.local/migration-20261020` in the canonical clone. They are intentionally excluded from Git and image contexts. Temporary task SSH access was removed; the user's existing global Google CLI login remains intact. Later documentation-only commits use `[skip ci]` and do not imply a new runtime image.
