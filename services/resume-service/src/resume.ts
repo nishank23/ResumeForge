@@ -1,4 +1,5 @@
 import { createAtsUseCases } from "./ats/use-cases.js";
+import { createTailoringUseCases } from "./tailoring/use-cases.js";
 import type { AiProviders } from "./ats/ai.js";
 import { computeReadiness } from "@resume-forge/resume-core";
 import { readinessProjection } from "./readiness-projection.js";
@@ -2371,6 +2372,15 @@ export function createResumeUseCases(
   }
 
   return {
+    ...createTailoringUseCases({
+      db,
+      now,
+      authorize: authorizeWorkspace,
+      assert: assertContext,
+      audit: createAuditIntent,
+      providers,
+      getResume: getResumeById,
+    }),
     ...createAtsUseCases({
       db,
       now,

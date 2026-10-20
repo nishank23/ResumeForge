@@ -46,6 +46,9 @@ export function createGatewayApp(
   app.put("/api/v1/resume/:id/jd-match/preferences", proxy);
   app.post("/api/v1/resume/:id/ai-rewrite", proxy);
   app.post("/api/v1/resume/:id/ai-rewrite/apply", proxy);
+  app.on(["GET", "POST"], "/api/v1/resume/:id/tailoring", proxy);
+  app.post("/api/v1/resume/:id/tailoring/cancel", proxy);
+  app.post("/api/v1/resume/:id/tailoring/apply", proxy);
   async function proxy(c: Context) {
     const origin = c.req.header("Origin");
     if (origin && origin !== appOrigin)

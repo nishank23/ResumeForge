@@ -29,6 +29,7 @@ blob-report/
 .wrangler/
 .vercel/
 .trigger/
+gha-creds-*.json
 
 # Local code index (project Markdown remains tracked)
 .codegraph/

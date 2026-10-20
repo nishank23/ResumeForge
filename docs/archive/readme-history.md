@@ -22,7 +22,7 @@ The signed-out **Forge Studio** scene now fills the viewport edge to edge. The o
 
 Manual check: open `http://localhost:3000/sign-in` while signed out. Confirm the background reaches every edge, header/footer stay within it, and Google remains available. Resize to phone width: content should stack without horizontal scrolling. Theme controls still select the existing browser-local preference; Use device theme in Preferences restores device mode.
 
-Verification: **15 shell tests**, shared/shell/auth lint, shared build and all four frontend production builds (including TypeScript) pass. Live dark-theme Chrome verifies a 1440×638 hero at x=0/y=0 with zero border/radius, and 320px/390px/900px responsive bounds. The final 390px static fallback has no canvas and fills the 844px scene; temporary viewport overrides were reset. Google OAuth, light-theme preview, backend/save/AI/PDF flows were not rerun for this layout-only slice. [Detailed evidence](../ux-ui-update-verification.md#full-screen-ascii-sign-in). Changes remain uncommitted on **ux-ui-update**.
+Verification: **15 shell tests**, shared/shell/auth lint, shared build and all four frontend production builds (including TypeScript) pass. Live dark-theme Chrome verifies a 1440×638 hero at x=0/y=0 with zero border/radius, and 320px/390px/900px responsive bounds. The final 390px static fallback has no canvas and fills the 844px scene; temporary viewport overrides were reset. Google OAuth, light-theme preview, backend/save/AI/PDF flows were not rerun for this layout-only slice. [Detailed evidence](2026-10-14/docs/ux-ui-update-verification.md#full-screen-ascii-sign-in). Changes remain uncommitted on **ux-ui-update**.
 
 ## Device theme default — 2026-10-10
 
@@ -34,7 +34,7 @@ Manual checks:
 2. Change the device appearance while the app is open. Device mode should follow it. Choose Light or Dark explicitly, reload, and confirm that choice remains even when device appearance differs. The header/editor theme icon also saves a manual choice.
 3. Select Use device theme again, reload, and confirm the current device appearance returns.
 
-Verification: **15 shell tests pass**, including five new theme regressions for first visits, device updates/manual override/reset, reload persistence, invalid/blocked storage, and subscription cleanup. Shell production build (including TypeScript checking), lint and whitespace checks pass. Live Chrome on a dark device verifies the default, a light override across reload, the header toggle, and restored device mode across reload. Live OS appearance changes, standalone remote entrypoints and backend workflows were not retested. [Evidence](../ux-ui-update-verification.md#device-theme-default).
+Verification: **15 shell tests pass**, including five new theme regressions for first visits, device updates/manual override/reset, reload persistence, invalid/blocked storage, and subscription cleanup. Shell production build (including TypeScript checking), lint and whitespace checks pass. Live Chrome on a dark device verifies the default, a light override across reload, the header toggle, and restored device mode across reload. Live OS appearance changes, standalone remote entrypoints and backend workflows were not retested. [Evidence](2026-10-14/docs/ux-ui-update-verification.md#device-theme-default).
 
 ## Upload dialog, AI actions and template gallery — 2026-10-10
 
@@ -55,7 +55,7 @@ Template ownership lives in `apps/resume-mfe/src/templates/` inside the existing
 3. Open a saved project. Check the AI sparkle in light/dark on its floating action, Edit dialog and AI request dialog. Cancel should preserve content and saved version.
 4. Open Template → Browse templates. Try Modern and Editorial: the gallery stays above the paper and shows selection. Done returns to the editor; Undo/Cancel restores formatting. Save, refresh and download PDF to check the saved style and content. Repeat at phone width.
 
-**Actual verification:** 80 frontend tests (shared 13, shell 10, profile 7, resume MFE 50), shared/four MFE builds, five-package typecheck/lint and whitespace check pass. New template tests prove isolated settings, strict save-envelope round trips, unchanged facts, undo/cancel and honest custom-formatting labels. Chrome verifies both themes, 320px/390px bounds, modal focus/return, nested Escape, empty-file recovery, synthetic import/review/Confirm and save (version 1), Modern/Undo and Editorial save/reload (synthetic version 6). Editorial PDF downloaded through the native Save picker: 68,871 bytes, one page, project title/description retained. Chrome extension file-URL permission was unchanged; native picker testing bypassed the automation limitation without changing access. New Gemini generation/Apply, every file format/layout and broad accessibility/performance checks were not repeated. [Evidence](../ux-ui-update-verification.md#upload-ai-action-and-template-refinements).
+**Actual verification:** 80 frontend tests (shared 13, shell 10, profile 7, resume MFE 50), shared/four MFE builds, five-package typecheck/lint and whitespace check pass. New template tests prove isolated settings, strict save-envelope round trips, unchanged facts, undo/cancel and honest custom-formatting labels. Chrome verifies both themes, 320px/390px bounds, modal focus/return, nested Escape, empty-file recovery, synthetic import/review/Confirm and save (version 1), Modern/Undo and Editorial save/reload (synthetic version 6). Editorial PDF downloaded through the native Save picker: 68,871 bytes, one page, project title/description retained. Chrome extension file-URL permission was unchanged; native picker testing bypassed the automation limitation without changing access. New Gemini generation/Apply, every file format/layout and broad accessibility/performance checks were not repeated. [Evidence](2026-10-14/docs/ux-ui-update-verification.md#upload-ai-action-and-template-refinements).
 
 ## Forge Studio entry and editor refinements — 2026-10-10
 
@@ -71,7 +71,7 @@ Saved-resume search now uses a quiet field and normal Search button. The selecte
 4. Open **Forge UI QA (Synthetic)**, select its project, and inspect the glowing Improve with AI action below that entry. Open its dialog and Cancel; saved version 5 should remain unchanged.
 5. Check light/dark and narrow widths. No A4/Fit-to-width labels should appear; paper still fits its available width. Preferences → Reduce motion stops the navigation fade and uses static ASCII.
 
-**Verification:** 78 frontend unit tests, shared and all four frontend builds, five-package typecheck/lint and `git diff --check` pass. Chrome verified actual sign-out/Google sign-in/direct authenticated entry, Search and Enter, scoped AI dialog/Cancel, centered entry toolbar, both themes, 320px/390px fit and reduced motion. No new AI generation, save mutation, file import or completed PDF download was needed for this refinement. [Detailed evidence](../ux-ui-update-verification.md). Changes remain uncommitted.
+**Verification:** 78 frontend unit tests, shared and all four frontend builds, five-package typecheck/lint and `git diff --check` pass. Chrome verified actual sign-out/Google sign-in/direct authenticated entry, Search and Enter, scoped AI dialog/Cancel, centered entry toolbar, both themes, 320px/390px fit and reduced motion. No new AI generation, save mutation, file import or completed PDF download was needed for this refinement. [Detailed evidence](2026-10-14/docs/ux-ui-update-verification.md). Changes remain uncommitted.
 
 ## Forge Studio design — 2026-10-10
 
@@ -79,7 +79,7 @@ Implemented the approved Studio direction locally on **ux-ui-update**, after the
 
 **My resumes** now has a full-width ASCII spotlight with Upload/Create above the saved list. Performative UI's AsciiHero, PromptHero, Prompt, Temperature, NodeGraphBackground, ChatBubble and TokenStream join the existing shared adapters. The editor puts paper left and a compact inspector right, with **Content / Template / Review**, **Editor / Preview**, and **Focus** controls. Review contains **ATS readiness / Tailor to job**; duplicate JD navigation is removed. Score displays remain read-only, rule groups retain exact-entry Fix/View/Dismiss/Restore, and secondary actions collapse. AI reviews retain red removals, green replacements and explicit versioned Apply. TokenStream reveals a validated response notice after the result arrives; it does not simulate server streaming.
 
-The change preserves existing APIs, authentication, saved-version checks, scoring weights, fact validation, Tiptap and native dialog focus handling. No backend, database, credential, dependency or printable-document change is included. Animated backgrounds unmount on mobile/touch, reduced motion, hidden tabs and offscreen views. [Design and component constraints](../ux-ui-update-plan.md), [actual checks and limitations](../ux-ui-update-verification.md).
+The change preserves existing APIs, authentication, saved-version checks, scoring weights, fact validation, Tiptap and native dialog focus handling. No backend, database, credential, dependency or printable-document change is included. Animated backgrounds unmount on mobile/touch, reduced motion, hidden tabs and offscreen views. [Design and component constraints](2026-10-14/docs/ux-ui-update-plan.md), [actual checks and limitations](2026-10-14/docs/ux-ui-update-verification.md).
 
 ### Check Forge Studio
 
@@ -254,37 +254,37 @@ The local implementation retains up to 100 immutable assessments per resume and 
 
 A **Readiness QA (Synthetic)** record was created for live testing and remains in the local account at version 3. It contains synthetic identity, one explicitly synthetic skill, and no contacts. Its score is 33 with six passing checks. A newer **ATS Flow QA (Synthetic)** record also remains for this workflow verification. Use these records for manual feedback checks. Existing real resume content was not edited.
 
-The signed-in Chrome comparison observed CareerZenith scoring without a JD, initially passing Completed checks and contextual Fix dialogs. Our implementation matches those interactions with our approved rubric. Its private algorithm, score weights and thresholds cannot be recovered from the UI. Contact completeness, appearance/link validation, provider-backed rewrites and JD matching are outside this slice. [Reference observations](../careerzenith-ats-comparison.md).
+The signed-in Chrome comparison observed CareerZenith scoring without a JD, initially passing Completed checks and contextual Fix dialogs. Our implementation matches those interactions with our approved rubric. Its private algorithm, score weights and thresholds cannot be recovered from the UI. Contact completeness, appearance/link validation, provider-backed rewrites and JD matching are outside this slice. [Reference observations](2026-10-14/docs/careerzenith-ats-comparison.md).
 
-Verification commands, actual browser results and remaining test limits are in the [tracker](../../context/progress-tracker.md#general-readiness-scoring--2026-10-09). These changes remain local and uncommitted.
+Verification commands, actual browser results and remaining test limits are in the [tracker](2026-10-14/context/progress-tracker.md#general-readiness-scoring--2026-10-09). These changes remain local and uncommitted.
 
 ## Current development task
 
 
 
-The Codex heartbeat checks this task every **15 minutes**. An `ongoing` task is skipped, including a task that takes longer than 15 minutes. When idle, read the [canonical tracker](../../context/progress-tracker.md), claim one unblocked slice with `pnpm task:start "Short task title"`, retain the returned owner token, and finish with `pnpm task:finish OWNER "Actual result and remaining limitation"`. `pnpm task:status` also checks an atomic ignored `.local/development-task.lock`; a competing start exits 2 without changing the README. Invalid or inconsistent state stops new work. Do not remove a stale lock or overwrite an ongoing marker until the previous run is confirmed stopped. See [scheduled development](../scheduled-development.md) for recovery and verification. Keep Codex open and this Mac awake for local checks.
+The Codex heartbeat checks this task every **15 minutes**. An `ongoing` task is skipped, including a task that takes longer than 15 minutes. When idle, read the [canonical tracker](2026-10-14/context/progress-tracker.md), claim one unblocked slice with `pnpm task:start "Short task title"`, retain the returned owner token, and finish with `pnpm task:finish OWNER "Actual result and remaining limitation"`. `pnpm task:status` also checks an atomic ignored `.local/development-task.lock`; a competing start exits 2 without changing the README. Invalid or inconsistent state stops new work. Do not remove a stale lock or overwrite an ongoing marker until the previous run is confirmed stopped. See [scheduled development](2026-10-14/docs/scheduled-development.md) for recovery and verification. Keep Codex open and this Mac awake for local checks.
 
 **Earlier frontend slice — 2026-10-03:** The sample established canvas editing, dialogs and history. The current resume-first integration below replaces its browser-only persistence boundary with owned database versions.
 
-**Earlier frontend fix — 2026-10-04 (superseded by the A4 correction below):** Contextual actions are centered below the active section without shifting the resume or covering the next heading; mobile retains its action dock. [Before/after and manual checks](../manual-editor-verification.md#toolbar-positioning-correction--2026-10-04).
+**Earlier frontend fix — 2026-10-04 (superseded by the A4 correction below):** Contextual actions are centered below the active section without shifting the resume or covering the next heading; mobile retains its action dock. [Before/after and manual checks](2026-10-14/docs/manual-editor-verification.md#toolbar-positioning-correction--2026-10-04).
 
-**AI dialog preview — 2026-10-04:** Improve with AI opens a selected-target dialog with temporary Thinking, Suggested changes and No changes needed states. Accept/Cancel and Undo work locally; every state identifies the disconnected AI service. [Actual checks and manual steps](../ai-preview-verification.md). This is frontend-only and resets on reload.
+**AI dialog preview — 2026-10-04:** Improve with AI opens a selected-target dialog with temporary Thinking, Suggested changes and No changes needed states. Accept/Cancel and Undo work locally; every state identifies the disconnected AI service. [Actual checks and manual steps](2026-10-14/docs/ai-preview-verification.md). This is frontend-only and resets on reload.
 
 A planned multi-tenant resume and professional-profile platform for individuals, organizations, and vendors. It tailors resumes to supplied job descriptions without changing the master profile.
 
-**Skills update — 2026-10-04:** Languages are grouped inside Skills; click Skills for category/tag editing without an AI toolbar. Extra paragraph spacing is removed. [Verification and manual checks](../manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) record desktop/keyboard results and mobile verification pending. Saves still reset on reload.
+**Skills update — 2026-10-04:** Languages are grouped inside Skills; click Skills for category/tag editing without an AI toolbar. Extra paragraph spacing is removed. [Verification and manual checks](2026-10-14/docs/manual-editor-verification.md#skills-dialog-and-compact-spacing--2026-10-04) record desktop/keyboard results and mobile verification pending. Saves still reset on reload.
 
 **Current stage: Phase 1 in progress — P1.1 toolchain/scaffold and P1.2 shared UI/shell (F01) complete.** P1.3 foundations and resume-first personal integration are in progress. The tracker records the current gate and supersedes earlier planning-stage status notes.
 
-**Editor tools — 2026-10-04:** Added Back to all resumes and Edit Content, Customize Template, ATS Score and Optimize for JD panels. Typography/spacing previews share local checkpoints/history; ATS/JD services and PDF remain pending. [Results and manual checks](../editor-panels-verification.md).
+**Editor tools — 2026-10-04:** Added Back to all resumes and Edit Content, Customize Template, ATS Score and Optimize for JD panels. Typography/spacing previews share local checkpoints/history; ATS/JD services and PDF remain pending. [Results and manual checks](2026-10-14/docs/editor-panels-verification.md).
 
-**Workspace sidebar — 2026-10-04:** Collapse sidebar below the logo folds the first column into a 72px icon rail. Expand restores its labels; mobile keeps the existing navigation menu. The choice resets on reload. [Screenshots and manual checks](../workspace-sidebar-verification.md).
+**Workspace sidebar — 2026-10-04:** Collapse sidebar below the logo folds the first column into a 72px icon rail. Expand restores its labels; mobile keeps the existing navigation menu. The choice resets on reload. [Screenshots and manual checks](2026-10-14/docs/workspace-sidebar-verification.md).
 
 ## Integration and branch workflow — 2026-10-08
 
 The completed account/profile integration, resume library/upload/review/database saves, import-field correction and A4 layout are being released through one PR into main. Backend source was already merged through PR #2. The combined lockfile also preserves the backend's pending typescript-eslint 8.71.0 resolution changes alongside the new import dependencies. Private runtime files, local database data and user-supplied resume samples are excluded from Git.
 
-After the merge, remove `origin/codex/frontend` and `origin/codex/backend`, create **features** from the merged main commit, and push its upstream as `origin/features`. Continue using `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. The separate backend checkout/local edits remain intact. Updated AGENTS and scheduled-work instructions use `features`; earlier branch references below are historical. [Current workflow](../parallel-development.md#historical-branch-workflow--2026-10-08).
+After the merge, remove `origin/codex/frontend` and `origin/codex/backend`, create **features** from the merged main commit, and push its upstream as `origin/features`. Continue using `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2`. The separate backend checkout/local edits remain intact. Updated AGENTS and scheduled-work instructions use `features`; earlier branch references below are historical. [Current workflow](2026-10-14/docs/parallel-development.md#historical-branch-workflow--2026-10-08).
 
 Release validation: frozen offline install passed; `pnpm check` **31/31**, `pnpm test` **25/25 tasks / 201 cases**, `pnpm build` **14/14** and the disposable resume-editor database suite **11/11** passed. Existing browser/manual evidence is recorded below. This checkpoint adds no deployment, provider integration or database migration.
 
@@ -317,7 +317,7 @@ Implemented on **features** in the frontend worktree. This section supersedes ea
 
 ### Verification
 
-Final commands and browser/PDF evidence are recorded in the [tracker](../../context/progress-tracker.md#saved-pdf-downloads-and-confirmed-deletion--2026-10-08). No commit, push or deployment is implied by these local changes.
+Final commands and browser/PDF evidence are recorded in the [tracker](2026-10-14/context/progress-tracker.md#saved-pdf-downloads-and-confirmed-deletion--2026-10-08). No commit, push or deployment is implied by these local changes.
 
 ## Editor sidebar, ATS meter and section actions — 2026-10-08
 
@@ -424,7 +424,7 @@ All new code runs from `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBui
 - Inline edits are committed before saving. Dialog **Save** changes the working draft; the editor's **Save changes** persists it. Undo/Redo remain local. Cancel restores the last acknowledged document. Changes typed during a pending save stay unsaved. Back to the library warns about unsaved changes; browser unload also warns. Other in-app navigation can still discard unsaved edits, so save before changing pages.
 - **Upload resume** extracts a supported file into an editable review draft. Inspect the extracted source text, correct fields and click **Confirm and save resume** to create version 1. Cancel before confirmation creates no resume. Parsing is authenticated, rechecks access after processing and never creates or updates a master professional profile or UserContact.
 - The schema requires a profile foreign key. If missing, creation inserts an empty internal anchor only. It does not copy imported professional facts, contacts or OAuth credentials into the master profile. Deriving a master profile from reviewed resume facts remains a separate future confirmation flow.
-- Gateway and the active resume service expose only personal create, parse, list, load and manual save. The service uses the explicitly approved `rf_local_resume` role and checks its grants at startup. It cannot read OAuth credentials or UserContact. Existing auth/profile passwords are preserved. No schema migration was needed. See [approved role and applied grants](../resume-runtime-approval.md).
+- Gateway and the active resume service expose only personal create, parse, list, load and manual save. The service uses the explicitly approved `rf_local_resume` role and checks its grants at startup. It cannot read OAuth credentials or UserContact. Existing auth/profile passwords are preserved. No schema migration was needed. See [approved role and applied grants](2026-10-14/docs/resume-runtime-approval.md).
 
 ### Upload limits and retention
 
@@ -468,11 +468,11 @@ pnpm --filter @resume-forge/shared... --filter @resume-forge/auth-service... --f
 RESUME_FORGE_LOCAL_ROOT=/Users/nishankbansal/Downloads/ResumeBuilderv2 node --experimental-strip-types --test services/auth-service/test/auth.test.mjs services/profile-service/test/profile.test.mjs services/resume-service/test/editor.db.test.mjs
 ```
 
-Test totals and final commands are recorded in the [progress tracker](../../context/progress-tracker.md#resume-first-library-upload-and-persistence--2026-10-04). Database suites create and drop disposable synthetic databases; they do not replace development accounts. Full F10 management, shared-workspace privacy variants, contact APIs, reviewed master-profile derivation, real grounded AI, ATS/JD scoring and PDF export remain pending. The temporary AI dialogs still operate locally; Accept changes the working draft and requires **Save changes** for persistence. AI/ATS/PDF controls do not imply those server capabilities are enabled.
+Test totals and final commands are recorded in the [progress tracker](2026-10-14/context/progress-tracker.md#resume-first-library-upload-and-persistence--2026-10-04). Database suites create and drop disposable synthetic databases; they do not replace development accounts. Full F10 management, shared-workspace privacy variants, contact APIs, reviewed master-profile derivation, real grounded AI, ATS/JD scoring and PDF export remain pending. The temporary AI dialogs still operate locally; Accept changes the working draft and requires **Save changes** for persistence. AI/ATS/PDF controls do not imply those server capabilities are enabled.
 
 ## Start here
 
-**Frontend worktree — 2026-10-04:** All new frontend work uses `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2` on `codex/frontend`. The original checkout is retained at detached commit `0dc79ec` for its authoritative private configuration and database; active personal service code now runs from this frontend worktree. Use the new worktree's own task marker/lock. [Current checkout paths and coordination](../parallel-development.md).
+**Frontend worktree — 2026-10-04:** All new frontend work uses `/Users/nishankbansal/.codex/worktrees/frontend/ResumeBuilderv2` on `codex/frontend`. The original checkout is retained at detached commit `0dc79ec` for its authoritative private configuration and database; active personal service code now runs from this frontend worktree. Use the new worktree's own task marker/lock. [Current checkout paths and coordination](2026-10-14/docs/parallel-development.md).
 
 For frontend-only development in this worktree, install the frozen lockfile, build `@resume-forge/shared-types` and `@resume-forge/shared`, then run:
 
@@ -482,16 +482,16 @@ pnpm --parallel --filter @resume-forge/shell --filter @resume-forge/auth-mfe --f
 
 The standalone resume remote at `http://localhost:3003/` links to the authenticated shell at `http://localhost:3000/`. These four frontend servers run from this worktree. For authenticated profile/resume work, use **`pnpm dev:personal`** above. The local auth/profile password mismatch is repaired; private configuration and the existing database remain in the original checkout. Do not initialize a second cluster or copy secrets into this worktree.
 
-**Parallel development — 2026-10-04:** Current sidebar work is committed on `main`; new work uses `codex/frontend` and a separate `codex/backend` checkout. Codex owns frontend and integration; the backend agent owns assigned service changes. Read [file ownership, scheduler rules and Gemini handoff](../parallel-development.md) before running both agents. The frontend AI dialog commit `0dc79ec` was subsequently pushed to `origin/codex/frontend`; the named frontend worktree now owns that branch.
+**Parallel development — 2026-10-04:** Current sidebar work is committed on `main`; new work uses `codex/frontend` and a separate `codex/backend` checkout. Codex owns frontend and integration; the backend agent owns assigned service changes. Read [file ownership, scheduler rules and Gemini handoff](2026-10-14/docs/parallel-development.md) before running both agents. The frontend AI dialog commit `0dc79ec` was subsequently pushed to `origin/codex/frontend`; the named frontend worktree now owns that branch.
 
-1. [Context index](../../context/README.md) — reading order and the complete document map.
-2. [Project overview](../../context/project-overview.md) — product scope, five baseline phases and proposed Phase 6.
-3. [Build plan](../../context/build-plan.md) — dependencies, phase gates, and task plans.
-4. [Decisions and open questions](../../context/decisions.md) — confirmed choices, proposed details, and unresolved requirements.
-5. [Project tracker](../../project-tracker.md) — entry point to the canonical progress record.
-6. [Agent instructions](../../AGENTS.md) — rules for future work in this project.
-7. [Frontend integration](../../context/frontend-integration.md) — Performative UI and reference review.
-8. [Contextual editing contract](../../context/resume-editing-contract.md) — section prompts, review/apply and version behavior.
+1. [Context index](2026-10-14/context/README.md) — reading order and the complete document map.
+2. [Project overview](2026-10-14/context/project-overview.md) — product scope, five baseline phases and proposed Phase 6.
+3. [Build plan](2026-10-14/context/build-plan.md) — dependencies, phase gates, and task plans.
+4. [Decisions and open questions](2026-10-14/context/decisions.md) — confirmed choices, proposed details, and unresolved requirements.
+5. [Project tracker](2026-10-14/project-tracker.md) — entry point to the canonical progress record.
+6. [Agent instructions](2026-10-14/AGENTS.md) — rules for future work in this project.
+7. [Frontend integration](2026-10-14/context/frontend-integration.md) — Performative UI and reference review.
+8. [Contextual editing contract](2026-10-14/context/resume-editing-contract.md) — section prompts, review/apply and version behavior.
 
 ## Documentation layout
 
@@ -529,7 +529,7 @@ The project and planned GitHub repository are named `resume-forge`. The layout a
 
 ## Stack (verified in P1.1 & P1.2)
 
-pnpm 12 + Turborepo 2; Vite 6 + React 19 + TypeScript 5.9 + `@module-federation/vite` microfrontends (`shell`, `auth-mfe`, `profile-mfe`, `resume-mfe`); Tailwind v4 + shadcn/ui + `performative-ui@0.7.0` wrappers in `@resume-forge/shared`; Hono 4 services on Node.js 22; local PostgreSQL 18 + Prisma 7 + pgvector 0.8.7 (real embedding model/dimensions and hosting deferred). Google OAuth is implemented; LinkedIn is on hold. Trigger.dev, Vercel AI SDK/Gemini, Cloudflare Pages and R2 remain planned integrations. See [architecture](../../context/architecture-context.md) and [progress tracker](../../context/progress-tracker.md) for pinned versions and actual implementation status.
+pnpm 12 + Turborepo 2; Vite 6 + React 19 + TypeScript 5.9 + `@module-federation/vite` microfrontends (`shell`, `auth-mfe`, `profile-mfe`, `resume-mfe`); Tailwind v4 + shadcn/ui + `performative-ui@0.7.0` wrappers in `@resume-forge/shared`; Hono 4 services on Node.js 22; local PostgreSQL 18 + Prisma 7 + pgvector 0.8.7 (real embedding model/dimensions and hosting deferred). Google OAuth is implemented; LinkedIn is on hold. Trigger.dev, Vercel AI SDK/Gemini, Cloudflare Pages and R2 remain planned integrations. See [architecture](2026-10-14/context/architecture-context.md) and [progress tracker](2026-10-14/context/progress-tracker.md) for pinned versions and actual implementation status.
 
 ## Development
 
@@ -557,7 +557,7 @@ pnpm --parallel --filter @resume-forge/shell --filter @resume-forge/auth-mfe --f
 
 This serves the frontend production builds on ports 3000–3003. Profile/resume persistence requires the gateway/auth/profile/resume services. Preview commands alone serve only frontend assets. Shared styles are a built package; after editing them during development, run `pnpm --filter @resume-forge/shared build` and refresh, or restart `pnpm dev`.
 
-See [UI review and verification](../ui-redesign-review.md) for the latest changes and manual checks. The 2026-09-29 planning notes below describe earlier stages; the current tracker takes precedence.
+See [UI review and verification](2026-10-14/docs/ui-redesign-review.md) for the latest changes and manual checks. The 2026-09-29 planning notes below describe earlier stages; the current tracker takes precedence.
 
 ### Local PostgreSQL
 
@@ -591,15 +591,15 @@ The local audit command processes one bounded batch and prints summary/backlog c
 
 ## Latest planning update
 
-The [manual editor](../manual-editor-verification.md) now supports direct paper editing across the header, Summary, Experience, Education, Projects, grouped Skills and Languages, contextual actions and validated dialogs. Open My resumes → Backend engineer in the local app. Saves remain in memory and reset on reload or leaving the editor; real draft creation, contacts, durable resume storage, ATS, PDF and AI remain pending.
+The [manual editor](2026-10-14/docs/manual-editor-verification.md) now supports direct paper editing across the header, Summary, Experience, Education, Projects, grouped Skills and Languages, contextual actions and validated dialogs. Open My resumes → Backend engineer in the local app. Saves remain in memory and reset on reload or leaving the editor; real draft creation, contacts, durable resume storage, ATS, PDF and AI remain pending.
 
 The local [professional profile API](../profile-api.md) explicitly creates a missing owned master, reads/updates existing professional fields and partially saves incomplete professional drafts on port 4002, with duplicate/revision/completion conflicts and transactional audit capture. The [Work Experience API](../experience-api.md) now lists/adds/updates owned entries with stable IDs, strict dates/plain bullets and the same master revision. Both APIs use user-supplied professional facts and copy no auth/contact facts. Follow [actor resolution](../actor-resolution.md) for the session boundary. Application database connections use UTC; restart local services to load changes. Main now includes additional backend section/contact/completion APIs, whose broader acceptance is separate. Professional profile gateway/browser integration is connected in the slice above; full onboarding and section/contact UI remain pending. Canvas Save still only changes memory.
 
-2026-09-29: added Performative UI integration and contextual resume-section prompting to the plan. The proposed flow supports a basic profile-derived resume or JD tailoring, followed by reviewable section changes and explicit version saves. CareerZenith informs resume capabilities only. Visual concepts are paused; no package has been installed or application developed. Remaining decisions, including file intake, are in [decisions](../../context/decisions.md).
+2026-09-29: added Performative UI integration and contextual resume-section prompting to the plan. The proposed flow supports a basic profile-derived resume or JD tailoring, followed by reviewable section changes and explicit version saves. CareerZenith informs resume capabilities only. Visual concepts are paused; no package has been installed or application developed. Remaining decisions, including file intake, are in [decisions](2026-10-14/context/decisions.md).
 
 Follow-up: the planned Performative UI use now includes backgrounds, surfaces and accents alongside shadcn/ui. The signed-in reference editor has been inspected through authorized Chrome access; findings and limits are recorded in the frontend integration document.
 
-Latest follow-up: [resume capability coverage](../../context/resume-capability-coverage.md) maps all identified resume features to owners and phases. Dashboard search/sort/clone/active selection and builder/issue workflows are explicit. Proposed [Phase 6](../../context/build-plans/06-builder-expansion.md) adds file import and full template/format controls as F19/F20. This supersedes the earlier unallocated intake/template backlog; technical decisions and development approval remain open.
+Latest follow-up: [resume capability coverage](2026-10-14/context/resume-capability-coverage.md) maps all identified resume features to owners and phases. Dashboard search/sort/clone/active selection and builder/issue workflows are explicit. Proposed [Phase 6](2026-10-14/context/build-plans/06-builder-expansion.md) adds file import and full template/format controls as F19/F20. This supersedes the earlier unallocated intake/template backlog; technical decisions and development approval remain open.
 
 ## GitHub preparation
 

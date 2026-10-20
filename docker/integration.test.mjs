@@ -208,11 +208,34 @@ test("full Docker app, migrated vector database and restricted personal flow", a
         );
       },
     );
+    const resumes = createResumeUseCases(clients.resume, Date.now, undefined, {
+      geminiAvailable: true,
+      rewriteAvailable: true,
+      tailor: async (source) => ({
+        changes: source.fields.map((field) => {
+          const fact = field.original
+            ? field
+            : source.fields.find((item) => item.original);
+          return {
+            field: field.field,
+            proposed: (fact?.original ?? "").replace("in order to", "to"),
+            facts: [fact?.field ?? field.field],
+          };
+        }),
+      }),
+      verifyTailoring: async (source) => ({
+        checks: source.fields.map((field) => ({
+          field: field.field,
+          supported: true,
+          complete: true,
+        })),
+      }),
+    });
     const app = createResumeApp({
       personalEditorOnly: true,
       appOrigin,
       resolveActor: createLocalActorResolver({ endpoint, key }),
-      resumes: createResumeUseCases(clients.resume),
+      resumes,
     });
     const gateway = createGatewayApp(
       (target, options) => app.request(target, options),
@@ -275,6 +298,72 @@ test("full Docker app, migrated vector database and restricted personal flow", a
         );
         const readiness = await a.runReadiness(saved.id, 2);
         assert.ok(readiness);
+      },
+    );
+    await t.test(
+      "full tailoring queues, reviews and saves one owned copy with PDF on the cloud runtime",
+      async () => {
+        const sourceDraft = blankResume("Synthetic Cloud Tailoring User");
+        sourceDraft.sections[1].entries = fromResumeContent({
+          sections: [
+            {
+              id: "cloud-work",
+              kind: "experience",
+              entries: [
+                {
+                  id: "cloud-python",
+                  title: "Engineer",
+                  description:
+                    "Built Python APIs in order to support operations.",
+                },
+              ],
+            },
+          ],
+        }).sections[0].entries;
+        const source = await a.create(randomUUID(), sourceDraft);
+        const runId = randomUUID();
+        const jd =
+          "Backend Engineer\nRequirements:\n- Python required.\nResponsibilities:\n- Build Python APIs for operations.";
+        const queued = await a.startTailoring(source.id, 1, runId, jd);
+        assert.equal(queued.run.status, "queued");
+        await assert.rejects(
+          b.tailoring(source.id),
+          (error) => error.code === "not_found",
+        );
+        for (let stage = 0; stage < 6; stage++) {
+          if ((await a.tailoring(source.id)).run.status === "ready") break;
+          await resumes.processTailoringJobs();
+        }
+        const ready = (await a.tailoring(source.id)).run;
+        assert.equal(ready.status, "ready");
+        assert.equal(ready.model, "gemini-3.8-flash");
+        assert.ok(ready.changes.length > 0);
+        const selected = ready.changes.map((change) => change.id);
+        const copy = await a.applyTailoring(
+          source.id,
+          1,
+          runId,
+          selected,
+          "Cloud tailored proof",
+        );
+        assert.notEqual(copy.id, source.id);
+        assert.equal(copy.currentVersion, 1);
+        assert.deepEqual((await a.load(source.id)).content, source.content);
+        assert.equal((await a.load(source.id)).currentVersion, 1);
+        assert.equal(
+          (
+            await a.applyTailoring(
+              source.id,
+              1,
+              runId,
+              selected,
+              "Cloud tailored proof",
+            )
+          ).id,
+          copy.id,
+        );
+        const pdf = await a.download(copy.id, 1);
+        assert.equal(await pdf.slice(0, 5).text(), "%PDF-");
       },
     );
     await t.test(

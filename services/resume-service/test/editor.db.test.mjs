@@ -82,12 +82,14 @@ test("owned editor persistence through client, gateway, service and restricted P
         include: { personalWorkspace: true },
       });
     const actors = { alice, bob };
-    let rewriteCalls=0, embeddingCalls=0, beforeEmbeddingReturn=async()=>{}, beforeRewriteReturn=async()=>{};
+    let rewriteCalls=0, fullWriterCalls=0, fullReviewCalls=0, embeddingCalls=0, beforeEmbeddingReturn=async()=>{}, beforeRewriteReturn=async()=>{};
     const providers={geminiAvailable:true,rewriteAvailable:true,
       embed:async(inputs)=>{embeddingCalls++;await beforeEmbeddingReturn();return inputs.map((_,i)=>Array.from({length:768},(_,j)=>j===i%2?1:0));},
       analyze:async(requirements,entries)=>requirements.length&&entries.length?[{requirement:requirements[0],evidence:entries[0].details[0],sectionId:entries[0].sectionId,itemId:entries[0].itemId}]:[],
       rewrite:async(fields)=>{rewriteCalls++;await beforeRewriteReturn();return fields.filter((f)=>f.original.includes("in order to")).map((f)=>({field:f.field,proposed:f.original.replace("in order to","to")}));},
     };
+    providers.tailor=async(source)=>{fullWriterCalls++;await beforeRewriteReturn();return {changes:source.fields.map(f=>({field:f.field,proposed:f.kind==="summary"&&!f.original?source.fields.find(v=>v.original)?.original??"":f.original.replace("in order to","to"),facts:[f.kind==="summary"&&!f.original?source.fields.find(v=>v.original)?.field:f.field]}))};};
+    providers.verifyTailoring=async(source)=>{fullReviewCalls++;return {checks:source.fields.map(f=>({field:f.field,supported:true,complete:true}))};};
     const resumes = createResumeUseCases(runtime,Date.now,undefined,providers);
     const app = createResumeApp({
       personalEditorOnly: true,
@@ -613,6 +615,143 @@ test("owned editor persistence through client, gateway, service and restricted P
       await admin.query('ALTER TABLE "AuditOutbox" ADD CONSTRAINT ats_egress_audit_reject CHECK (false) NOT VALID');
       try{await assert.rejects(a.requestRewrite(record.id,4,target,true));assert.equal(rewriteCalls,beforeCalls);}finally{await admin.query('ALTER TABLE "AuditOutbox" DROP CONSTRAINT ats_egress_audit_reject');}
       assert.equal(await owner.userContact.count(),0);
+    });
+    await t.test("full tailoring crosses client/gateway/restricted DB, reviews choices, saves one independent copy and recomputes both rubrics", async () => {
+      const d = blankResume("Synthetic Tailoring Person");
+      d.sampleContact = { email: "synthetic-private@example.invalid", phone: "+15555550123" };
+      d.sections[1].entries = fromResumeContent({sections:[{id:"work",kind:"experience",entries:[{id:"tailor-work",title:"Engineer",description:"Built Python APIs in order to support operations.",startDate:"2020-01",endDate:"2022-12"}]}]}).sections[0].entries;
+      d.sections[4].groups=[{id:"tailor-skills",label:"Skills",items:[{id:"java-tailor",text:"Java",hidden:false},{id:"hidden-tailor",text:"Hidden skill",hidden:true},{id:"python-tailor",text:"Python",hidden:false}]}];
+      const source=await a.create(randomUUID(),d), jd="Backend Engineer\nRequirements:\n- Python and PostgreSQL required.\nResponsibilities:\n- Build Python APIs for operations.";
+      const requestId=randomUUID(),calls=fullWriterCalls,reviews=fullReviewCalls;
+      const start=await a.startTailoring(source.id,1,requestId,jd);
+      assert.equal(start.run.status,"queued");assert.equal(fullWriterCalls,calls,"start only queues; no provider egress");
+      await assert.rejects(b.tailoring(source.id)); await assert.rejects(b.startTailoring(source.id,1,randomUUID(),jd));
+      await assert.rejects(a.startTailoring(source.id,1,requestId,jd+"\nSQL essential"),e=>e.code==="revision_conflict");
+      await a.startTailoring(source.id,1,requestId,jd);
+      assert.equal((await a.tailoring(source.id)).run.id,requestId);
+      let releaseWriter;
+      const heldWriter=new Promise(resolve=>{releaseWriter=resolve;});
+      beforeRewriteReturn=async()=>heldWriter;
+      const firstWorker=resumes.processTailoringJobs();
+      while(fullWriterCalls===calls)await new Promise(resolve=>setTimeout(resolve,5));
+      await resumes.processTailoringJobs();
+      releaseWriter();await firstWorker;beforeRewriteReturn=async()=>{};
+      const pending=(await a.tailoring(source.id)).run;
+      assert.equal(pending.status,"queued");assert.equal(pending.batchesDone,1);assert.deepEqual(pending.changes,[],"unverified draft is private");assert.equal(fullWriterCalls,calls+1,"concurrent workers respect persisted lease");
+      await resumes.processTailoringJobs();
+      const ready=(await a.tailoring(source.id)).run;
+      assert.equal(ready.status,"ready");assert.equal(fullReviewCalls,reviews+1);assert.equal(ready.model,"gemini-3.8-flash");assert.equal(ready.promptVersion,"tailor-v3");assert.equal(ready.quality.fieldsChecked,2);
+      assert.ok(ready.changes.some(c=>c.kind==="text"));assert.ok(ready.changes.some(c=>c.kind==="order"));
+      await assert.rejects(b.applyTailoring(source.id,1,requestId,[],"forbidden"));
+      await assert.rejects(a.applyTailoring(source.id,1,requestId,["forged"],"invalid"),e=>e.code==="invalid_input");
+      const order=ready.changes.find(c=>c.kind==="order"&&c.scope==="skills"), selections=[order.id];
+      await admin.query(`ALTER TABLE "AuditOutbox" ADD CONSTRAINT tailor_copy_reject CHECK ((payload->>'action') <> 'resume.created') NOT VALID`);
+      try { await assert.rejects(a.applyTailoring(source.id,1,requestId,selections,"Reviewed copy"));assert.equal((await a.tailoring(source.id)).run.status,"ready"); }
+      finally { await admin.query('ALTER TABLE "AuditOutbox" DROP CONSTRAINT tailor_copy_reject'); }
+      const count=await owner.resume.count({where:{ownerUserId:alice.id}});
+      const copy=await a.applyTailoring(source.id,1,requestId,selections,"Reviewed copy"), copyDoc=fromResumeContent(copy.content);
+      assert.notEqual(copy.id,source.id);assert.equal(copy.status,"draft");assert.equal(copy.title,"Reviewed copy");assert.equal(copyDoc.title,"Reviewed copy");
+      assert.deepEqual(copyDoc.header,d.header);assert.deepEqual(copyDoc.sampleContact,d.sampleContact);assert.deepEqual(copyDoc.sections[1],d.sections[1],"rejected text proposals stay original");
+      assert.deepEqual(copyDoc.sections[4].groups[0].items.map(v=>v.id),["python-tailor","hidden-tailor","java-tailor"]);
+      assert.deepEqual((await a.load(source.id)).content,source.content);assert.equal((await a.load(source.id)).currentVersion,1);
+      assert.equal((await a.runJdMatch(copy.id,1,jd,false,false)).evaluation.score,(await a.jdMatch(copy.id)).evaluation.score);
+      assert.equal((await a.readiness(copy.id)).evaluation.resumeVersion,1);
+      assert.equal((await a.applyTailoring(source.id,1,requestId,selections,"Reviewed copy")).id,copy.id);
+      assert.equal(await owner.resume.count({where:{ownerUserId:alice.id}}),count+1);assert.equal(await owner.resumeVersion.count({where:{resumeId:source.id}}),1);
+      await assert.rejects(a.applyTailoring(source.id,1,requestId,[],"Reviewed copy"),e=>e.code==="revision_conflict");
+      const pdf=await a.download(copy.id,1);assert.equal(await pdf.slice(0,5).text(),"%PDF-");
+    });
+    await t.test("confirmed experience survives queue restart, stays entry-scoped and saves only in the reviewed copy", async () => {
+      const d=blankResume("Fictional Enrichment Person");
+      d.sections=fromResumeContent({sections:[{id:"enrich-projects",kind:"projects",label:"Projects",entries:[{id:"enrich-invoice",title:"Invoice application",description:"Built a Python invoice application."}]}]}).sections;
+      const source=await a.create(randomUUID(),d),runId=randomUUID();
+      const jd="Backend Engineer. Python and PostgreSQL required. Build invoice search APIs for operations.";
+      const facts=[{sectionId:"enrich-projects",itemId:"enrich-invoice",kind:"contribution",text:"Implemented invoice search using PostgreSQL.",confirmed:true},{sectionId:"enrich-projects",itemId:"enrich-invoice",kind:"tools",text:"PostgreSQL",confirmed:true}];
+      const calls=fullWriterCalls;
+      for(const invalid of [[{...facts[0],confirmed:false}],[{...facts[0],itemId:"forged"}],[{...facts[0],text:"fixture@example.invalid"}],[facts[0],facts[0]]]) await assert.rejects(a.startTailoring(source.id,1,randomUUID(),jd,invalid));
+      assert.equal(fullWriterCalls,calls);
+      const requested=await a.startTailoring(source.id,1,runId,jd,facts);
+      assert.deepEqual(requested.run.additionalFacts,facts);
+      await assert.rejects(a.startTailoring(source.id,1,runId,jd,[{...facts[0],text:"Different actual contribution."}]),e=>e.code==="revision_conflict");
+      await assert.rejects(b.startTailoring(source.id,1,randomUUID(),jd,facts));
+      const originalWriter=providers.tailor;
+      providers.tailor=async(input)=>({changes:input.fields.map(f=>({field:f.field,proposed:f.kind==="summary"?"Built a Python invoice application.":`${f.original}\nImplemented invoice search using PostgreSQL.`,facts:input.facts.filter(p=>f.kind==="summary"||p.scope===f.scope).map(p=>p.id)}))});
+      try {
+        const restarted=createResumeUseCases(runtime,Date.now,undefined,providers);
+        await restarted.processTailoringJobs();await restarted.processTailoringJobs();
+        const ready=(await a.tailoring(source.id)).run;
+        assert.equal(ready.status,"ready");assert.deepEqual(ready.additionalFacts,facts);
+        assert.ok(ready.changes.some(c=>c.field==="skills"));assert.ok(ready.changes.some(c=>c.field==="summary"));
+        const chosen=ready.changes.map(c=>c.id);
+        const copy=await a.applyTailoring(source.id,1,runId,chosen,"Enriched copy"),next=fromResumeContent(copy.content);
+        assert.equal(next.sections.find(s=>s.kind==="projects").entries[0].description.content[0].type,"bulletList");
+        assert.ok(next.sections.find(s=>s.kind==="skills").groups[0].items.some(i=>i.text==="PostgreSQL"));
+        assert.deepEqual((await a.load(source.id)).content,source.content);
+        assert.equal((await a.load(source.id)).currentVersion,1);
+        assert.equal((await a.applyTailoring(source.id,1,runId,chosen,"Enriched copy")).id,copy.id);
+        const stored=await owner.resume.findUnique({where:{id:copy.id}});
+        assert.deepEqual(stored.atsBreakdown.tailoringOrigin.confirmedFacts,facts);
+        const pdf=await a.download(copy.id,1);assert.equal(await pdf.slice(0,5).text(),"%PDF-");
+      } finally {providers.tailor=originalWriter;}
+    });
+    await t.test("tailoring cancellation, stale inputs, provider failure and restart recovery preserve the source", async () => {
+      const d=blankResume("Synthetic Recovery");
+      d.sections[1].entries=fromResumeContent({sections:[{id:"work",kind:"experience",entries:[{id:"recovery-entry",title:"Engineer",description:"Built Python APIs in order to support operations."}]}]}).sections[0].entries;
+      const source=await a.create(randomUUID(),d),jd="Backend Engineer\nRequirements:\n- Python required.\nResponsibilities:\n- Build Python APIs for operations.";
+      let runId=randomUUID();await a.startTailoring(source.id,1,runId,jd);
+      beforeRewriteReturn=async()=>{await a.cancelTailoring(source.id,runId);};
+      try { await resumes.processTailoringJobs(); } finally { beforeRewriteReturn=async()=>{}; }
+      assert.equal((await a.tailoring(source.id)).run.status,"cancelled");await assert.rejects(a.applyTailoring(source.id,1,runId,[],"cancelled"));
+      runId=randomUUID();await a.startTailoring(source.id,1,runId,jd);
+      const row=await owner.resume.findUnique({where:{id:source.id}}), meta=structuredClone(row.atsBreakdown);
+      meta.tailoring.runs.at(-1).run.status="drafting";meta.tailoring.runs.at(-1).lease=randomUUID();meta.tailoring.runs.at(-1).leaseUntil=Date.now()-1;
+      await owner.resume.update({where:{id:source.id},data:{atsBreakdown:meta}});
+      await createResumeUseCases(runtime,Date.now,undefined,providers).processTailoringJobs();
+      assert.equal((await a.tailoring(source.id)).run.batchesDone,1,"new worker recovers abandoned lease");
+      await resumes.processTailoringJobs();
+      assert.equal((await a.tailoring(source.id)).run.status,"ready");
+      await a.save(source.id,1,{...d,title:"New source revision"});
+      await assert.rejects(a.applyTailoring(source.id,1,runId,[],"stale"),e=>e.code==="revision_conflict");
+      runId=randomUUID();await a.startTailoring(source.id,2,runId,jd);
+      beforeRewriteReturn=async()=>{throw new Error("PRIVATE PROVIDER BODY");};
+      try { await resumes.processTailoringJobs(); } finally { beforeRewriteReturn=async()=>{}; }
+      const failed=(await a.tailoring(source.id)).run;assert.equal(failed.status,"failed");assert.equal(failed.changes.length,0);assert.ok(!failed.error.includes("PRIVATE"));
+      assert.equal((await a.load(source.id)).currentVersion,2);assert.deepEqual((await a.load(source.id)).content.editorDraft.sections,d.sections);
+      runId=randomUUID();await a.startTailoring(source.id,2,runId,jd);await resumes.processTailoringJobs();await resumes.processTailoringJobs();assert.equal((await a.tailoring(source.id)).run.status,"ready");
+    });
+    await t.test("full tailoring repairs only rejected fields once and never exposes unverified candidates",async()=>{
+      const d=blankResume("Synthetic Correction");
+      d.sections[1].entries=fromResumeContent({sections:[{id:"work",kind:"experience",entries:[{id:"repair-entry",title:"Engineer",description:"Built Python APIs in order to support operations."}]}]}).sections[0].entries;
+      const source=await a.create(randomUUID(),d),jd="Backend Engineer\nRequirements: Python required.\nResponsibilities: Build Python APIs for operations.",runId=randomUUID();
+      const writer=providers.tailor;let calls=0;
+      providers.tailor=async(input,job,revision)=>{
+        calls++;
+        if(revision){assert.equal(input.fields.length,1);assert.equal(input.fields[0].field,"fact-0");assert.equal(revision.review.checks[0].supported,false);return {changes:[{field:"fact-0",proposed:"Developed Python APIs to support operations.",facts:["fact-0"]}]};}
+        const result=await writer(input,job);result.changes.find(c=>c.field==="fact-0").proposed="Developed Python APIs, reducing costs by 35%.";return result;
+      };
+      try {
+        await a.startTailoring(source.id,1,runId,jd);
+        await resumes.processTailoringJobs();await resumes.processTailoringJobs();
+        const pending=(await a.tailoring(source.id)).run;assert.equal(pending.status,"queued");assert.equal(pending.batchesTotal,4);assert.deepEqual(pending.changes,[]);
+        await resumes.processTailoringJobs();await resumes.processTailoringJobs();
+        const ready=(await a.tailoring(source.id)).run;assert.equal(ready.status,"ready");assert.equal(calls,2);assert.equal(ready.batchesDone,4);assert.equal(ready.quality.retainedOriginal,0);assert.ok(ready.changes.some(c=>c.id==="fact-0"));assert.ok(!JSON.stringify(ready.changes).includes("35%"));
+        const copy=await a.applyTailoring(source.id,1,runId,ready.changes.map(c=>c.id),"Corrected copy");assert.equal(copy.currentVersion,1);assert.equal((await a.load(source.id)).currentVersion,1);assert.deepEqual((await a.load(source.id)).content,source.content);
+        const row=await owner.resume.findUnique({where:{id:source.id}});assert.equal(row.atsBreakdown.tailoring.runs.at(-1).draft,null);assert.equal(row.atsBreakdown.tailoring.runs.at(-1).review,null);
+      } finally {providers.tailor=writer;}
+    });
+    await t.test("second failed semantic review retains originals; cancellation during review discards private draft",async()=>{
+      const d=blankResume("Synthetic Review Failure");d.sections[1].entries=fromResumeContent({sections:[{id:"work",kind:"experience",entries:[{id:"review-entry",title:"Engineer",description:"Built Python APIs in order to support operations."}]}]}).sections[0].entries;
+      const source=await a.create(randomUUID(),d),jd="Backend Engineer\nRequirements: Python required.\nResponsibilities: Build Python APIs for operations.";
+      const reviewer=providers.verifyTailoring;
+      providers.verifyTailoring=async(input)=>({checks:input.fields.map(f=>({field:f.field,supported:f.kind==="summary",complete:true}))});
+      try {
+        let runId=randomUUID();await a.startTailoring(source.id,1,runId,jd);for(let i=0;i<4;i++)await resumes.processTailoringJobs();
+        const ready=(await a.tailoring(source.id)).run;assert.equal(ready.status,"ready");assert.equal(ready.quality.retainedOriginal,1);assert.ok(!ready.changes.some(c=>c.id==="fact-0"));assert.ok(ready.warnings.some(w=>w.includes("Kept 1 original")));
+        runId=randomUUID();await a.startTailoring(source.id,1,runId,jd);await resumes.processTailoringJobs();
+        providers.verifyTailoring=async(input)=>{await a.cancelTailoring(source.id,runId);return reviewer(input);};
+        await resumes.processTailoringJobs();const cancelled=(await a.tailoring(source.id)).run;assert.equal(cancelled.status,"cancelled");assert.deepEqual(cancelled.changes,[]);
+        const row=await owner.resume.findUnique({where:{id:source.id}});assert.equal(row.atsBreakdown.tailoring.runs.at(-1).draft,null);assert.equal(row.atsBreakdown.tailoring.runs.at(-1).review,null);
+      } finally {providers.verifyTailoring=reviewer;}
     });
     await t.test("vector cache uses current owned version, deduplicates documents, denies cross-owner RLS, purges on delete",async()=>{
       const d=blankResume("Synthetic Vector Lifecycle");

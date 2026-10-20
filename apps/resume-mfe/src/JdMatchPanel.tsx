@@ -11,7 +11,9 @@ import {
 import type { ReadinessCheck } from "@resume-forge/resume-core";
 import type { JdState } from "@resume-forge/shared-types";
 import { targetLabel, type ResumeDraft } from "./editor-draft";
+import { TailoringDialog, type TailoringServices } from "./TailoringDialog";
 export interface JdServices {
+  tailoring?: TailoringServices;
   load: (signal?: AbortSignal) => Promise<JdState>;
   run: (text: string, semantic: boolean, consent: boolean) => Promise<JdState>;
   dismiss: (
@@ -41,6 +43,7 @@ export function JdMatchPanel({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [editingJd, setEditingJd] = useState(true);
+  const [tailoringOpen, setTailoringOpen] = useState(false);
   const identity = useRef(0),
     submitted = useRef(false),
     hydrated = useRef(false);
@@ -227,6 +230,38 @@ export function JdMatchPanel({
           ) : null}
         </div>
       </details>
+      {services?.tailoring ? (
+        <section className="rf-tailoring-entry">
+          <h3>Make a resume for this role</h3>
+          <p>
+            Review supported changes across your resume, then save a separate
+            tailored copy.
+          </p>
+          <Button
+            glow
+            disabled={!!disabledReason || busy}
+            onClick={() => {
+              setTailoringOpen(true);
+            }}
+          >
+            Tailor full resume
+          </Button>
+          {disabledReason ? <p role="status">{disabledReason}</p> : null}
+        </section>
+      ) : null}
+      {tailoringOpen && services?.tailoring ? (
+        <TailoringDialog
+          base={draft}
+          savedVersion={savedVersion}
+          initialJd={text}
+          services={services.tailoring}
+          disabledReason={disabledReason}
+          reducedMotion={reducedMotion}
+          onClose={() => {
+            setTailoringOpen(false);
+          }}
+        />
+      ) : null}
       {error && !editingJd ? (
         <p role="alert" className="rf-ai-error">
           {error}
