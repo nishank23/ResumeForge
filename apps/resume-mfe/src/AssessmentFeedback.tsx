@@ -52,6 +52,12 @@ export function AssessmentFeedback({
     "Pending",
   );
   const priorities = priorityReadinessChecks(checks, dismissed);
+  const [priorityId, setPriorityId] = useState<string>();
+  const priorityIndex = Math.max(
+    0,
+    priorities.findIndex((check) => check.id === priorityId),
+  );
+  const priority = priorities[priorityIndex];
   const groups = readinessGroups({ checks }, dismissed);
   const rules = readinessRuleGroups(checks, dismissed);
   const compact = compactCheckGroups(groups[filter]);
@@ -64,7 +70,7 @@ export function AssessmentFeedback({
       <h3>What to improve next</h3>
       {priorities.length ? (
         <div className="rf-priority-checks">
-          {priorities.map((check) => (
+          {(priority ? [priority] : []).map((check) => (
             <article className="rf-priority-check" key={check.id}>
               <h4>{check.title}</h4>
               {label && check.target ? (
@@ -100,6 +106,36 @@ export function AssessmentFeedback({
               </div>
             </article>
           ))}
+          {priorities.length > 1 ? (
+            <nav
+              className="rf-priority-navigation"
+              aria-label="Priority suggestions"
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={priorityIndex === 0}
+                onClick={() => {
+                  setPriorityId(priorities[priorityIndex - 1]?.id);
+                }}
+              >
+                Previous
+              </Button>
+              <span aria-live="polite">
+                {priorityIndex + 1} of {priorities.length} priorities
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={priorityIndex === priorities.length - 1}
+                onClick={() => {
+                  setPriorityId(priorities[priorityIndex + 1]?.id);
+                }}
+              >
+                Next
+              </Button>
+            </nav>
+          ) : null}
         </div>
       ) : (
         <p role="status">

@@ -10,16 +10,28 @@ The document is the main object. Existing professional facts, original/suggested
 
 Use the existing token roles: Carbon `#111014`, panel `#1b1921`, ink `#f8f6fd`, violet `#b89aff` and border `#393341`. Light mode keeps Mist `#f5f3f8` and its existing ink/accent roles. Sora remains the heading face, DM Sans remains the UI body face, and printable resume fonts remain separate. All new CSS reads shared tokens rather than introducing a new palette.
 
-Desktop composition:
+Focused builder revision (2026-10-21): the user found the permanent section list and feedback controls overwhelming. Writing now opens with the document alone. A single task bar offers **Write**, **Improve** and **Design**; tailoring remains a direct, explicit action in the header.
 
 ```text
-Resume title                         Edit actions | Tailor | Download
-Sections                 Resume / selected actions          Feedback
-Personal details         Editable document                  Priority fixes
-Experience               Exact layout in Preview            All checks
+Resume title + saved status                       More | Tailor | Download
+                              Write | Improve | Design
+                 Edit directly on your resume       Manage sections | Preview
+                 Editable document                  Optional selected tool
 ```
 
-Phone/tablet composition uses one current surface: Resume or Feedback/tools. Compact editing reflows at readable sizes; Preview retains exact A4 typography. Section/entry IDs, saved appearance and PDF content do not change when switching views. Selected-content actions sit outside printable paper and appear after a target is selected.
+There is no permanent left sidebar and no initial feedback panel. Manage sections opens section controls only when requested. Improve and Design replace that panel, so only one tool is visible. Write and the panel close button restore the document. Save status is beside the title instead of occupying a separate row. Preview is a single toggle with Back to writing.
+
+Phone/tablet uses the same task bar and one surface at a time. Compact editing reflows at readable sizes; Preview retains exact A4 typography. Returning from a scoped feedback editor keeps the user with their suggested fixes. Section/entry IDs, unsaved edits, saved appearance and PDF content survive task switching. Selected-content actions remain outside printable paper and appear after a target is selected.
+
+### Reference research
+
+Reviewed public product pages and official help documentation, not signed-in competitor sessions:
+
+- [LoopCV CV Builder](https://www.loopcv.pro/ai-cv-builder/) separates choosing a template, writing content, reviewing and downloading. Its advertised flow supports choosing a task before exposing its settings; it does not prove the usability of its authenticated editor.
+- [Teal Resume Designer](https://help.tealhq.com/en/articles/9508951-getting-started-resume-designer) places formatting in a separate Designer tab. We keep appearance settings out of the initial writing view.
+- [Resume.io preview](https://help.resume.io/en/articles/3785216) keeps a live document preview available and provides a way back to editing. Our existing exact-layout Preview and desktop document/tool split retain this context.
+
+These are interaction references, not copied visuals or evidence of increased completion. The existing Studio theme and components remain. The deliberate change is information hierarchy: one resume, one current task, one suggested fix.
 
 This is an app workspace, which design-taste-frontend explicitly excludes from its marketing-page workflow. The implementation uses its screenshot/readability critique and frontend-design's subject-led hierarchy. No marketing direction draw, photograph floor, decorative-motion quota or gallery score is claimed. Existing Studio colors and component conventions take priority.
 
@@ -27,7 +39,7 @@ This is an app workspace, which design-taste-frontend explicitly excludes from i
 
 - The library keeps Upload resume and Start from scratch. Each saved resume has a direct Tailor for a job action. Text actions use their content width; only download/delete icon controls use fixed square sizing. Its `?action=tailor` link opens the existing editor directly into tailoring; the query grants no resource access.
 - Import review occupies the page rather than nesting a full editor inside a modal. The import stays unsaved until Confirm import. Existing discard confirmation, editable fields and optional extracted-text reference remain. Upload copy correctly says server processing and no AI-provider transmission during import.
-- Feedback leads with up to three existing pending checks, prioritizing existing scored component weights and distinct rule families. It does not change the rubric or promise a score gain. Complete checks, original reasons, per-entry targets, dismissal and restore remain under All checks. Score details are secondary and explicitly separate internal checks from employer ATS results.
+- Feedback presents one priority at a time, with Previous/Next through up to three existing pending checks. The priority order still uses existing scored component weights and distinct rule families. It does not change the rubric or promise a score gain. Complete checks, original reasons, per-entry targets, dismissal and restore remain under All checks. Score details are secondary and explicitly separate internal checks from employer ATS results.
 - A recommendation opens its scoped editor. Missing experience/skills can open the appropriate section/entry editor directly instead of making the user find it in section controls.
 - Save & download saves first, then exports the returned immutable version, using the saved snapshot title for its filename. Save & tailor waits for the owner to refresh callbacks for that returned revision. Save failure/conflict stops the follow-up. Edits made while saving remain dirty and prevent an older snapshot from entering a new tailoring request. No autosave-on-keystroke or silent AI submission was introduced.
 

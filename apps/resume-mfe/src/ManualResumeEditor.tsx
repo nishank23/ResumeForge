@@ -33,6 +33,7 @@ import {
   Pencil,
   Trash2,
   BriefcaseBusiness,
+  X,
 } from "lucide-react";
 import {
   Button,
@@ -151,10 +152,8 @@ export function ManualResumeEditor({
     error: boolean;
   } | null>(null);
   const [noticeKey, setNoticeKey] = useState(0);
-  const [panel, setPanel] = useState<EditorPanel>(
-    readiness ? "ats" : "content",
-  );
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panel, setPanel] = useState<EditorPanel>("content");
+  const [panelOpen, setPanelOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"resume" | "tools">("resume");
   const [tailoringOpen, setTailoringOpen] = useState(initialTailoringOpen);
   const [tailoringJd, setTailoringJd] = useState("");
@@ -466,9 +465,12 @@ export function ManualResumeEditor({
     dispatch({ type: "edit", value: result.draft });
     return true;
   };
-  const focusActions = () => {
+  const focusActions = (preferTools = true) => {
     requestAnimationFrame(() =>
       (
+        (preferTools && panelOpen && mobileView === "tools"
+          ? document.getElementById("rf-tool-panel-heading")
+          : null) ??
         canvasRef.current?.querySelector<HTMLElement>(
           "[data-skills-dialog].is-selected",
         ) ??
@@ -623,7 +625,6 @@ export function ManualResumeEditor({
           targetSection = emptySection(kind, crypto.randomUUID());
           next.sections.push(targetSection);
         }
-        setMobileView("resume");
         startEdit(
           { type: "section", sectionId: targetSection.id },
           next,
@@ -634,7 +635,7 @@ export function ManualResumeEditor({
       setPanel("content");
       setPanelOpen(true);
       announce(
-        `${check.title}: ${check.reason} Use Edit Content to add the missing section or entry.`,
+        `${check.title}: ${check.reason} Use Manage sections to add the missing section or entry.`,
       );
       return;
     }
@@ -642,10 +643,13 @@ export function ManualResumeEditor({
       error("This assessment target is no longer present. Save and recheck.");
       return;
     }
-    setMobileView("resume");
     select(target);
     if (edit) startEdit(target, history.current, check);
-    else focusActions();
+    else {
+      setPanelOpen(false);
+      setMobileView("resume");
+      focusActions(false);
+    }
   };
   const documentBody = (
     <ResumeDocument
@@ -680,17 +684,22 @@ export function ManualResumeEditor({
           <button type="button" className="rf-studio-back" onClick={goBack}>
             <ArrowLeft size={18} aria-hidden="true" /> All resumes
           </button>
-          <span className="rf-studio-wordmark">
-            Forge <span>Studio</span>
-          </span>
           <div className="rf-editor-title">
             <div>
               <h1>{history.current.title}</h1>
-              <p>
-                {savedVersion
-                  ? `Saved version ${String(savedVersion)}`
-                  : "Imported draft awaiting confirmation"}
-              </p>
+              <DocumentStatus
+                tone={
+                  saving || dirty || inlinePending || !savedVersion
+                    ? "pending"
+                    : "saved"
+                }
+              >
+                {saving
+                  ? "Saving…"
+                  : dirty || inlinePending || !savedVersion
+                    ? "Unsaved changes"
+                    : `Saved · Version ${String(savedVersion)}`}
+              </DocumentStatus>
             </div>
             <Button
               variant="ghost"
@@ -706,7 +715,7 @@ export function ManualResumeEditor({
           <div className="rf-editor-actions">
             <DropdownMenu
               ariaLabel="Edit actions"
-              triggerLabel="Edit actions"
+              triggerLabel="More"
               items={[
                 {
                   id: "undo",
@@ -816,26 +825,11 @@ export function ManualResumeEditor({
             ) : null}
           </div>
         </header>
-        <div className="rf-local-draft-note">
-          <span>
-            <DocumentStatus
-              tone={saving || dirty || !savedVersion ? "pending" : "saved"}
-            >
-              {saving
-                ? "Saving…"
-                : dirty || !savedVersion
-                  ? "Unsaved changes"
-                  : "Saved to your account"}
-            </DocumentStatus>
-          </span>
-          <span id="rf-pdf-limit">
-            {onDownload
-              ? dirty || inlinePending
-                ? "Save & download includes your latest edits."
-                : `PDF uses saved version ${String(savedVersion)}.`
-              : "Review the fields, then confirm this import."}
-          </span>
-        </div>
+        <span id="rf-pdf-limit" className="rf-visually-hidden">
+          {onDownload
+            ? "Download saves pending edits and exports that saved version."
+            : "Review the fields, then confirm this import."}
+        </span>
         {notice &&
         !session &&
         !aiSession &&
@@ -869,101 +863,21 @@ export function ManualResumeEditor({
             )}
           </div>
         ) : null}
-        <nav className="rf-workspace-mobile-nav" aria-label="Workspace view">
-          <Button
-            variant={mobileView === "resume" ? "default" : "outline"}
-            aria-pressed={mobileView === "resume"}
-            onClick={() => {
+        <EditorRail
+          active={panelOpen ? panel : undefined}
+          onSelect={(key) => {
+            if (key === "write") {
+              setPanelOpen(false);
               setMobileView("resume");
-            }}
-          >
-            Resume
-          </Button>
-          <Button
-            variant={mobileView === "tools" ? "default" : "outline"}
-            aria-pressed={mobileView === "tools"}
-            onClick={() => {
-              setPanel("ats");
+              setMode("editor");
+            } else {
+              setPanel(key);
               setPanelOpen(true);
               setMobileView("tools");
-            }}
-          >
-            Feedback & tools
-          </Button>
-        </nav>
-        <EditorRail
-          active={panel}
-          open={panelOpen}
-          onSelect={(key) => {
-            setPanel(key);
-            setPanelOpen(true);
-            setMobileView("tools");
+            }
           }}
-          onToggle={() => {
-            setPanelOpen((open) => !open);
-            setMobileView("resume");
-          }}
-        ></EditorRail>
+        />
         <div className={`rf-tools-layout${panelOpen ? " has-panel" : ""}`}>
-          <nav className="rf-section-navigation" aria-label="Resume sections">
-            <h2>Your resume</h2>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                startEdit({ type: "header" });
-              }}
-            >
-              Personal details
-            </Button>
-            {history.current.sections.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                aria-current={
-                  selection.type !== "header" && selection.sectionId === item.id
-                    ? "location"
-                    : undefined
-                }
-                onClick={() => {
-                  const target: DraftTarget = {
-                    type: "section",
-                    sectionId: item.id,
-                  };
-                  setMobileView("resume");
-                  select(target);
-                  requestAnimationFrame(() => {
-                    const element = [
-                      ...(canvasRef.current?.querySelectorAll<HTMLElement>(
-                        "[data-editor-target]",
-                      ) ?? []),
-                    ].find(
-                      (el) =>
-                        el.dataset.editorTarget === JSON.stringify(target),
-                    );
-                    element?.scrollIntoView({ block: "center" });
-                    element
-                      ?.querySelector<HTMLElement>(
-                        '[contenteditable="true"],button',
-                      )
-                      ?.focus({ preventScroll: true });
-                  });
-                }}
-              >
-                {SECTION_LABELS[item.kind]}
-                {item.hidden ? " (hidden)" : ""}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPanel("content");
-                setPanelOpen(true);
-                setMobileView("tools");
-              }}
-            >
-              Manage sections
-            </Button>
-          </nav>
           <div
             className="rf-paper-stage"
             aria-label="Resume document workspace"
@@ -974,29 +888,43 @@ export function ManualResumeEditor({
               <span>
                 {mode === "editor"
                   ? isCompact
-                    ? "Editing view · Preview shows PDF layout"
+                    ? "Tap text to edit your resume"
                     : "Edit directly on your resume"
                   : "Preview of visible content"}
               </span>
-              <div className="rf-mode-switch" aria-label="Resume view">
-                <button
-                  type="button"
-                  aria-pressed={mode === "editor"}
-                  onClick={() => {
-                    setMode("editor");
-                  }}
-                >
-                  Editor
-                </button>
-                <button
-                  type="button"
+              <div className="rf-paper-view-actions">
+                {mode === "editor" ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-expanded={panelOpen && panel === "content"}
+                    aria-controls={
+                      panelOpen ? "rf-editor-tool-panel" : undefined
+                    }
+                    onClick={() => {
+                      setPanel("content");
+                      setPanelOpen(true);
+                      setMobileView("tools");
+                    }}
+                  >
+                    Manage sections
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
                   aria-pressed={mode === "preview"}
                   onClick={() => {
-                    setMode("preview");
+                    setMode(mode === "editor" ? "preview" : "editor");
                   }}
                 >
-                  Preview
-                </button>
+                  {mode === "editor" ? (
+                    <Eye size={16} aria-hidden="true" />
+                  ) : (
+                    <Pencil size={16} aria-hidden="true" />
+                  )}
+                  {mode === "editor" ? "Preview" : "Back to writing"}
+                </Button>
               </div>
             </div>
             {mode === "editor" &&
@@ -1120,11 +1048,27 @@ export function ManualResumeEditor({
               aria-labelledby="rf-tool-panel-heading"
             >
               <div className="rf-inspector-heading">
-                <h2 id="rf-tool-panel-heading">
+                <h2 id="rf-tool-panel-heading" tabIndex={-1}>
                   {panel === "ats" || panel === "jd"
-                    ? "Resume review"
+                    ? "Improve your resume"
                     : EDITOR_PANELS[panel].label}
                 </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Close tools and return to resume"
+                  onClick={() => {
+                    setPanelOpen(false);
+                    setMobileView("resume");
+                    requestAnimationFrame(() =>
+                      document
+                        .querySelector<HTMLButtonElement>("[data-editor-write]")
+                        ?.focus(),
+                    );
+                  }}
+                >
+                  <X size={18} aria-hidden="true" />
+                </Button>
               </div>
               {panel === "content" ? (
                 <ContentPanel

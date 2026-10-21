@@ -117,14 +117,21 @@ try {
     [390, 844],
   ]) {
     const page = await open("", width, height);
-    await wait(
-      page,
-      'document.querySelectorAll(".rf-priority-check").length===3',
-    );
+    await wait(page, '!!document.querySelector(".rf-paper-stage")');
     await check(
       page,
       `${width}: editor fits viewport`,
       "document.documentElement.scrollWidth<=innerWidth",
+    );
+    await check(
+      page,
+      `${width}: writing starts without sidebars or feedback`,
+      '!document.querySelector(".rf-editor-tool-panel, .rf-section-navigation, .rf-priority-check")',
+    );
+    await check(
+      page,
+      `${width}: only three task choices`,
+      '[...document.querySelectorAll(".rf-rail-tabs button")].map(b=>b.textContent.trim()).join(",")==="Write,Improve,Design"',
     );
     await check(
       page,
@@ -163,8 +170,38 @@ try {
       path: resolve(out, `editor-${width}.jpg`),
       quality: 88,
     });
+    await click(page, "Improve");
+    await wait(
+      page,
+      'document.querySelectorAll(".rf-priority-check").length===1',
+    );
+    await check(
+      page,
+      `${width}: detailed checks start collapsed`,
+      '!document.querySelector(".rf-all-checks").open && !document.querySelector(".rf-readiness-summary").open',
+    );
+    const firstPriority = await page.eval(
+      'document.querySelector(".rf-priority-check h4").textContent',
+    );
+    await click(page, "Next");
+    await check(
+      page,
+      `${width}: next priority replaces rather than stacks controls`,
+      'document.querySelectorAll(".rf-priority-check").length===1 && document.querySelector(".rf-priority-check h4").textContent!==' +
+        JSON.stringify(firstPriority),
+    );
+    await click(page, "Previous");
+    await check(
+      page,
+      `${width}: returning preserves priority order`,
+      'document.querySelector(".rf-priority-check h4").textContent===' +
+        JSON.stringify(firstPriority),
+    );
+    await page.screenshot({
+      path: resolve(out, `improve-${width}.jpg`),
+      quality: 88,
+    });
     if (width < 901) {
-      await click(page, "Feedback & tools");
       await check(
         page,
         `${width}: feedback has one scrolling surface`,
@@ -190,7 +227,46 @@ try {
       code: "Escape",
     });
     await wait(page, '!document.querySelector("[role=dialog]")');
-    if (width < 901) await click(page, "Resume");
+    await check(
+      page,
+      `${width}: closing an edit returns to feedback`,
+      'document.querySelector(".rf-ux-workspace").dataset.mobileView==="tools" && !!document.querySelector(".rf-priority-check")',
+    );
+    await click(page, "Write");
+    await click(page, "Design");
+    await check(
+      page,
+      `${width}: design replaces feedback`,
+      '!!document.querySelector(".rf-design-tools") && !document.querySelector(".rf-assessment-feedback") && document.querySelectorAll(".rf-editor-tool-panel").length===1',
+    );
+    await click(page, "Write");
+    await click(page, "Manage sections");
+    await check(
+      page,
+      `${width}: section controls only appear when requested`,
+      '!!document.querySelector(".rf-content-tools") && !document.querySelector(".rf-design-tools")',
+    );
+    await page.eval(() =>
+      document
+        .querySelector('[aria-label="Close tools and return to resume"]')
+        .click(),
+    );
+    await page.eval("new Promise(requestAnimationFrame)");
+    await check(
+      page,
+      `${width}: closing tools restores writing and keyboard focus`,
+      '!document.querySelector(".rf-editor-tool-panel") && document.activeElement.hasAttribute("data-editor-write")',
+    );
+    await click(page, "Preview");
+    await check(
+      page,
+      `${width}: preview is read only`,
+      () =>
+        document.querySelector(".rf-paper-stage").dataset.editorMode ===
+          "preview" &&
+        !document.querySelector('.rf-paper-stage [contenteditable="true"]'),
+    );
+    await click(page, "Back to writing");
     await click(page, "Tailor for a job");
     await wait(page, '!!document.querySelector(".rf-tailoring-job")');
     await check(
@@ -353,13 +429,22 @@ try {
     await page.close();
   }
   let page = await open();
-  await wait(
-    page,
-    'document.querySelectorAll(".rf-priority-check").length===3',
-  );
+  await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await editSummary(
     page,
     "Backend developer building Python APIs with PostgreSQL and automated pytest checks.",
+  );
+  await click(page, "Design");
+  await click(page, "Improve");
+  await click(page, "Write");
+  await check(
+    page,
+    "changing tasks preserves unsaved resume edits",
+    () =>
+      document
+        .querySelector('[aria-label="Professional summary on resume page"]')
+        .textContent.includes("automated pytest checks") &&
+      !!document.querySelector(".rf-explicit-save"),
   );
   await click(page, "Save & download");
   await wait(page, events("pdf") + ".length===1");
@@ -463,7 +548,7 @@ try {
     "phone preview retains A4 layout",
     '!!document.querySelector(".rf-page-zoom-surface") && !document.querySelector(".rf-mobile-document")',
   );
-  await click(page, "Editor");
+  await click(page, "Back to writing");
   await check(
     page,
     "phone editing never persists display typography",
@@ -746,10 +831,7 @@ try {
   );
   await page.close();
   page = await open("?theme=light", 1440, 1000);
-  await wait(
-    page,
-    'document.querySelectorAll(".rf-priority-check").length===3',
-  );
+  await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await page.screenshot({
     path: resolve(out, "editor-light-1440.jpg"),
     quality: 88,

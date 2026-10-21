@@ -1,10 +1,10 @@
-/* Document-first workspace. All colors and type inherit the shared Studio tokens. */
+/* Writing opens with only the document. One optional tool occupies the right side. */
 .rf-ux-workspace .rf-editor-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
-  padding: 18px 28px;
+  padding: 14px 28px;
   overflow: visible;
   border-bottom: 0;
   background: var(--surface);
@@ -14,23 +14,22 @@
   min-height: 44px;
   white-space: nowrap;
 }
-.rf-ux-workspace .rf-studio-wordmark {
-  font-size: 17px;
-}
 .rf-ux-workspace .rf-editor-title {
   flex: 1;
   min-width: 180px;
   margin: 0;
   max-width: none;
 }
-.rf-ux-workspace .rf-editor-title h1 {
-  font-size: 19px;
-  line-height: 1.35;
-  letter-spacing: -0.025em;
+.rf-ux-workspace .rf-editor-title > div {
+  min-width: 0;
 }
-.rf-ux-workspace .rf-editor-title p {
-  font-size: 13px;
-  line-height: 1.45;
+.rf-ux-workspace .rf-editor-title h1 {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rf-ux-workspace .rf-editor-actions {
   display: flex;
@@ -44,69 +43,41 @@
   min-height: 44px;
   font-size: 14px;
 }
-.rf-ux-workspace .rf-local-draft-note {
-  padding: 10px 28px;
-  gap: 18px;
-  font-size: 13px;
-  border-bottom: 0;
-  background: var(--surface);
-}
 .rf-ux-workspace .rf-editor-rail {
-  padding: 8px 28px;
-  gap: 16px;
-  border-bottom: 0;
+  justify-content: center;
+  padding: 12px 28px;
+  border: 0;
   background: var(--background);
 }
 .rf-ux-workspace .rf-rail-tabs {
+  display: flex;
   flex: 0 1 auto;
+  gap: 8px;
 }
 .rf-ux-workspace .rf-editor-rail button {
   flex-direction: row;
   font-size: 14px;
   min-height: 44px;
-  padding: 10px 14px;
+  padding: 10px 24px;
 }
-.rf-ux-workspace .rf-editor-rail .rf-rail-tabs {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.rf-ux-workspace .rf-editor-rail button[aria-pressed="true"] {
+  box-shadow: none;
+  background: var(--surface-muted);
 }
 .rf-ux-workspace .rf-tools-layout {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
-  grid-template-areas: "sections paper";
-  gap: 24px;
+  grid-template-columns: minmax(0, 794px);
+  grid-template-areas: "paper";
+  justify-content: center;
+  gap: 28px;
   align-items: start;
-  padding: 16px 28px 36px;
+  padding: 0 28px 36px;
+  max-width: 1260px;
+  margin: auto;
 }
 .rf-ux-workspace .rf-tools-layout.has-panel {
-  grid-template-columns: 170px minmax(0, 1fr) 320px;
-  grid-template-areas: "sections paper tools";
-}
-.rf-section-navigation {
-  grid-area: sections;
-  display: grid;
-  gap: 5px;
-  align-content: start;
-  position: sticky;
-  top: calc(var(--editor-header-height, 80px) + 16px);
-}
-.rf-section-navigation h2 {
-  font-size: 18px;
-  margin: 0 0 12px;
-  font-weight: 600;
-}
-.rf-section-navigation .rf-button {
-  justify-content: flex-start;
-  text-align: left;
-  white-space: normal;
-  min-height: 44px;
-  font-size: 14px;
-}
-.rf-section-navigation .rf-button[aria-current] {
-  background: var(--surface-muted);
-  color: var(--primary);
-}
-.rf-section-navigation .rf-button:last-child {
-  margin-top: 18px;
+  grid-template-columns: minmax(0, 794px) 340px;
+  grid-template-areas: "paper tools";
 }
 .rf-ux-workspace .rf-paper-stage {
   grid-area: paper;
@@ -119,35 +90,41 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 13px;
   min-height: 48px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding: 0;
   text-transform: none;
   letter-spacing: normal;
 }
-.rf-ux-workspace .rf-paper-meta .rf-mode-switch {
-  margin: 0;
-  flex: 0 0 auto;
+.rf-paper-view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.rf-ux-workspace .rf-mode-switch button {
+.rf-paper-view-actions .rf-button {
   min-height: 44px;
-  padding: 8px 14px;
   font-size: 13px;
 }
 .rf-ux-workspace .rf-editor-tool-panel {
   grid-area: tools;
   min-width: 0;
-  padding: 22px 18px;
+  padding: 20px;
   border: 0;
   background: var(--surface);
   position: sticky;
   top: calc(var(--editor-header-height, 80px) + 16px);
   max-height: calc(100dvh - var(--editor-header-height, 80px) - 32px);
   overflow-y: auto;
+  border-radius: 12px;
 }
 .rf-ux-workspace .rf-inspector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 0;
   margin: 0 0 16px;
   min-height: 0;
@@ -155,17 +132,41 @@
   border: 0;
 }
 .rf-ux-workspace .rf-inspector-heading h2 {
-  font-size: 19px;
+  font-size: 18px;
   margin: 0;
   letter-spacing: -0.025em;
+}
+.rf-ux-workspace .rf-inspector-heading .rf-button {
+  flex-shrink: 0;
 }
 .rf-ux-workspace .rf-paper-caption {
   font-size: 13px;
   line-height: 1.5;
   margin-top: 16px;
 }
-.rf-workspace-mobile-nav {
-  display: none;
+.rf-ux-workspace .rf-tool-hint,
+.rf-ux-workspace .rf-service-tools p {
+  font-size: 14px;
+}
+.rf-priority-navigation {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.rf-priority-navigation .rf-button {
+  min-height: 44px;
+}
+.rf-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .rf-priority-checks {
   display: grid;
@@ -265,34 +266,14 @@
   min-width: 0;
 }
 @media (max-width: 1199px) {
-  .rf-ux-workspace .rf-tools-layout,
   .rf-ux-workspace .rf-tools-layout.has-panel {
-    grid-template-columns: minmax(0, 1fr) 300px;
-    grid-template-areas: "paper tools";
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: 20px;
-    padding: 16px 20px 32px;
-  }
-  .rf-ux-workspace .rf-tools-layout:not(.has-panel) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "paper";
-  }
-  .rf-section-navigation {
-    display: none;
-  }
-  .rf-ux-workspace .rf-editor-title {
-    min-width: 220px;
-  }
-  .rf-ux-workspace .rf-studio-wordmark {
-    display: none;
   }
 }
 @media (max-width: 900px) {
-  .rf-ux-workspace {
-    padding-bottom: 88px;
-  }
   .rf-ux-workspace .rf-editor-bar {
     position: static;
-    display: flex;
     gap: 10px;
     padding: 12px 16px;
   }
@@ -303,13 +284,10 @@
   }
   .rf-ux-workspace .rf-editor-title {
     flex: 1;
-    min-width: 160px;
+    min-width: 140px;
   }
   .rf-ux-workspace .rf-editor-title h1 {
-    font-size: 17px;
-  }
-  .rf-ux-workspace .rf-editor-title p {
-    font-size: 12px;
+    font-size: 16px;
   }
   .rf-ux-workspace .rf-editor-actions {
     width: 100%;
@@ -319,22 +297,6 @@
   .rf-ux-workspace .rf-editor-actions .rf-button {
     font-size: 13px;
     padding-inline: 12px;
-  }
-  .rf-ux-workspace .rf-local-draft-note {
-    padding: 8px 16px;
-    min-height: 0;
-  }
-  .rf-ux-workspace .rf-local-draft-note > span:last-child {
-    display: none;
-  }
-  .rf-workspace-mobile-nav {
-    display: flex;
-    gap: 8px;
-    padding: 16px;
-  }
-  .rf-workspace-mobile-nav .rf-button {
-    flex: 1;
-    min-height: 44px;
   }
   .rf-ux-workspace .rf-tools-layout,
   .rf-ux-workspace .rf-tools-layout.has-panel {
@@ -349,59 +311,23 @@
     top: auto;
   }
   .rf-ux-workspace[data-mobile-view="resume"] .rf-editor-tool-panel,
-  .rf-ux-workspace[data-mobile-view="resume"] .rf-editor-rail {
-    display: none;
-  }
   .rf-ux-workspace[data-mobile-view="tools"] .rf-paper-stage {
     display: none;
   }
   .rf-ux-workspace .rf-editor-rail {
-    padding: 0 16px 16px;
+    padding: 12px 16px;
     margin: 0;
-    flex-wrap: nowrap;
-    gap: 0;
   }
   .rf-ux-workspace .rf-rail-tabs {
     width: 100%;
     display: grid;
-    flex: 1 1 auto;
+    flex: 1;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
   }
   .rf-ux-workspace .rf-editor-rail .rf-rail-tabs button {
-    min-height: 44px;
-    padding: 10px 6px;
-    font-size: 13px;
-    flex-direction: row;
-  }
-  .rf-ux-workspace .rf-editor-rail .rf-panel-toggle {
-    display: none;
-  }
-  .rf-ux-workspace .rf-editor-rail .rf-rail-tabs svg {
-    width: 16px;
-    height: 16px;
-  }
-  .rf-ux-workspace .rf-editor-actions .rf-direct-tailor {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    z-index: 30;
-    width: calc(100% - 32px);
-    min-height: 48px;
-    margin: 0;
-    background: var(--primary);
-    color: var(--primary-foreground);
-  }
-  .rf-import-fullpage .rf-explicit-save {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    z-index: 30;
-    width: calc(100% - 32px);
-    min-height: 48px;
-    margin: 0;
+    padding: 10px 8px;
+    font-size: 14px;
   }
   .rf-import-review-banner {
     padding: 16px;
