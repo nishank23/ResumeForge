@@ -44,8 +44,10 @@
   font-size: 14px;
 }
 .rf-ux-workspace .rf-editor-rail {
-  justify-content: center;
-  padding: 12px 28px;
+  justify-content: space-between;
+  max-width: 1260px;
+  margin-inline: auto;
+  padding: 16px 28px;
   border: 0;
   background: var(--background);
 }
@@ -428,5 +430,37 @@
   .rf-ux-workspace .rf-paper-meta > span {
     max-width: 100%;
     font-size: 13px;
+  }
+}
+
+/* One toolbar. Secondary document controls live in More. */
+.rf-rail-utility {
+  display: flex;
+  flex: 0 0 auto;
+}
+.rf-ux-workspace .rf-rail-utility .rf-button {
+  font-size: 13px;
+  padding-inline: 12px;
+}
+.rf-ux-workspace .rf-editor-tool-panel .rf-assessment-feedback > h3 {
+  display: none;
+}
+@media (max-width: 900px) {
+  .rf-ux-workspace .rf-editor-rail {
+    gap: 8px;
+  }
+  .rf-ux-workspace .rf-rail-tabs {
+    width: auto;
+    min-width: 0;
+  }
+  .rf-ux-workspace .rf-rail-tabs svg {
+    display: none;
+  }
+  .rf-ux-workspace .rf-editor-rail .rf-rail-tabs button {
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+  .rf-ux-workspace .rf-rail-utility .rf-button {
+    padding-inline: 8px;
   }
 }

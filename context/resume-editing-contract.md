@@ -33,3 +33,9 @@ New import heuristics separate supported undated project headings and map degree
 ## Save-before-action UX — 2026-10-20
 
 Save & download exports the exact version returned by saving. Save & tailor waits for revision-bound owner callbacks and refuses to use an older snapshot if newer unsaved edits appeared during save. Conflicts/failures stop either follow-up. Tailoring has three presentation phases; optional added facts still require explicit confirmation before provider processing, and reviewed changes still save a separate copy. PDF retry does not repeat Apply. Compact readable editing changes only the view; saved appearance, exact A4 preview, paper identity and PDF rendering remain separate.
+
+## Relevant-detail presentation — 2026-10-22
+
+The writing workspace keeps task navigation and Preview in one toolbar. Structural and destructive actions remain available through labeled menus; deletion still requires confirmation and local Undo still restores it. Hover alone does not select content or reveal a toolbar. Explicit pointer/keyboard selection retains stable targets.
+
+Full-tailoring review leads with proposed wording and a selectable change. Compare with original exposes full original/proposed text, rationale and evidence before saving. Copy naming and job-fit details are secondary; hiding the name field does not reset its controlled value or change Apply semantics. Warnings, errors, stale/expired blocks, fact confirmation and persistent copy-save/PDF actions remain visible when relevant. Extra-experience intake appears only after a usable JD. This changes presentation, not provider input, scoring or source/version authority.

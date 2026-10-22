@@ -240,6 +240,9 @@ try {
       '!!document.querySelector(".rf-design-tools") && !document.querySelector(".rf-assessment-feedback") && document.querySelectorAll(".rf-editor-tool-panel").length===1',
     );
     await click(page, "Write");
+    await page.eval(() =>
+      document.querySelector('[aria-label="Edit actions"]').click(),
+    );
     await click(page, "Manage sections");
     await check(
       page,
@@ -330,13 +333,40 @@ try {
       path: resolve(out, `tailor-job-${width}.jpg`),
       quality: 88,
     });
+    await check(
+      page,
+      `${width}: optional experience waits for a job description`,
+      '!document.querySelector(".rf-tailoring-optional")',
+    );
     await fill(
       page,
       '[aria-label="Target job description"]',
       "Backend Engineer: build Python APIs and PostgreSQL services; write automated tests using pytest.",
     );
+    await check(
+      page,
+      `${width}: extra experience becomes available after job input`,
+      '!!document.querySelector(".rf-tailoring-optional") && !document.querySelector(".rf-tailoring-optional").open',
+    );
     await click(page, "Tailor my resume");
     await wait(page, '!!document.querySelector(".rf-tailoring-review")');
+    await check(
+      page,
+      `${width}: review starts with proposed wording and collapsed details`,
+      '!!document.querySelector(".rf-suggestion-text") && !document.querySelector(".rf-ai-change details").open && !document.querySelector(".rf-tailoring-copy-options").open',
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-ai-change details").open = true),
+    );
+    await check(
+      page,
+      `${width}: original comparison remains available`,
+      'document.querySelector(".rf-text-comparison").textContent.includes("Backend developer building Python APIs and SQL data services.")',
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-ai-change details").open = false),
+    );
+
     await check(
       page,
       `${width}: saved facts do not require empty confirmation`,
@@ -363,7 +393,7 @@ try {
         () => {
           const preview = document.querySelector(".rf-tailoring-preview");
           const top = preview.getBoundingClientRect().top;
-          document.querySelector(".rf-tailoring-check-details").open = true;
+          document.querySelector(".rf-tailoring-copy-options").open = true;
           const panel = document.querySelector(".rf-tailoring-controls");
           panel.scrollTop = panel.scrollHeight;
           return (
@@ -374,7 +404,7 @@ try {
         },
       );
       await page.eval(() => {
-        document.querySelector(".rf-tailoring-check-details").open = false;
+        document.querySelector(".rf-tailoring-copy-options").open = false;
         document.querySelector(".rf-tailoring-controls").scrollTop = 0;
       });
     }
@@ -399,6 +429,17 @@ try {
       );
       await click(page, "Changes");
     }
+    await page.eval(
+      () => (document.querySelector(".rf-tailoring-copy-options").open = true),
+    );
+    await fill(
+      page,
+      ".rf-tailoring-title input",
+      "Backend Engineer application",
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-tailoring-copy-options").open = false),
+    );
     await page.eval("window.__resumeUx.pdfFails=true");
     await click(page, "Save copy & download PDF");
     await wait(page, '!!document.querySelector(".rf-tailoring-ready")');
@@ -407,6 +448,11 @@ try {
       `${width}: copy retained after PDF error`,
       events("apply") +
         '.length===1 && document.querySelector(".rf-tailoring-ready").textContent.includes("already saved")',
+    );
+    await check(
+      page,
+      `${width}: collapsed copy name still reaches save`,
+      `${events("apply")}[0].title==="Backend Engineer application"`,
     );
     await page.eval("window.__resumeUx.pdfFails=false");
     await click(page, "Download PDF");
@@ -429,6 +475,59 @@ try {
     await page.close();
   }
   let page = await open();
+  await page.eval(async () => {
+    const summary = document.querySelector(
+      '[aria-label="Professional summary on resume page"]',
+    );
+    summary.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+  await check(
+    page,
+    "hovering no longer reveals a toolbar",
+    '!document.querySelector(".rf-selected-actions")',
+  );
+  await page.eval(() =>
+    document
+      .querySelector('[aria-label="Professional summary on resume page"]')
+      .click(),
+  );
+  await wait(page, '!!document.querySelector(".rf-selected-actions")');
+  await check(
+    page,
+    "selected content leads with editing and hides secondary actions",
+    () =>
+      !!document.querySelector("[data-selection-edit]") &&
+      !document.querySelector('.rf-selected-actions [role="menu"]'),
+  );
+  await page.eval(() =>
+    document
+      .querySelector('[aria-label="More selected content actions"]')
+      .click(),
+  );
+  await click(page, "Hide from resume");
+  await check(page, "hidden content action remains connected", () =>
+    document
+      .querySelector('[aria-label="Professional summary on resume page"]')
+      .closest(".rf-paper-selectable")
+      .classList.contains("is-hidden"),
+  );
+  await page.eval(() =>
+    document.querySelector('[aria-label="Edit actions"]').click(),
+  );
+  await click(page, "Undo");
+  await check(
+    page,
+    "undo restores hidden content",
+    () =>
+      !document
+        .querySelector('[aria-label="Professional summary on resume page"]')
+        .closest(".rf-paper-selectable")
+        .classList.contains("is-hidden"),
+  );
+  await page.close();
+  page = await open();
+
   await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await editSummary(
     page,
@@ -523,10 +622,9 @@ try {
   await click(page, "Save & tailor");
   await wait(page, "!!window.__resumeUx.resolveSave");
   await page.eval(() =>
-    document
-      .querySelector('[aria-label="Edit resume title and contact details"]')
-      .click(),
+    document.querySelector('[aria-label="Edit actions"]').click(),
   );
+  await click(page, "Edit resume title and contact details");
   await wait(page, '!!document.querySelector("[role=dialog]")');
   await page.eval("window.__resumeUx.resolveSave()");
   await wait(page, events("saveComplete") + ".length===1");

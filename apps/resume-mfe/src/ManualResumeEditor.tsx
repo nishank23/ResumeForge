@@ -24,14 +24,10 @@ import {
 } from "react";
 import {
   ArrowLeft,
-  ArrowDown,
-  ArrowUp,
   Check,
   Download,
   Eye,
-  EyeOff,
   Pencil,
-  Trash2,
   BriefcaseBusiness,
   X,
 } from "lucide-react";
@@ -87,6 +83,9 @@ import {
 import "./manual-editor.css";
 import "./editor-tool-panels.css";
 import "./workspace-ux.css";
+
+// ResumeDocument also serves read-only previews; its hover callbacks are intentionally inactive here.
+const ignoreHover = () => {};
 
 interface EditSession {
   base: ResumeDraft;
@@ -365,29 +364,11 @@ export function ManualResumeEditor({
       });
     });
   };
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelHover = useCallback(() => {
-    if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
-    hoverTimer.current = null;
-  }, []);
-  useEffect(() => {
-    cancelHover();
-    return cancelHover;
-  }, [cancelHover, mode, session, aiSession]);
   const select = (target: DraftTarget) => {
-    cancelHover();
     setActionsVisible(true);
     setSelected((current) =>
       JSON.stringify(current) === JSON.stringify(target) ? current : target,
     );
-  };
-  const hover = (target: DraftTarget) => {
-    cancelHover();
-    // Crossing another section on the way to its predecessor's actions must
-    // not relocate the toolbar before the pointer can reach it.
-    hoverTimer.current = setTimeout(() => {
-      select(target);
-    }, 150);
   };
   const addEntry = (
     targetSection = section,
@@ -658,8 +639,8 @@ export function ManualResumeEditor({
       editable={mode === "editor" && !session && !aiSession}
       onPending={setInlinePending}
       onSelect={select}
-      onHover={hover}
-      onHoverExit={cancelHover}
+      onHover={ignoreHover}
+      onHoverExit={ignoreHover}
       onEdit={(target) => {
         requestAnimationFrame(() => {
           startEdit(target, historyRef.current.current);
@@ -698,25 +679,31 @@ export function ManualResumeEditor({
                   ? "Saving…"
                   : dirty || inlinePending || !savedVersion
                     ? "Unsaved changes"
-                    : `Saved · Version ${String(savedVersion)}`}
+                    : "Saved"}
               </DocumentStatus>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Edit resume title and contact details"
-              onClick={() => {
-                startEdit({ type: "header" });
-              }}
-            >
-              <Pencil size={14} />
-            </Button>
           </div>
           <div className="rf-editor-actions">
             <DropdownMenu
               ariaLabel="Edit actions"
               triggerLabel="More"
               items={[
+                {
+                  id: "details",
+                  label: "Edit resume title and contact details",
+                  onSelect: () => {
+                    startEdit({ type: "header" });
+                  },
+                },
+                {
+                  id: "sections",
+                  label: "Manage sections",
+                  onSelect: () => {
+                    setPanel("content");
+                    setPanelOpen(true);
+                    setMobileView("tools");
+                  },
+                },
                 {
                   id: "undo",
                   label: "Undo",
@@ -876,7 +863,25 @@ export function ManualResumeEditor({
               setMobileView("tools");
             }
           }}
-        />
+        >
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={mode === "preview"}
+            onClick={() => {
+              setMode(mode === "editor" ? "preview" : "editor");
+              setPanelOpen(false);
+              setMobileView("resume");
+            }}
+          >
+            {mode === "editor" ? (
+              <Eye size={16} aria-hidden="true" />
+            ) : (
+              <Pencil size={16} aria-hidden="true" />
+            )}
+            {mode === "editor" ? "Preview" : "Back to writing"}
+          </Button>
+        </EditorRail>
         <div className={`rf-tools-layout${panelOpen ? " has-panel" : ""}`}>
           <div
             className="rf-paper-stage"
@@ -884,49 +889,6 @@ export function ManualResumeEditor({
             data-editor-mode={mode}
             style={appearanceVariables(appearance)}
           >
-            <div className="rf-paper-meta">
-              <span>
-                {mode === "editor"
-                  ? isCompact
-                    ? "Tap text to edit your resume"
-                    : "Edit directly on your resume"
-                  : "Preview of visible content"}
-              </span>
-              <div className="rf-paper-view-actions">
-                {mode === "editor" ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-expanded={panelOpen && panel === "content"}
-                    aria-controls={
-                      panelOpen ? "rf-editor-tool-panel" : undefined
-                    }
-                    onClick={() => {
-                      setPanel("content");
-                      setPanelOpen(true);
-                      setMobileView("tools");
-                    }}
-                  >
-                    Manage sections
-                  </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  aria-pressed={mode === "preview"}
-                  onClick={() => {
-                    setMode(mode === "editor" ? "preview" : "editor");
-                  }}
-                >
-                  {mode === "editor" ? (
-                    <Eye size={16} aria-hidden="true" />
-                  ) : (
-                    <Pencil size={16} aria-hidden="true" />
-                  )}
-                  {mode === "editor" ? "Preview" : "Back to writing"}
-                </Button>
-              </div>
-            </div>
             {mode === "editor" &&
             actionsVisible &&
             section?.kind !== "skills" ? (
@@ -938,7 +900,7 @@ export function ManualResumeEditor({
                 layoutKey={`${String(panelOpen)}:${panel}`}
                 draft={draft}
                 hidden={!!session || !!aiSession}
-                onPointerEnter={cancelHover}
+                onPointerEnter={ignoreHover}
               >
                 <span
                   className="rf-floating-target"
@@ -963,68 +925,56 @@ export function ManualResumeEditor({
                     Improve with AI
                   </Button>
                 ) : null}
-                {itemArrows ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Move selected item up"
-                      onClick={() => {
-                        act("up");
-                      }}
-                    >
-                      <ArrowUp size={15} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Move selected item down"
-                      onClick={() => {
-                        act("down");
-                      }}
-                    >
-                      <ArrowDown size={15} />
-                    </Button>
-                  </>
-                ) : null}
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   data-selection-edit
                   aria-label="Edit selected content"
                   onClick={() => {
                     startEdit();
                   }}
                 >
-                  <Pencil size={15} />
+                  <Pencil size={15} aria-hidden="true" /> Edit details
                 </Button>
                 {selection.type !== "header" ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={
-                        hidden
-                          ? "Show selected content in preview"
-                          : "Hide selected content from preview"
-                      }
-                      onClick={() => {
-                        act("hide");
-                      }}
-                    >
-                      {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Delete selected content"
-                      onClick={() => {
-                        setDeleting(selection);
-                      }}
-                    >
-                      <Trash2 size={15} />
-                    </Button>
-                  </>
+                  <DropdownMenu
+                    ariaLabel="More selected content actions"
+                    triggerLabel="More"
+                    items={[
+                      ...(itemArrows
+                        ? [
+                            {
+                              id: "up",
+                              label: "Move up",
+                              onSelect: () => {
+                                act("up");
+                              },
+                            },
+                            {
+                              id: "down",
+                              label: "Move down",
+                              onSelect: () => {
+                                act("down");
+                              },
+                            },
+                          ]
+                        : []),
+                      {
+                        id: "visibility",
+                        label: hidden ? "Show in resume" : "Hide from resume",
+                        onSelect: () => {
+                          act("hide");
+                        },
+                      },
+                      {
+                        id: "delete",
+                        label: "Delete selected content",
+                        onSelect: () => {
+                          setDeleting(selection);
+                        },
+                      },
+                    ]}
+                  />
                 ) : null}
               </SectionActions>
             ) : null}
@@ -1035,10 +985,6 @@ export function ManualResumeEditor({
                 <ResumePage>{documentBody}</ResumePage>
               )}
             </div>
-            <p className="rf-paper-caption">
-              Edits stay in your draft until saved. AI suggestions require
-              review.
-            </p>
           </div>
           {panelOpen ? (
             <aside

@@ -14,14 +14,13 @@ Focused builder revision (2026-10-21): the user found the permanent section list
 
 ```text
 Resume title + saved status                       More | Tailor | Download
-                              Write | Improve | Design
-                 Edit directly on your resume       Manage sections | Preview
-                 Editable document                  Optional selected tool
+Write | Improve | Design                                           Preview
+                         Editable document       Optional selected tool
 ```
 
-There is no permanent left sidebar and no initial feedback panel. Manage sections opens section controls only when requested. Improve and Design replace that panel, so only one tool is visible. Write and the panel close button restore the document. Save status is beside the title instead of occupying a separate row. Preview is a single toggle with Back to writing.
+There is no permanent left sidebar and no initial feedback panel. More contains Manage sections and title/contact editing. Preview shares the task toolbar rather than a separate document-control row. Improve and Design replace that panel, so only one tool is visible. Write and the panel close button restore the document. The title shows a concise Saved or Unsaved changes status. Version details remain available through saved-document behavior rather than repeated workspace labels. Preview is a single toggle with Back to writing.
 
-Phone/tablet uses the same task bar and one surface at a time. Compact editing reflows at readable sizes; Preview retains exact A4 typography. Returning from a scoped feedback editor keeps the user with their suggested fixes. Section/entry IDs, unsaved edits, saved appearance and PDF content survive task switching. Selected-content actions remain outside printable paper and appear after a target is selected.
+Phone/tablet uses the same task bar and one surface at a time. Compact editing reflows at readable sizes; Preview retains exact A4 typography. Returning from a scoped feedback editor keeps the user with their suggested fixes. Section/entry IDs, unsaved edits, saved appearance and PDF content survive task switching. Selected-content actions remain outside printable paper and appear after a click or keyboard selection. Hovering does not reveal or move controls. Edit details and Improve with AI are primary; move/hide/delete are in a labeled More menu. Delete still requires confirmation and Undo remains available.
 
 ### Reference research
 
@@ -45,9 +44,9 @@ This is an app workspace, which design-taste-frontend explicitly excludes from i
 
 ## Three tailoring phases
 
-**Job description:** paste a JD. Optional experience questions are collapsed. Opening them with a valid JD uses local preflight to retain relevant question selection; the result is reused when starting. Added facts stay tied to the original visible entry and need a separate inline confirmation checkbox. Editing facts or the JD clears that confirmation. The primary Tailor my resume action has one fixed footer location. The full Gemini processing scope is available under What is sent to AI?. A saved-facts-only request has no empty confirmation page.
+**Job description:** paste a JD. The prompt is the first task, without another repeated heading or instructions. Optional experience questions appear collapsed only after a usable JD (at least 50 trimmed characters); AI scope remains available under What is sent to AI?. Opening them with a valid JD uses local preflight to retain relevant question selection; the result is reused when starting. Added facts stay tied to the original visible entry and need a separate inline confirmation checkbox. Editing facts or the JD clears that confirmation. The primary Tailor my resume action has one fixed footer location. The full Gemini processing scope is available under What is sent to AI?. A saved-facts-only request has no empty confirmation page.
 
-**Review changes:** real queued/writing/fact-review status appears until the stored proposals are ready. Users review one suggestion at a time with Previous/Next or the shared suggestion selector. Full original/suggested text stays visible, and each accepted/rejected choice persists while navigating. Users name the copy and inspect the selected result. Desktop input and review keep the resume beside the controls; each pane scrolls independently beneath compact phase navigation and above persistent footer actions. Narrow screens can switch between controls and Preview during job input as well as review. Detailed job-fit scores, required evidence and quality metadata remain available without dominating the review. Unsupported requirements remain gaps.
+**Review changes:** real queued/writing/fact-review status appears until the stored proposals are ready. Users review one suggestion at a time with Previous/Next or the shared suggestion selector. Suggested wording appears first. Compare with original opens complete original/suggested text, factual explanation and supporting evidence together. Each accepted/rejected choice persists while navigating. Copy name and job-fit details is a single collapsed disclosure after the changes; naming is optional and still reaches Apply. Material warnings and stale/expiry/error messages stay visible. Users inspect the selected result beside the review. Desktop input and review keep the resume beside the controls; each pane scrolls independently beneath compact phase navigation and above persistent footer actions. Narrow screens can switch between controls and Preview during job input as well as review. Detailed job-fit scores, required evidence and quality metadata remain available without dominating the review. Unsupported requirements remain gaps.
 
 **Saved copy:** Save copy & download PDF first uses the existing idempotent Apply, then downloads that returned saved copy/version. A failed PDF request leaves the copy saved. Retry only exports; it does not rerun AI or Apply. A reopened saved run can load the owned copy metadata and export it. Closing queued work allows later resumption; cancellation, stale versions, expired proposals and errors remain explicit.
 

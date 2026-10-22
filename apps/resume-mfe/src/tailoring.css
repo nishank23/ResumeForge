@@ -672,3 +672,34 @@
     flex-basis: 100%;
   }
 }
+
+/* Lead with the proposed wording. Comparisons and naming are available on demand. */
+.rf-tailoring-copy-options {
+  margin-top: 16px;
+}
+.rf-tailoring-copy-options > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  font-size: 14px;
+}
+.rf-tailoring-copy-options .rf-tailoring-title {
+  margin-top: 8px;
+}
+.rf-tailoring-copy-options > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.rf-tailoring-ux .rf-suggestion-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 1.65;
+  margin: 12px 0;
+}
+.rf-tailoring-ux .rf-ai-change > details > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  font-size: 14px;
+}

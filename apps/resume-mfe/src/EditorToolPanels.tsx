@@ -1,5 +1,5 @@
 export { ReadinessPanel as AtsPanel } from "./ReadinessPanel";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -47,7 +47,9 @@ export type EditorPanel = keyof typeof EDITOR_PANELS;
 export function EditorRail({
   active,
   onSelect,
+  children,
 }: {
+  children?: ReactNode;
   active?: EditorPanel;
   onSelect: (panel: "write" | "ats" | "design") => void;
 }) {
@@ -81,6 +83,7 @@ export function EditorRail({
           </Button>
         ))}
       </div>
+      <div className="rf-rail-utility">{children}</div>
     </nav>
   );
 }

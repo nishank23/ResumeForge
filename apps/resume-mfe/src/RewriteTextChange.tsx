@@ -1,17 +1,34 @@
+import type { ReactNode } from "react";
 import { TextComparison } from "@resume-forge/shared";
 import { wordDiff } from "./word-diff";
 
 export function RewriteTextChange({
   change,
   expanded = false,
+  suggestionFirst = false,
+  comparisonDetails,
 }: {
   change: { label: string; original: string; proposed: string };
   expanded?: boolean;
+  suggestionFirst?: boolean;
+  comparisonDetails?: ReactNode;
 }) {
   return (
     <section className="rf-ai-change">
       <h3>{change.label}</h3>
-      {expanded ? (
+      {suggestionFirst ? (
+        <>
+          <p className="rf-suggestion-text">{change.proposed}</p>
+          <details>
+            <summary>Compare with original</summary>
+            <TextComparison
+              original={change.original}
+              suggested={change.proposed}
+            />
+            {comparisonDetails}
+          </details>
+        </>
+      ) : expanded ? (
         <TextComparison
           original={change.original}
           suggested={change.proposed}

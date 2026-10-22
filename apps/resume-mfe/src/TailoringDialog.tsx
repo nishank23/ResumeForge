@@ -334,7 +334,7 @@ export function TailoringDialog({
     <Dialog
       open
       title="Tailor for a job"
-      description={`${base.title} · Saved version ${String(savedVersion)}`}
+      description="Create a separate copy for this job."
       className="rf-ai-dialog rf-tailoring-dialog rf-tailoring-ux"
       bodyClassName="rf-ai-dialog-body"
       footerClassName="rf-ai-dialog-footer"
@@ -493,10 +493,6 @@ export function TailoringDialog({
           ) : null}
           {step === "job" && !running ? (
             <div className="rf-tailoring-job">
-              <h3>Which job are you applying for?</h3>
-              <p>
-                Paste the job description. Your original resume stays unchanged.
-              </p>
               <StudioPrompt
                 label="Target job description"
                 value={text}
@@ -513,43 +509,45 @@ export function TailoringDialog({
                 hideSubmit
                 onSubmit={start}
               />
-              <details
-                className="rf-tailoring-optional"
-                onToggle={(event) => {
-                  if (
-                    event.currentTarget.open &&
-                    text.trim().length >= 50 &&
-                    text.length <= 12000 &&
-                    !busy &&
-                    !disabledReason &&
-                    state?.available
-                  )
-                    void mutate(async () => {
-                      await prepare();
-                      return null;
-                    });
-                }}
-              >
-                <summary>Add experience I left out (optional)</summary>
-                <TailoringExperience
-                  doc={base}
-                  answers={answers}
-                  terms={
-                    preparation?.text === text
-                      ? (preparation.state.evaluation?.keywords.map(
-                          (keyword) => keyword.term,
-                        ) ?? [])
-                      : []
-                  }
-                  disabled={busy || !!disabledReason}
-                  onChange={(next) => {
-                    setAnswers(next);
-                    setFactsConfirmed(false);
-                    setError("");
-                    requestId.current = null;
+              {text.trim().length >= 50 ? (
+                <details
+                  className="rf-tailoring-optional"
+                  onToggle={(event) => {
+                    if (
+                      event.currentTarget.open &&
+                      text.trim().length >= 50 &&
+                      text.length <= 12000 &&
+                      !busy &&
+                      !disabledReason &&
+                      state?.available
+                    )
+                      void mutate(async () => {
+                        await prepare();
+                        return null;
+                      });
                   }}
-                />
-              </details>
+                >
+                  <summary>Add experience I left out (optional)</summary>
+                  <TailoringExperience
+                    doc={base}
+                    answers={answers}
+                    terms={
+                      preparation?.text === text
+                        ? (preparation.state.evaluation?.keywords.map(
+                            (keyword) => keyword.term,
+                          ) ?? [])
+                        : []
+                    }
+                    disabled={busy || !!disabledReason}
+                    onChange={(next) => {
+                      setAnswers(next);
+                      setFactsConfirmed(false);
+                      setError("");
+                      requestId.current = null;
+                    }}
+                  />
+                </details>
+              ) : null}
               {pendingAnswers.length ? (
                 <section
                   className="rf-experience-confirm"
@@ -626,29 +624,11 @@ export function TailoringDialog({
             <section className="rf-tailoring-review">
               <div className="rf-tailoring-changes">
                 <div className="rf-tailoring-review-heading">
-                  <h3>Review what changed</h3>
                   <p>
                     {selected.length} of {run.changes.length} suggestions
-                    selected. Unchecked suggestions keep your original wording.
+                    included.
                   </p>
                 </div>
-                <label className="rf-tailoring-title">
-                  Copy name
-                  <Input
-                    value={title}
-                    maxLength={200}
-                    disabled={busy}
-                    onChange={(event) => {
-                      setTitle(event.target.value);
-                    }}
-                  />
-                </label>
-                {run.warnings.map((warning) => (
-                  <p key={warning} role="status" className="rf-tool-hint">
-                    {warning}
-                  </p>
-                ))}
-
                 {run.changes.length > 1 ? (
                   <div className="rf-tailoring-change-navigation">
                     <Button
@@ -714,64 +694,90 @@ export function TailoringDialog({
                         );
                       }}
                     />
-                    <RewriteTextChange change={c} expanded />
-                    <details>
-                      <summary>Why this change?</summary>
-                      <p>
-                        {c.kind === "order"
-                          ? "Reorders existing content using supported job requirements. Nothing is removed."
-                          : "Checked against professional facts and original coverage. Review the meaning before saving."}
-                      </p>
-                      {(c.evidence.length ? c.evidence : [c.original]).map(
-                        (evidence, i) => (
-                          <p key={i}>{evidence}</p>
-                        ),
-                      )}
-                    </details>
+                    <RewriteTextChange
+                      change={c}
+                      suggestionFirst
+                      comparisonDetails={
+                        <>
+                          <p>
+                            {c.kind === "order"
+                              ? "Reorders existing content using supported job requirements. Nothing is removed."
+                              : "Checked against professional facts and original coverage. Review the meaning before saving."}
+                          </p>
+                          {(c.evidence.length ? c.evidence : [c.original]).map(
+                            (evidence, i) => (
+                              <p key={i}>{evidence}</p>
+                            ),
+                          )}
+                        </>
+                      }
+                    />
                   </section>
                 ))}
-                <details className="rf-tailoring-check-details">
-                  <summary>Job fit and fact-check details</summary>
-                  <p>
-                    Internal job-fit check: {run.before.score ?? "partial"}{" "}
-                    before; {run.after?.score ?? "partial"} with all
-                    suggestions. This is not an employer ATS rating. Selected
-                    changes are reassessed after saving.
+                {run.warnings.map((warning) => (
+                  <p key={warning} role="status" className="rf-tool-hint">
+                    {warning}
                   </p>
-                  <p>
-                    Evidence still missing:{" "}
-                    {run.before.missing.join(", ") ||
-                      "No gaps among extracted terms."}{" "}
-                    Missing qualifications are not added to your resume.
-                  </p>
-                  <p>
-                    Requested seniority: {run.before.experienceLevel}. Requested
-                    experience:{" "}
-                    {run.before.statedYears == null
-                      ? "Not stated"
-                      : `${String(run.before.statedYears)}+ years`}
-                    . These are evidence details, not score multipliers.
-                  </p>
-                  {run.responsibilities.map((responsibility, i) => (
-                    <p key={`responsibility-${String(i)}`}>{responsibility}</p>
-                  ))}
-                  {run.quality ? (
+                ))}
+
+                <details className="rf-tailoring-copy-options">
+                  <summary>Copy name and job-fit details</summary>
+                  <label className="rf-tailoring-title">
+                    Copy name
+                    <Input
+                      value={title}
+                      maxLength={200}
+                      disabled={busy}
+                      onChange={(event) => {
+                        setTitle(event.target.value);
+                      }}
+                    />
+                  </label>
+                  <div className="rf-tailoring-check-details">
                     <p>
-                      {run.model}: {run.quality.fieldsChecked} fields checked,{" "}
-                      {run.quality.fieldsRewritten} rewritten.{" "}
-                      {run.quality.sourceWords} original words;{" "}
-                      {run.quality.proposedWords} with all suggestions. Original
-                      work, projects, education and skills remain in the copy.
+                      Internal job-fit check: {run.before.score ?? "partial"}{" "}
+                      before; {run.after?.score ?? "partial"} with all
+                      suggestions. This is not an employer ATS rating. Selected
+                      changes are reassessed after saving.
                     </p>
-                  ) : null}
-                  {run.requirements.map((k) => (
-                    <p key={k.name}>
-                      <strong>{k.name}</strong> —{" "}
-                      {k.required ? "Required" : "Preferred or unspecified"}
-                      <br />
-                      {k.evidence}
+                    <p>
+                      Evidence still missing:{" "}
+                      {run.before.missing.join(", ") ||
+                        "No gaps among extracted terms."}{" "}
+                      Missing qualifications are not added to your resume.
                     </p>
-                  ))}
+                    <p>
+                      Requested seniority: {run.before.experienceLevel}.
+                      Requested experience:{" "}
+                      {run.before.statedYears == null
+                        ? "Not stated"
+                        : `${String(run.before.statedYears)}+ years`}
+                      . These are evidence details, not score multipliers.
+                    </p>
+                    {run.responsibilities.map((responsibility, i) => (
+                      <p key={`responsibility-${String(i)}`}>
+                        {responsibility}
+                      </p>
+                    ))}
+                    {run.quality ? (
+                      <p>
+                        {run.model}: {run.quality.fieldsChecked} fields checked,{" "}
+                        {run.quality.fieldsRewritten} rewritten.{" "}
+                        {run.quality.sourceWords} original words;{" "}
+                        {run.quality.proposedWords} with all suggestions.
+                        Original work, projects, education and skills remain in
+                        the copy.
+                      </p>
+                    ) : null}
+                    {run.requirements.map((k) => (
+                      <p key={k.name}>
+                        <strong>{k.name}</strong> —{" "}
+                        {k.required ? "Required" : "Preferred or unspecified"}
+                        <br />
+                        {k.evidence}
+                      </p>
+                    ))}
+                  </div>
                 </details>
               </div>
             </section>
@@ -823,7 +829,6 @@ export function TailoringDialog({
                 ? "Preview of selected changes"
                 : "Original saved resume"}
             </h3>
-            <span>Read-only · PDF layout</span>
           </div>
           <ResumePage>
             <ResumeDocument
