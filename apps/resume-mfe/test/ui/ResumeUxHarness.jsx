@@ -341,7 +341,10 @@ function Harness() {
     };
     return {
       load: async () => value,
-      run: async () => value,
+      run: async () => {
+        event("readinessRun");
+        return value;
+      },
       dismiss: async (_id, id, hidden) => ({
         ...value,
         dismissed: hidden ? [id] : [],

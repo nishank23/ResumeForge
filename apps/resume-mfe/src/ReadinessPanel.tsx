@@ -5,19 +5,14 @@ import {
   DocumentStatus,
   RequestFeedback,
 } from "@resume-forge/shared";
-import type {
-  ReadinessCheck,
-  ReadinessResult,
-} from "@resume-forge/resume-core";
+import type { ReadinessResult } from "@resume-forge/resume-core";
 import type { ReadinessState } from "@resume-forge/shared-types";
-import { AssessmentFeedback } from "./AssessmentFeedback";
 import { READINESS_RUBRIC } from "@resume-forge/resume-core";
 import { needsReadinessCheck } from "./readiness-feedback";
 export interface ReadinessPanelProps {
   savedVersion: number;
   reducedMotion?: boolean;
   disabledReason?: string;
-  navigationDisabled?: boolean;
   preview?: ReadinessResult;
   load?: (signal?: AbortSignal) => Promise<ReadinessState>;
   run?: () => Promise<ReadinessState>;
@@ -26,20 +21,14 @@ export interface ReadinessPanelProps {
     issueId: string,
     dismissed: boolean,
   ) => Promise<ReadinessState>;
-  label?: (check: ReadinessCheck) => string;
-  onTarget: (check: ReadinessCheck, edit: boolean) => void;
 }
 export function ReadinessPanel({
   savedVersion,
   reducedMotion,
   disabledReason,
-  navigationDisabled,
   preview,
   load,
   run,
-  dismiss,
-  onTarget,
-  label,
 }: ReadinessPanelProps) {
   const [state, setState] = useState<ReadinessState | null>(null);
   const [busy, setBusy] = useState(false),
@@ -124,120 +113,64 @@ export function ReadinessPanel({
             size="sm"
             variant="outline"
             disabled={busy || loading}
-            onClick={() => { setRetry((value) => value + 1); }}
+            onClick={() => {
+              setRetry((value) => value + 1);
+            }}
           >
             Retry resume check
           </Button>
         </div>
       ) : null}
-      {result ? (
-        <>
-          {result.truncated ? (
-            <p role="status">
-              Showing the first 100 checks. The score uses all checks.
-            </p>
-          ) : null}
-          <AssessmentFeedback
-            mode="rules"
-            label={label}
-            checks={result.checks}
-            dismissed={state?.dismissed ?? []}
-            disabled={navigationDisabled || (!preview && (blocked || stale))}
-            onTarget={onTarget}
-            onDismiss={
-              dismiss && evaluation && !preview && !stale && !blocked
-                ? (check, hidden) => {
-                    void mutate(() => dismiss(evaluation.id, check.id, hidden));
-                  }
-                : undefined
-            }
-          />
-        </>
-      ) : !loading && !error ? (
-        <p role="status">
-          Saved resumes are checked automatically. Add your experience to see
-          useful feedback.
+      <section
+        className="rf-ats-readiness rf-compact-score"
+        aria-label="Resume score"
+      >
+        <DocumentStatus
+          tone={
+            preview || loading || busy || stale
+              ? "pending"
+              : evaluation
+                ? "saved"
+                : "neutral"
+          }
+        >
+          {preview
+            ? "Unsaved preview"
+            : loading || busy
+              ? "Checking…"
+              : !evaluation
+                ? "Not evaluated"
+                : stale
+                  ? "Needs recheck"
+                  : "Evaluated"}
+        </DocumentStatus>
+        <AssessmentMeter value={result?.score} label="Resume score" />
+        <p>
+          Internal content score. Use Job fit to compare with a job description.
         </p>
-      ) : null}
-      <details className="rf-readiness-summary">
-        <summary>
-          Resume check details
-          {result?.score != null ? ` · ${String(result.score)}/100` : ""}
-        </summary>
-        <section className="rf-ats-readiness" aria-label="Resume checks">
-          <DocumentStatus
-            tone={
-              preview || loading || busy || stale
-                ? "pending"
-                : evaluation
-                  ? "saved"
-                  : "neutral"
-            }
-          >
-            {preview
-              ? "Unsaved preview"
-              : loading || busy
-                ? "Checking…"
-                : !evaluation
-                  ? "Not evaluated"
-                  : stale
-                    ? "Needs recheck"
-                    : "Evaluated"}
-          </DocumentStatus>
-          <AssessmentMeter
-            value={result?.score}
-            label="General resume readiness"
-          />
-          <p>
-            Content checks, not an employer ATS rating or PDF parsing test. Job
-            fit is checked separately.
+        {preview ? (
+          <p role="status">Save your changes to update the saved score.</p>
+        ) : null}
+        {stale && !preview ? (
+          <p role="status">
+            This score belongs to an older version. Recheck to update it.
           </p>
-          {preview ? (
-            <p>Unsaved preview. Save changes to store a new assessment.</p>
-          ) : evaluation ? (
-            <p>
-              Saved version {evaluation.resumeVersion}. Checked{" "}
-              {new Date(evaluation.evaluatedAt).toLocaleString()}.
-            </p>
-          ) : null}
-          {stale && !preview ? (
-            <p role="status">
-              These checks belong to an older saved version or rule set. Recheck
-              before relying on them.
-            </p>
-          ) : null}
-          {result ? (
-            <div
-              aria-label="Readiness breakdown"
-              className="rf-readiness-components"
-            >
-              {result.components.map((component) => (
-                <div key={component.id}>
-                  <span>
-                    {component.label}
-                    <small>
-                      {component.weight}% weight · {component.passed}/
-                      {component.total} checks
-                    </small>
-                  </span>
-                  <strong>{component.score}/100</strong>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {run ? (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={blocked}
-              aria-busy={busy || loading}
-              onClick={() => void mutate(run)}
-            >
-              Recheck resume
-            </Button>
-          ) : null}
-        </section>
-      </details>
+        ) : null}
+        {!result && !loading && !error ? (
+          <p role="status">Save your resume to get a score.</p>
+        ) : null}
+        {run ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={blocked}
+            aria-busy={busy || loading}
+            onClick={() => void mutate(run)}
+          >
+            Recheck resume
+          </Button>
+        ) : null}
+      </section>
     </div>
   );
 }

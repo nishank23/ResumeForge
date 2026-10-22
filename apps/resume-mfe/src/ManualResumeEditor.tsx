@@ -84,9 +84,6 @@ import "./manual-editor.css";
 import "./editor-tool-panels.css";
 import "./workspace-ux.css";
 
-// ResumeDocument also serves read-only previews; its hover callbacks are intentionally inactive here.
-const ignoreHover = () => {};
-
 interface EditSession {
   base: ResumeDraft;
   target: DraftTarget;
@@ -364,11 +361,28 @@ export function ManualResumeEditor({
       });
     });
   };
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelHover = useCallback(() => {
+    if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+  }, []);
+  useEffect(() => {
+    cancelHover();
+    return cancelHover;
+  }, [cancelHover, mode, session, aiSession]);
   const select = (target: DraftTarget) => {
+    cancelHover();
     setActionsVisible(true);
     setSelected((current) =>
       JSON.stringify(current) === JSON.stringify(target) ? current : target,
     );
+  };
+  const hover = (target: DraftTarget) => {
+    cancelHover();
+    // Delay crossing another region so the current actions stay reachable.
+    hoverTimer.current = setTimeout(() => {
+      select(target);
+    }, 150);
   };
   const addEntry = (
     targetSection = section,
@@ -639,8 +653,8 @@ export function ManualResumeEditor({
       editable={mode === "editor" && !session && !aiSession}
       onPending={setInlinePending}
       onSelect={select}
-      onHover={ignoreHover}
-      onHoverExit={ignoreHover}
+      onHover={hover}
+      onHoverExit={cancelHover}
       onEdit={(target) => {
         requestAnimationFrame(() => {
           startEdit(target, historyRef.current.current);
@@ -900,7 +914,7 @@ export function ManualResumeEditor({
                 layoutKey={`${String(panelOpen)}:${panel}`}
                 draft={draft}
                 hidden={!!session || !!aiSession}
-                onPointerEnter={ignoreHover}
+                onPointerEnter={cancelHover}
               >
                 <span
                   className="rf-floating-target"
@@ -1052,7 +1066,7 @@ export function ManualResumeEditor({
                       setPanel("ats");
                     }}
                   >
-                    Resume checks
+                    Resume score
                   </button>
                   <button
                     type="button"
@@ -1069,32 +1083,11 @@ export function ManualResumeEditor({
                 <AtsPanel
                   reducedMotion={context?.reducedMotion}
                   {...readiness}
-                  label={(check) => {
-                    if (!check.target) return "Resume";
-                    if (check.target.type === "header")
-                      return "Contact details";
-                    const value = targetValue(history.current, check.target);
-                    const section = sectionFor(history.current, check.target);
-                    return value && "title" in value
-                      ? `${value.title || "Untitled entry"} · ${section?.label ?? ""}`
-                      : (section?.label ?? "Section");
-                  }}
                   savedVersion={savedVersion}
                   preview={
                     previewChanged || !savedVersion
                       ? readinessPreview
                       : undefined
-                  }
-                  navigationDisabled={
-                    !!(
-                      conflict ||
-                      inlinePending ||
-                      saving ||
-                      session ||
-                      aiSession ||
-                      deleting ||
-                      leaving
-                    )
                   }
                   disabledReason={
                     !savedVersion
@@ -1111,7 +1104,6 @@ export function ManualResumeEditor({
                           ? "Save changes and close edit dialogs before checking readiness."
                           : undefined
                   }
-                  onTarget={onAtsTarget}
                 />
               ) : null}
               {panel === "jd" ? (

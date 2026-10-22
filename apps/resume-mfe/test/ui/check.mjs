@@ -173,30 +173,34 @@ try {
     await click(page, "Improve");
     await wait(
       page,
-      'document.querySelectorAll(".rf-priority-check").length===1',
+      'document.querySelector(".rf-compact-score").textContent.includes("Evaluated")',
     );
     await check(
       page,
-      `${width}: detailed checks start collapsed`,
-      '!document.querySelector(".rf-all-checks").open && !document.querySelector(".rf-readiness-summary").open',
+      `${width}: score replaces detailed check lists`,
+      '!!document.querySelector(".rf-compact-score") && !document.querySelector(".rf-assessment-feedback, .rf-priority-check, .rf-all-checks, .rf-readiness-components, .rf-readiness-summary")',
     );
-    const firstPriority = await page.eval(
-      'document.querySelector(".rf-priority-check h4").textContent',
-    );
-    await click(page, "Next");
     await check(
       page,
-      `${width}: next priority replaces rather than stacks controls`,
-      'document.querySelectorAll(".rf-priority-check").length===1 && document.querySelector(".rf-priority-check h4").textContent!==' +
-        JSON.stringify(firstPriority),
+      `${width}: existing returned score stays visible`,
+      'document.querySelector(".rf-compact-score").textContent.includes("81")',
     );
-    await click(page, "Previous");
+    await click(page, "Recheck resume");
+    await wait(page, `${events("readinessRun")}.length===1`);
     await check(
       page,
-      `${width}: returning preserves priority order`,
-      'document.querySelector(".rf-priority-check h4").textContent===' +
-        JSON.stringify(firstPriority),
+      `${width}: manual recheck preserves resume version`,
+      'window.__resumeUx.version===1 && document.querySelector(".rf-compact-score").textContent.includes("81")',
     );
+    await click(page, "Job fit");
+    await wait(page, '!!document.querySelector(".rf-jd-match")');
+    await check(
+      page,
+      `${width}: job fit replaces score without opening tailoring`,
+      '!document.querySelector(".rf-compact-score, .rf-tailoring-dialog")',
+    );
+    await click(page, "Resume score");
+    await wait(page, '!!document.querySelector(".rf-compact-score")');
     await page.screenshot({
       path: resolve(out, `improve-${width}.jpg`),
       quality: 88,
@@ -212,26 +216,6 @@ try {
         quality: 88,
       });
     }
-    await page.eval(
-      'document.querySelector(".rf-priority-check button").click()',
-    );
-    await wait(page, '!!document.querySelector("[role=dialog]")');
-    await check(
-      page,
-      `${width}: feedback opens scoped editor`,
-      '!!document.querySelector("[role=dialog] input, [role=dialog] [contenteditable]")',
-    );
-    await page.send("Input.dispatchKeyEvent", {
-      type: "keyDown",
-      key: "Escape",
-      code: "Escape",
-    });
-    await wait(page, '!document.querySelector("[role=dialog]")');
-    await check(
-      page,
-      `${width}: closing an edit returns to feedback`,
-      'document.querySelector(".rf-ux-workspace").dataset.mobileView==="tools" && !!document.querySelector(".rf-priority-check")',
-    );
     await click(page, "Write");
     await click(page, "Design");
     await check(
@@ -484,9 +468,30 @@ try {
   });
   await check(
     page,
-    "hovering no longer reveals a toolbar",
-    '!document.querySelector(".rf-selected-actions")',
+    "hover restores Improve with AI for the summary",
+    'document.querySelector(".rf-selected-actions .rf-ai-entry-action")?.getClientRects().length > 0',
   );
+  await page.eval(() => document.querySelector(".rf-ai-entry-action").click());
+  await wait(page, '!!document.querySelector("[role=dialog]")');
+  await check(
+    page,
+    "hover action opens the original scoped AI review",
+    () =>
+      document
+        .querySelector("[role=dialog]")
+        .textContent.includes("Improve summary") &&
+      document
+        .querySelector(".rf-ai-original")
+        .textContent.includes(
+          "Backend developer building Python APIs and SQL data services.",
+        ),
+  );
+  await check(
+    page,
+    "hover and opening AI review do not run whole-resume tailoring",
+    `${events("start")}.length===0`,
+  );
+  await click(page, "Cancel");
   await page.eval(() =>
     document
       .querySelector('[aria-label="Professional summary on resume page"]')
@@ -535,6 +540,18 @@ try {
   );
   await click(page, "Design");
   await click(page, "Improve");
+  await wait(page, '!!document.querySelector(".rf-compact-score")');
+  await check(
+    page,
+    "unsaved score remains a preview with saved recheck blocked",
+    () =>
+      document
+        .querySelector(".rf-compact-score")
+        .textContent.includes("Unsaved preview") &&
+      [...document.querySelectorAll(".rf-compact-score button")].find(
+        (button) => button.textContent.trim() === "Recheck resume",
+      ).disabled,
+  );
   await click(page, "Write");
   await check(
     page,
