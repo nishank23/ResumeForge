@@ -37,6 +37,7 @@ export interface AtsAssessmentState {
     resumeVersion: number;
     inputHash: string;
     jdHash: string;
+    jdText?: string;
     evaluatedAt: string;
     assessment: AtsAssessment;
   };
@@ -109,6 +110,7 @@ function atsState(value: unknown, id: string): AtsAssessmentState {
           "resumeVersion",
           "inputHash",
           "jdHash",
+          "jdText",
           "evaluatedAt",
           "assessment",
         ].includes(key),
@@ -120,6 +122,10 @@ function atsState(value: unknown, id: string): AtsAssessmentState {
     Number(evaluation.resumeVersion) < 1 ||
     !/^[a-f0-9]{64}$/.test(str(evaluation.inputHash)) ||
     !/^[a-f0-9]{64}$/.test(str(evaluation.jdHash)) ||
+    (evaluation.jdText !== undefined &&
+      (typeof evaluation.jdText !== "string" ||
+        evaluation.jdText.trim().length < 50 ||
+        evaluation.jdText.length > 12000)) ||
     !/^\d{4}-\d{2}-\d{2}T/.test(str(evaluation.evaluatedAt)) ||
     !Number.isFinite(Date.parse(str(evaluation.evaluatedAt)))
   )
@@ -135,6 +141,9 @@ function atsState(value: unknown, id: string): AtsAssessmentState {
       resumeVersion: Number(evaluation.resumeVersion),
       inputHash: str(evaluation.inputHash),
       jdHash: str(evaluation.jdHash),
+      ...(typeof evaluation.jdText === "string"
+        ? { jdText: evaluation.jdText }
+        : {}),
       evaluatedAt: str(evaluation.evaluatedAt),
       assessment: assessment.data,
     },

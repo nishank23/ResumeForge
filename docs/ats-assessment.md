@@ -21,7 +21,7 @@ Word count, formatting, bullet count, bold text, action verbs, section count and
 
 ## API
 
-POST body: `{ expectedVersion, jdText, consent: true }`. GET and POST return the standard `{data,requestId}` envelope. `data` is `{ currentVersion, evaluation }`; evaluation is null or `{ id, resumeId, versionId, resumeVersion, inputHash, jdHash, evaluatedAt, assessment }`. Assessment is the shared `atsAssessmentSchema`. The response contains exact professional evidence but never credentials or contacts.
+POST body: `{ expectedVersion, jdText, consent: true }`. GET and POST return the standard `{data,requestId}` envelope. `data` is `{ currentVersion, evaluation }`; evaluation is null or `{ id, resumeId, versionId, resumeVersion, inputHash, jdHash, jdText?, evaluatedAt, assessment }`. New assessments retain the trimmed JD in private owned resume metadata, validate it against `jdHash`, and return it only through the same authorized owner endpoint. Historical assessments may omit `jdText`; their scores remain readable. Existing metadata count/byte limits still apply. No JD or resume facts enter logs or Git fixtures. Assessment is the shared `atsAssessmentSchema`. The response contains exact professional evidence but never credentials or contacts.
 
 Historical readiness/JD records remain stored and readable. Their old POST routes now return authenticated `410 assessment_retired`, directing clients to Job fit. Existing source functions and strict legacy schemas remain for historical compatibility; they are not active score creation routes. The new UI does not display their scores.
 
@@ -30,6 +30,12 @@ Historical readiness/JD records remain stored and readable. Their old POST route
 `pnpm dev:personal` builds and starts the additional workspace service. Docker includes its manifest, build, private startup wait and health probe. No external port, new VM, database or subscription is needed. The existing cloud resource limit is unchanged; production memory must still be measured before claiming capacity on the 1 GB VM.
 
 The ATS service reads existing private `.env`/`.local/ai-provider.env` paid Gemini settings and `.local/auth-transport.env`. Default internal key is HMAC-SHA256 of the existing service key with context `ats-service-v1`; optional `ATS_SERVICE_KEY` replaces it for both processes. Keys remain server-side and are neither returned to the UI nor committed. Only resume-service and ATS service receive Gemini process credentials. No `.env` file is uploaded through Git. Deployment requires the normal reviewed release process; feature-branch verification is not live-site proof.
+
+## Default improvement workspace
+
+Improve opens by default. The current saved assessment appears before the JD input, followed by the job-specific tailoring action and up to three missing/uncertain requirement suggestions, ordered by mandatory importance. This is evidence from the actual assessment, not a new fixed checklist or score. Full citations remain in a collapsed disclosure. Edit resume returns to writing and the existing hover AI controls. Mobile/tablet starts with Improve and keeps Write/Preview in the shared task bar.
+
+Mounting or revisiting tools only loads the current saved result. It never starts a paid request. The user explicitly chooses Check job fit, or starts reviewed tailoring separately. Missing/stale/loading/failed results show no numeric score; dirty resumes block requests and hide outdated coverage. A checked JD can be reused after reopening without another assessment charge. An explicit checked JD opens a fresh intake instead of an older completed run for another job. An active different-job run is disclosed and preserved until explicitly finished/cancelled. Historical records without retained text request a paste before tailoring; no backfill, migration or fabricated generic ATS score is performed.
 
 ## Public-tool investigation
 

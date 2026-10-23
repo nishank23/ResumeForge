@@ -161,6 +161,7 @@ qa.request = async (path, options = {}) => {
         resumeVersion: qa.version,
         inputHash: "a".repeat(64),
         jdHash: "b".repeat(64),
+        jdText: body.jdText,
         evaluatedAt: new Date().toISOString(),
         assessment: {
           rubricVersion: "ats-evidence-v1",
@@ -364,6 +365,11 @@ function Harness() {
       );
     return {
       load: async () => {
+        if (qa.previousTailoringStatus) {
+          storedRun.current = makeRun(qa.previousTailoringStatus);
+          storedRun.current.jdText =
+            "Previous job: create Java applications using Kafka and enterprise data systems.";
+        }
         if (qa.finishQueue && storedRun.current?.status === "queued")
           storedRun.current = makeRun();
         return {

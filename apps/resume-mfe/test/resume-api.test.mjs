@@ -485,6 +485,22 @@ test("ATS client loads saved evidence without generating a paid assessment", asy
   assert.equal(calls[0].headers["X-Workspace-Id"], workspaceId);
   assert.equal(calls[0].body, undefined);
 });
+test("ATS client restores the private JD while accepting historical assessments without it", async () => {
+  const saved = atsFixture();
+  saved.evaluation.jdText =
+    "Build Python APIs and PostgreSQL services. Production operations experience is required.";
+  const api = createResumeApi(async () => envelope(saved), workspaceId);
+  assert.deepEqual(await api.atsAssessment(id), saved);
+  for (const invalid of [null, 20, "short", "x".repeat(12001)]) {
+    saved.evaluation.jdText = invalid;
+    await assert.rejects(
+      api.atsAssessment(id),
+      (error) => error.code === "invalid_response",
+    );
+  }
+  delete saved.evaluation.jdText;
+  assert.equal((await api.atsAssessment(id)).evaluation.jdText, undefined);
+});
 test("ATS client submits only explicit JD consent and expected saved version", async () => {
   const calls = [];
   const jdText =

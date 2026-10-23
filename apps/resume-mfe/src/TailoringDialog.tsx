@@ -160,7 +160,26 @@ export function TailoringDialog({
     void services
       .load(abort.signal)
       .then((next) => {
-        if (!abort.signal.aborted) acceptState(next);
+        if (abort.signal.aborted) return;
+        const differentJob =
+          !!initialJd.trim() &&
+          !!next.run &&
+          next.run.jdText.trim() !== initialJd.trim();
+        if (
+          differentJob &&
+          next.run &&
+          !["queued", "drafting"].includes(next.run.status)
+        ) {
+          // An explicit target job takes precedence over an older completed run.
+          // Keep that run on the server; only show a fresh intake locally.
+          acceptState({ ...next, run: null });
+        } else {
+          acceptState(next);
+          if (differentJob)
+            setError(
+              "Tailoring for another job is already in progress. Finish or cancel it, then reopen Tailor for this job.",
+            );
+        }
       })
       .catch((e: unknown) => {
         if (!abort.signal.aborted)
@@ -174,7 +193,7 @@ export function TailoringDialog({
       live.current = false;
       abort.abort();
     };
-  }, [services, acceptState]);
+  }, [services, acceptState, initialJd]);
   useEffect(() => {
     if (!running) return;
     let stopped = false,

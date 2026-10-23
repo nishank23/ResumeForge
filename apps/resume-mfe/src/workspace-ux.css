@@ -1,4 +1,4 @@
-/* Writing opens with only the document. One optional tool occupies the right side. */
+/* Improve opens beside the document; Write returns to the document alone. */
 .rf-ux-workspace .rf-editor-bar {
   display: flex;
   flex-wrap: wrap;
@@ -465,6 +465,90 @@
   }
 }
 
+.rf-review-panel .rf-inspector-heading {
+  min-height: 34px;
+  margin-bottom: 12px;
+}
+.rf-ats-overview,
+.rf-ats-job-context,
+.rf-ats-next-steps {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.rf-ats-job-fit p,
+.rf-ats-job-fit h3 {
+  margin: 0;
+}
+.rf-ats-score-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.rf-ats-score-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rf-ats-score-heading > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.rf-ats-score-card .rf-assessment-meter {
+  margin-block: 8px;
+}
+.rf-ats-score-card
+  .rf-assessment-meter[data-unavailable="true"]
+  .rf-temperature-display {
+  display: none;
+}
+.rf-ats-score-card .rf-studio-score {
+  margin-block: 10px;
+}
+.rf-ats-score-card .rf-tool-hint {
+  font-size: 11px;
+}
+.rf-ats-score-card > p + p {
+  margin-top: 6px;
+}
+.rf-ats-job-context,
+.rf-ats-next-steps {
+  padding-block: 4px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.rf-ats-job-context > .rf-button {
+  width: 100%;
+}
+.rf-ats-job-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rf-ats-next-steps ul {
+  display: grid;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rf-ats-next-steps li {
+  display: grid;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 2px solid var(--primary);
+  overflow-wrap: anywhere;
+}
+.rf-ats-next-steps li strong {
+  font-size: 14px;
+}
+.rf-ats-next-steps li > span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
 .rf-ats-jd-label {
   display: block;
   font-weight: 600;
@@ -474,7 +558,7 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 160px;
+  min-height: 104px;
   resize: vertical;
   padding: 12px;
   border: 1px solid var(--border);

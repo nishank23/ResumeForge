@@ -209,6 +209,11 @@ test("assessment persists version identity and audit atomically; repeats reuse e
   assert.equal(result.evaluation.assessment.score, 100);
   assert.equal(result.evaluation.inputHash.length, 64);
   assert.equal(result.evaluation.jdHash.length, 64);
+  assert.equal(result.evaluation.jdText, jdText);
+  assert.equal(
+    (await s.api.getAtsAssessment(context, resumeId)).evaluation.jdText,
+    jdText,
+  );
   assert.deepEqual(s.counts(), { calls: 1, writes: 1, events: 1 });
   assert.deepEqual((await run(s)).evaluation, result.evaluation);
   assert.deepEqual(s.counts(), { calls: 1, writes: 1, events: 1 });
@@ -217,6 +222,24 @@ test("assessment persists version identity and audit atomically; repeats reuse e
     (await s.api.getAtsAssessment(context, resumeId)).evaluation.id,
     result.evaluation.id,
   );
+});
+test("legacy assessments without retained JD stay readable; mismatched saved JD fails closed", async () => {
+  const s = setup();
+  await run(s);
+  const saved = s.row.atsBreakdown.atsAssessments[0];
+  delete saved.jdText;
+  assert.equal(
+    (await s.api.getAtsAssessment(context, resumeId)).evaluation.assessment
+      .score,
+    100,
+  );
+  assert.equal(
+    (await s.api.getAtsAssessment(context, resumeId)).evaluation.jdText,
+    undefined,
+  );
+  saved.jdText =
+    "A different job description with at least fifty characters of text.";
+  await assert.rejects(s.api.getAtsAssessment(context, resumeId));
 });
 test("current state hides assessments for changed versions or changed model; old scores cannot satisfy a new request", async () => {
   const s = setup();

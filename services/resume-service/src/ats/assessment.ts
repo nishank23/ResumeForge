@@ -35,10 +35,15 @@ const evaluationSchema = z
     resumeVersion: z.number().int().positive(),
     inputHash: z.string().regex(/^[a-f0-9]{64}$/),
     jdHash: z.string().regex(/^[a-f0-9]{64}$/),
+    // Optional for historical assessments; private owned metadata, never a log field.
+    jdText: z.string().trim().min(50).max(12000).optional(),
     evaluatedAt: z.string().datetime(),
     assessment: atsAssessmentSchema,
   })
-  .strict();
+  .strict()
+  .refine((entry) => !entry.jdText || hash(entry.jdText) === entry.jdHash, {
+    message: "Saved JD does not match this assessment.",
+  });
 const historySchema = z.array(evaluationSchema).max(100);
 export interface AtsClient {
   model: string;
@@ -361,6 +366,7 @@ export function createAssessmentUseCases(options: {
       resumeVersion: resume.currentVersion,
       inputHash,
       jdHash,
+      jdText: payload.data.jdText,
       evaluatedAt: new Date(now()).toISOString(),
       assessment,
     });

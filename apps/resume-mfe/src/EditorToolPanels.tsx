@@ -42,7 +42,7 @@ export const EDITOR_PANELS = {
 } as const;
 export type EditorPanel = keyof typeof EDITOR_PANELS;
 
-/** Choose a task before exposing its controls. Writing starts with the document alone. */
+/** Improve opens with saved job fit; Write returns to the document alone. */
 export function EditorRail({
   active,
   onSelect,

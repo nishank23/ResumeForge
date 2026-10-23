@@ -108,6 +108,13 @@ const open = async (query = "", width = 1440, height = 1000) => {
   );
   return page;
 };
+// Editing/motion scenarios explicitly choose Write; default Improve is verified separately.
+const openWriting = async (...args) => {
+  const page = await open(...args);
+  if (await page.eval('!!document.querySelector("[data-editor-write]")'))
+    await click(page, "Write");
+  return page;
+};
 const events = (name) =>
   `window.__resumeUx.events.filter(e=>e.name===${JSON.stringify(name)})`;
 try {
@@ -117,6 +124,55 @@ try {
     [390, 844],
   ]) {
     const page = await open("", width, height);
+    await wait(
+      page,
+      '!!document.querySelector(".rf-ats-jd-input") && !document.querySelector(".rf-request-feedback")',
+    );
+    await check(
+      page,
+      `${width}: Improve and ATS summary open by default`,
+      () => {
+        const active = document.querySelector(
+          '.rf-rail-tabs button[aria-pressed="true"]',
+        );
+        const card = document.querySelector(".rf-ats-score-card");
+        const jd = document.querySelector(".rf-ats-jd-input");
+        const r = card.getBoundingClientRect();
+        return (
+          active.textContent.trim() === "Improve" &&
+          card.textContent.includes("ATS score") &&
+          !!card.querySelector('[data-unavailable="true"]') &&
+          r.top >= 0 &&
+          r.bottom <= innerHeight &&
+          r.bottom <= jd.getBoundingClientRect().top &&
+          getComputedStyle(document.querySelector(".rf-editor-tool-panel"))
+            .display !== "none"
+        );
+      },
+    );
+    await check(
+      page,
+      `${width}: initial assessment never starts a paid request`,
+      'window.__resumeUx.events.every(e=>e.name!=="atsRun") && !document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-job-context").textContent.includes("Tailor for this job")',
+    );
+    await check(
+      page,
+      `${width}: score and JD actions fit without a first-screen scroll`,
+      () => {
+        const card = document
+          .querySelector(".rf-ats-score-card")
+          .getBoundingClientRect();
+        const tailor = [...document.querySelectorAll(".rf-ats-job-fit button")]
+          .find((b) => b.textContent.trim() === "Tailor for this job")
+          .getBoundingClientRect();
+        return card.top >= 0 && tailor.bottom <= innerHeight;
+      },
+    );
+    await page.screenshot({
+      path: resolve(out, `improve-default-${width}.jpg`),
+      quality: 88,
+    });
+    await click(page, "Write");
     await wait(page, '!!document.querySelector(".rf-paper-stage")');
     await check(
       page,
@@ -292,6 +348,21 @@ try {
       page,
       `${width}: result is requirement coverage not legacy fixed checks`,
       'document.querySelector(".rf-ats-result").textContent.includes("50") && document.querySelector(".rf-ats-result").textContent.includes("1 of 2 required") && !document.querySelector(".rf-readiness-components, .rf-priority-check")',
+    );
+    await check(
+      page,
+      `${width}: improvement guidance is visible before evidence disclosure`,
+      () => {
+        const steps = document.querySelector(".rf-ats-next-steps");
+        const items = [...steps.querySelectorAll("li")];
+        return (
+          items[0].textContent.includes("Investigate failed requests") &&
+          items[0].textContent.includes("Required") &&
+          items[1].textContent.includes("Kubernetes") &&
+          steps.textContent.includes("Add only experience you actually have") &&
+          !document.querySelector(".rf-ats-result details").open
+        );
+      },
     );
     await page.eval(
       () => (document.querySelector(".rf-ats-result details").open = true),
@@ -561,7 +632,7 @@ try {
     );
     await page.close();
   }
-  let page = await open();
+  let page = await openWriting();
   await page.eval(async () => {
     const summary = document.querySelector(
       '[aria-label="Professional summary on resume page"]',
@@ -657,7 +728,7 @@ try {
   );
   await page.close();
   for (const width of [1440, 768, 390]) {
-    page = await open("", width, 1000);
+    page = await openWriting("", width, 1000);
     await page.eval(() =>
       document
         .querySelector("[data-skills-dialog]")
@@ -765,7 +836,7 @@ try {
     ["library", ".rf-resume-library"],
     ["editor", ".rf-ux-workspace"],
   ]) {
-    page = await open(`?view=${view}&motion=on`);
+    page = await openWriting(`?view=${view}&motion=on`);
     await check(
       page,
       `${view}: ready page has a finite entrance`,
@@ -871,7 +942,7 @@ try {
     }
     await page.close();
   }
-  page = await open();
+  page = await openWriting();
 
   await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await editSummary(
@@ -914,7 +985,7 @@ try {
       "[0].version===2",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Backend developer building Python API services with automated checks.",
@@ -929,7 +1000,7 @@ try {
       '.length===0 && document.body.innerText.includes("Backend developer building Python API services with automated checks.")',
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Backend developer building Python API services with automated checks.",
@@ -949,7 +1020,7 @@ try {
     events("start") + "[0].version===2",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(page, "First edits to Python API summary before saving.");
   await page.eval("window.__resumeUx.delaySave=true");
   await click(page, "Save & tailor");
@@ -971,7 +1042,7 @@ try {
       ".length===0",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Python API summary with new testing details before saving.",
@@ -993,7 +1064,7 @@ try {
     '!document.querySelector(".rf-tailoring-dialog") && !!document.querySelector("[role=dialog]")',
   );
   await page.close();
-  page = await open("", 390, 844);
+  page = await openWriting("", 390, 844);
   await wait(
     page,
     () => !!document.querySelector(".rf-mobile-document .tiptap"),
@@ -1011,7 +1082,7 @@ try {
     '!!document.querySelector(".rf-mobile-document") && window.__resumeUx.latest.appearance===undefined',
   );
   await page.close();
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval('document.querySelector(".rf-tailoring-optional").open=true');
   await wait(page, '!!document.querySelector("#experience-answer")');
   await fill(
@@ -1039,7 +1110,7 @@ try {
   );
   await page.close();
   for (const scenario of ["stale", "expired"]) {
-    page = await open("?view=tailoring&case=" + scenario);
+    page = await openWriting("?view=tailoring&case=" + scenario);
     await wait(page, '!!document.querySelector(".rf-tailoring-review")');
     await check(
       page,
@@ -1048,7 +1119,7 @@ try {
     );
     await page.close();
   }
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval("window.__resumeUx.preflightStale=true");
   await click(page, "Tailor my resume");
   await wait(page, 'document.body.innerText.includes("saved version changed")');
@@ -1058,7 +1129,7 @@ try {
     events("start") + ".length===0",
   );
   await page.close();
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval("window.__resumeUx.providerFails=true");
   await click(page, "Tailor my resume");
   await wait(page, 'document.body.innerText.includes("Provider unavailable")');
@@ -1076,7 +1147,7 @@ try {
     events("start") + "[0].id===" + events("start") + "[1].id",
   );
   await page.close();
-  page = await open("?case=queued");
+  page = await openWriting("?case=queued");
   await click(page, "Tailor for a job");
   await wait(
     page,
@@ -1102,7 +1173,7 @@ try {
     events("cancel") + ".length===1 && " + events("apply") + ".length===0",
   );
   await page.close();
-  page = await open("?view=tailoring&case=empty");
+  page = await openWriting("?view=tailoring&case=empty");
   await wait(
     page,
     'document.body.innerText.includes("No supported changes were needed")',
@@ -1113,7 +1184,7 @@ try {
     '!document.querySelector(".rf-ai-dialog-footer button:last-child").disabled',
   );
   await page.close();
-  page = await open("?view=tailoring&case=saved");
+  page = await openWriting("?view=tailoring&case=saved");
   await wait(page, '!!document.querySelector(".rf-tailoring-ready")');
   await click(page, "Download PDF");
   await wait(page, events("copyPdf") + ".length===1");
@@ -1124,7 +1195,7 @@ try {
   );
   await page.close();
   for (const width of [1366, 1024, 768, 390]) {
-    page = await open("?view=library&long-title", width, 800);
+    page = await openWriting("?view=library&long-title", width, 800);
     await wait(page, '!!document.querySelector(".rf-library-name")');
     await check(
       page,
@@ -1150,7 +1221,7 @@ try {
     });
     await page.close();
   }
-  page = await open("?view=tailoring&case=multiple", 1366, 768);
+  page = await openWriting("?view=tailoring&case=multiple", 1366, 768);
   await wait(
     page,
     () => !!document.querySelector("[aria-label='Choose suggestion']"),
@@ -1226,7 +1297,7 @@ try {
       '[0].selected[0]==="role-change"',
   );
   await page.close();
-  page = await open("?view=library");
+  page = await openWriting("?view=library");
   await wait(page, '!!document.querySelector(".rf-library-name")');
   await click(page, "Tailor for a job");
   await check(
@@ -1235,7 +1306,7 @@ try {
     events("navigate") + '[0].path.endsWith("?action=tailor")',
   );
   await page.close();
-  page = await open("?view=library");
+  page = await openWriting("?view=library");
   await wait(page, '!!document.querySelector(".rf-library-name")');
   await click(page, "Start from scratch");
   await wait(page, events("create") + ".length===1");
@@ -1245,7 +1316,7 @@ try {
     events("navigate") + ".length===1",
   );
   await page.close();
-  page = await open("?view=import", 390, 844);
+  page = await openWriting("?view=import", 390, 844);
   const { root } = await page.send("DOM.getDocument");
   const { nodeId } = await page.send("DOM.querySelector", {
     nodeId: root.nodeId,
@@ -1287,7 +1358,7 @@ try {
   );
   await page.close();
   for (const failure of ["atsUnauthorized", "atsFails"]) {
-    page = await open();
+    page = await openWriting();
     await click(page, "Improve");
     await wait(
       page,
@@ -1319,7 +1390,7 @@ try {
       );
     await page.close();
   }
-  page = await open();
+  page = await openWriting();
   await click(page, "Improve");
   await wait(
     page,
@@ -1352,20 +1423,71 @@ try {
   await wait(page, '!!document.querySelector(".rf-ats-result")');
   await check(
     page,
-    "loaded assessment cannot tailor with an unstored JD",
+    "saved assessment restores JD and tailoring without a new paid request",
     () =>
-      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+      ![...document.querySelectorAll(".rf-ats-job-fit button")].find(
         (button) => button.textContent.trim() === "Tailor for this job",
       ).disabled &&
       document
-        .querySelector(".rf-ats-job-fit")
-        .textContent.includes("Paste the job description again"),
+        .querySelector(".rf-ats-job-excerpt")
+        .textContent.includes("Backend Engineer") &&
+      window.__resumeUx.events.filter((e) => e.name === "atsRun").length === 1,
   );
+  await click(page, "Tailor for this job");
+  await wait(page, '!!document.querySelector("[role=dialog]")');
+  await check(page, "job-based improvement receives the checked JD", () =>
+    document
+      .querySelector(".rf-tailoring-job textarea")
+      .value.includes("Backend Engineer"),
+  );
+  await click(page, "Back to resume");
+  for (const status of ["ready", "saved", "queued"]) {
+    await page.eval((status) => {
+      window.__resumeUx.previousTailoringStatus = status;
+    }, status);
+    await click(page, "Tailor for this job");
+    await wait(page, '!!document.querySelector("[role=dialog]")');
+    if (status === "queued") {
+      await wait(
+        page,
+        'document.querySelector("[role=dialog]").textContent.includes("another job is already in progress")',
+      );
+      await check(
+        page,
+        "another active job is explicit and never silently replaced",
+        () =>
+          !document.querySelector(".rf-tailoring-job") &&
+          window.__resumeUx.events.every(
+            (e) => !["start", "cancel"].includes(e.name),
+          ),
+      );
+      await click(page, "Close and continue later");
+    } else {
+      await wait(
+        page,
+        '!!document.querySelector(".rf-tailoring-job textarea")',
+      );
+      await check(
+        page,
+        `${status}: previous job never replaces the checked JD`,
+        () =>
+          document
+            .querySelector(".rf-tailoring-job textarea")
+            .value.includes("Backend Engineer") &&
+          !document.querySelector(".rf-tailoring-review") &&
+          window.__resumeUx.events.every((e) => e.name !== "start"),
+      );
+      await click(page, "Back to resume");
+    }
+  }
+  await page.eval(() => {
+    window.__resumeUx.previousTailoringStatus = null;
+  });
   await click(page, "Change job description");
   await check(
     page,
-    "changing an unstored JD hides the old assessment and requests fresh text",
-    '!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-jd-input").value==="" && document.querySelector(".rf-ats-job-fit").textContent.includes("Paste the job description again")',
+    "opening the JD editor retains the unchanged assessed score",
+    '!!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-jd-input").value.includes("Backend Engineer")',
   );
   await fill(
     page,
@@ -1383,8 +1505,34 @@ try {
     "clear removes job text without a paid request",
     'document.querySelector(".rf-ats-jd-input").value==="" && window.__resumeUx.events.filter(e=>e.name==="atsRun").length===1',
   );
+  await page.eval(() => {
+    delete window.__resumeUx.atsEvaluation.jdText;
+  });
+  await click(page, "Write");
+  await click(page, "Improve");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "historical scores stay visible with a clear JD-reuse fallback",
+    () =>
+      document.querySelector(".rf-ats-score-card").textContent.includes("50") &&
+      document
+        .querySelector(".rf-ats-job-context")
+        .textContent.includes("older assessment") &&
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (b) => b.textContent.trim() === "Tailor for this job",
+      ).disabled,
+  );
+  await click(page, "Edit resume");
+  await check(
+    page,
+    "improvement action returns to the editable resume",
+    () =>
+      !document.querySelector(".rf-editor-tool-panel") &&
+      document.querySelector(".rf-paper-stage").dataset.editorMode === "editor",
+  );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await click(page, "Improve");
   await wait(
     page,
@@ -1406,7 +1554,7 @@ try {
     'document.querySelector(".rf-ats-result").textContent.includes("0 of 1 preferred") && !document.querySelector(".rf-ats-result").textContent.includes("0 of 0 required")',
   );
   await page.close();
-  page = await open("?theme=light", 1440, 1000);
+  page = await openWriting("?theme=light", 1440, 1000);
   await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await page.screenshot({
     path: resolve(out, "editor-light-1440.jpg"),

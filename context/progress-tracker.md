@@ -1,5 +1,14 @@
 # Current progress
 
+## Improve opens with ATS guidance — 2026-10-23
+
+The builder now opens in Improve. The latest current-version ATS evidence score leads, followed by the checked job's tailoring action and up to three missing/uncertain actual-JD requirements, with required evidence first. Full quotations stay in a secondary disclosure. Edit resume returns to writing and the existing hover AI. Empty/stale/loading/error states never invent a number or trigger a paid request. Compact default controls fit the first screen at 1440×800, 768×1024 and 390×844.
+
+New assessments retain their trimmed JD in private owner-scoped metadata, verify it against its stored hash, and restore it for later tailoring without another assessment call. Historical rows without JD text stay readable. An explicitly selected JD takes precedence over older completed tailoring runs; another active job is disclosed and kept intact until the user finishes or cancels it. No scoring formula, model, provider configuration, migration or deployment change.
+
+Verified: resume frontend and owner-service builds, TypeScript and lint; 66 frontend unit tests; 9 owner-boundary tests; 208 synthetic browser checks, including default Improve, score/action geometry, visible guidance, saved-JD reuse, old metadata, completed/active prior jobs, dirty/error guards and preserved hover/icons/motion. Desktop/phone screenshots reviewed. Signed-in localhost verification showed Improve selected and ATS/JD controls visible without a click. No provider calls, merge or production deployment.
+
+
 ## Icon controls and coordinated motion — 2026-10-23
 
 Skills now exposes the floating edit controls previously excluded by the builder. Selected content uses direct edit, move up/down, visibility and delete icons, with tooltips, accessible names, disabled ordering boundaries and the existing deletion confirmation. Section moves reuse the same immutable editor mutations. AI remains limited to supported prose. Narrow phones show one labeled AI row and one complete five-icon row.

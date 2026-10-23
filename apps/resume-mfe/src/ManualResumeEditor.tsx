@@ -144,9 +144,9 @@ export function ManualResumeEditor({
     error: boolean;
   } | null>(null);
   const [noticeKey, setNoticeKey] = useState(0);
-  const [panel, setPanel] = useState<EditorPanel>("content");
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<"resume" | "tools">("resume");
+  const [panel, setPanel] = useState<EditorPanel>("ats");
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [mobileView, setMobileView] = useState<"resume" | "tools">("tools");
   const [tailoringOpen, setTailoringOpen] = useState(initialTailoringOpen);
   const [tailoringJd, setTailoringJd] = useState("");
   const [tailoringVersion, setTailoringVersion] = useState<number | null>(null);
@@ -1015,6 +1015,11 @@ export function ManualResumeEditor({
               {panel === "ats" || panel === "jd" ? (
                 <AtsJobFitPanel
                   reducedMotion={context?.reducedMotion}
+                  onWrite={() => {
+                    setPanelOpen(false);
+                    setMobileView("resume");
+                    setMode("editor");
+                  }}
                   services={atsAssessment}
                   savedVersion={savedVersion}
                   disabledReason={
