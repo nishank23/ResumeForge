@@ -284,7 +284,7 @@ export function AtsJobFitPanel({
                 {requirement.evidence.map((item, index) => (
                   <blockquote key={`${item.sourceId}-${String(index)}`}>
                     <p>{item.quote}</p>
-                    <cite>Resume source: {item.sourceId}</cite>
+                    <cite>Saved resume evidence</cite>
                   </blockquote>
                 ))}
               </section>

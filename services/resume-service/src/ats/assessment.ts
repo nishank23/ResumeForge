@@ -144,7 +144,7 @@ export function atsSources(doc: EditorDocument): AtsAssessmentInput["sources"] {
         .join("\n");
       if (text)
         sources.push({
-          id: id.length > 120 ? `source:${hash(id)}` : id,
+          id: `source:${hash(id)}`,
           kind,
           text,
         });

@@ -7,6 +7,8 @@ export async function serveResumeUx() {
   const server = await createServer({
     root,
     configFile: false,
+    // Keep synthetic React optimization separate from live federation owner modules.
+    cacheDir: resolve(root, "node_modules/.vite-resume-ux"),
     plugins: [
       react(),
       {

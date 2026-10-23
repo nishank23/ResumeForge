@@ -186,8 +186,9 @@ const run = (s, changes = {}) =>
     ...changes,
   });
 test("ATS projection excludes identity, contacts and hidden work while preserving visible professional evidence", () => {
-  const doc = document(),
-    sources = atsSources(doc),
+  const doc = document();
+  doc.sections[1].entries[0].id = "private@example.invalid";
+  const sources = atsSources(doc),
     text = JSON.stringify(sources);
   assert.ok(text.includes("Built Python APIs"));
   for (const secret of [
