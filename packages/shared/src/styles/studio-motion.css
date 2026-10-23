@@ -1,0 +1,175 @@
+/* Studio motion: a document settling on a desk; an ink sweep for AI intent.
+   All entrances are finite and immediately interactive. Printable content stays isolated. */
+:root {
+  --studio-ease-out: cubic-bezier(0.18, 1, 0.32, 1);
+  --studio-ease-spring: cubic-bezier(0.2, 0.85, 0.25, 1.12);
+}
+/* Ready content owns arrival, so a remote-loading fallback cannot consume the reveal. */
+.rf-route-view {
+  animation: none;
+}
+:is(.rf-page, .rf-auth, .rf-ux-workspace) {
+  animation: rf-studio-arrive 380ms var(--studio-ease-out) both;
+  transform-origin: 50% 12%;
+}
+.rf-ux-workspace .rf-paper-stage {
+  animation: rf-paper-settle 480ms var(--studio-ease-out) backwards;
+  transform-origin: 50% 10%;
+}
+.rf-editor-tool-panel {
+  animation: rf-tools-open 240ms var(--studio-ease-out) both;
+}
+.rf-modal-layer > [role="dialog"],
+.rf-modal-layer > [role="alertdialog"] {
+  animation: rf-dialog-open 260ms var(--studio-ease-out) both;
+}
+.rf-modal-layer > [aria-hidden="true"] {
+  animation: rf-scrim-open 180ms ease-out both;
+}
+.rf-document-container > .rf-floating-actions {
+  animation: rf-context-arrive 220ms var(--studio-ease-spring) both;
+  transform-origin: 0 50%;
+}
+.rf-ai-entry-action {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rf-ai-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    #ffffff45 48%,
+    transparent 76%
+  );
+  animation: rf-ai-ink-sweep 650ms var(--studio-ease-out) 90ms both;
+}
+.rf-floating-actions .rf-selection-icon {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    scale 120ms var(--studio-ease-out);
+}
+.rf-floating-actions .rf-selection-icon:active:not(:disabled) {
+  scale: 0.91;
+}
+.rf-editor-toast {
+  animation: rf-context-arrive 180ms var(--studio-ease-out) both;
+}
+@keyframes rf-studio-arrive {
+  from {
+    opacity: 0.4;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes rf-paper-settle {
+  from {
+    opacity: 0.65;
+    clip-path: inset(0 0 4% 0 round 2px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 round 2px);
+  }
+}
+@keyframes rf-tools-open {
+  from {
+    opacity: 0.3;
+    translate: 12px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes rf-dialog-open {
+  from {
+    opacity: 0.25;
+    scale: 0.975;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+@keyframes rf-scrim-open {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rf-context-arrive {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes rf-ai-ink-sweep {
+  from {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  to {
+    transform: translateX(120%) skewX(-12deg);
+  }
+}
+/* Both the OS preference and Studio's explicit quiet-motion setting disable decoration. */
+[data-reduced-motion="true"],
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"]::before,
+[data-reduced-motion="true"]::after,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .rf-page,
+    .rf-auth,
+    .rf-ux-workspace,
+    .rf-paper-stage,
+    .rf-editor-tool-panel,
+    .rf-floating-actions,
+    .rf-ai-sheen,
+    .rf-editor-toast
+  ),
+  .rf-modal-layer > [role="dialog"],
+  .rf-modal-layer > [role="alertdialog"],
+  .rf-modal-layer > [aria-hidden="true"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media print {
+  :is(
+    .rf-page,
+    .rf-auth,
+    .rf-ux-workspace,
+    .rf-paper-stage,
+    .rf-editor-tool-panel,
+    .rf-floating-actions,
+    .rf-ai-sheen,
+    .rf-editor-toast
+  ) {
+    animation: none !important;
+    scale: none !important;
+    translate: none !important;
+    rotate: none !important;
+  }
+}

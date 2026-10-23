@@ -10,6 +10,8 @@ import {
 import { ManualResumeEditor } from "../../src/ManualResumeEditor";
 import { TailoringDialog } from "../../src/TailoringDialog";
 import { ResumeImportDialog } from "../../src/ResumeImportDialog";
+import { AuthRemoteRoot } from "../../../auth-mfe/src/AuthRemoteRoot";
+import { ProfileRemoteRoot } from "../../../profile-mfe/src/ProfileRemoteRoot";
 import { ResumeLibrary } from "../../src/ResumeLibrary";
 import {
   blankResume,
@@ -108,9 +110,10 @@ const context = {
   activeWorkspace: { id: ids.workspace, type: "individual", name: "Personal" },
   workspaces: [],
   theme: params.get("theme") === "light" ? "light" : "dark",
-  reducedMotion: true,
+  reducedMotion: params.get("motion") !== "on",
   onNavigate: (path) => event("navigate", { path }),
 };
+document.documentElement.dataset.reducedMotion = String(context.reducedMotion);
 document.documentElement.dataset.theme = context.theme;
 document.documentElement.classList.toggle("dark", context.theme === "dark");
 function row(doc = fixture, id = ids.source, version = 1) {
@@ -457,7 +460,7 @@ function Harness() {
         savedVersion={version}
         initialJd={jd}
         services={services}
-        reducedMotion
+        reducedMotion={context.reducedMotion}
         onClose={close}
       />
     );
@@ -481,6 +484,8 @@ function Harness() {
         onClose={close}
       />
     );
+  if (mode === "auth") return <AuthRemoteRoot context={context} />;
+  if (mode === "profile") return <ProfileRemoteRoot />;
   if (mode === "library") return <ResumeLibrary context={context} />;
   return (
     <ManualResumeEditor

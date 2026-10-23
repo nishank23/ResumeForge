@@ -34,8 +34,8 @@ const wait = async (page, expression) => {
   }
   throw new Error("UI did not settle: " + expression);
 };
-const check = async (page, name, expression) => {
-  const result = await page.eval(expression);
+const check = async (page, name, expression, argument) => {
+  const result = await page.eval(expression, argument);
   assert.ok(result, name);
   results.push(name);
 };
@@ -98,13 +98,13 @@ const open = async (query = "", width = 1440, height = 1000) => {
     width,
     height,
     mobile: width < 600,
-    reducedMotion: true,
+    reducedMotion: !query.includes("motion=on"),
   });
   lastPage = page;
   await page.goto(url + query, { settleMs: 350 });
   await wait(
     page,
-    '!!window.__resumeUx && !!document.querySelector(".rf-ux-workspace, [role=dialog], .rf-resume-library")',
+    '!!window.__resumeUx && !!document.querySelector(".rf-ux-workspace, [role=dialog], .rf-resume-library, .rf-auth, .rf-page")',
   );
   return page;
 };
@@ -182,6 +182,28 @@ try {
           (button) => button.scrollWidth <= button.clientWidth + 1,
         ),
     );
+    if (width < 481) {
+      await check(
+        page,
+        "phone: AI label and utility icons use two complete rows",
+        () => {
+          const ai = document
+            .querySelector(".rf-ai-entry-action")
+            .getBoundingClientRect();
+          const icons = [
+            ...document.querySelectorAll(
+              ".rf-floating-actions .rf-selection-icon",
+            ),
+          ].map((button) => button.getBoundingClientRect());
+          return (
+            icons.length === 5 &&
+            icons.every(
+              (r) => r.top >= ai.bottom && Math.abs(r.top - icons[0].top) < 1,
+            )
+          );
+        },
+      );
+    }
     await page.eval(() =>
       document
         .querySelector("[data-editor-entry]")
@@ -586,12 +608,34 @@ try {
       !!document.querySelector("[data-selection-edit]") &&
       !document.querySelector('.rf-floating-actions [role="menu"]'),
   );
+  await check(
+    page,
+    "selected actions expose icons with accessible names and no utility text",
+    () => {
+      const labels = [
+        "Edit selected content",
+        "Move selected content up",
+        "Move selected content down",
+        "Delete selected content",
+      ];
+      return labels.every((label) => {
+        const button = document.querySelector(
+          `.rf-floating-actions button[aria-label="${label}"]`,
+        );
+        return (
+          button &&
+          button.querySelector("svg") &&
+          button.textContent.trim() === "" &&
+          !!button.title
+        );
+      });
+    },
+  );
   await page.eval(() =>
     document
-      .querySelector('[aria-label="More selected content actions"]')
+      .querySelector('.rf-floating-actions [aria-label="Hide from resume"]')
       .click(),
   );
-  await click(page, "Hide from resume");
   await check(page, "hidden content action remains connected", () =>
     document
       .querySelector('[aria-label="Professional summary on resume page"]')
@@ -612,6 +656,221 @@ try {
         .classList.contains("is-hidden"),
   );
   await page.close();
+  for (const width of [1440, 768, 390]) {
+    page = await open("", width, 1000);
+    await page.eval(() =>
+      document
+        .querySelector("[data-skills-dialog]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      '!!document.querySelector("[data-skills-dialog].is-selected") && !!document.querySelector(".rf-floating-actions [data-selection-edit]")',
+    );
+    await check(
+      page,
+      `${width}: Skills hover has edit and section movement icons without unsupported AI`,
+      () => {
+        const actions = document.querySelector(".rf-floating-actions");
+        const r = actions.getBoundingClientRect(),
+          skills = document
+            .querySelector("[data-skills-dialog]")
+            .getBoundingClientRect();
+        return (
+          !!actions.querySelector('[aria-label="Edit selected content"]') &&
+          !!actions.querySelector('[aria-label="Move selected content up"]') &&
+          !actions.querySelector(".rf-ai-entry-action") &&
+          Math.abs(r.top - skills.bottom - 6) < 2 &&
+          r.left >= 0 &&
+          r.right <= innerWidth
+        );
+      },
+    );
+    await page.eval(() =>
+      document
+        .querySelector(".rf-floating-actions [data-selection-edit]")
+        .click(),
+    );
+    await wait(page, '!!document.querySelector("[role=dialog]")');
+    await check(
+      page,
+      `${width}: Skills hover edit opens its existing complete form`,
+      () =>
+        document.querySelector("[role=dialog]").textContent.includes("Skills"),
+    );
+    await click(page, "Cancel");
+    await page.eval(() =>
+      document
+        .querySelector("[data-skills-dialog]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      () =>
+        !!document.querySelector(
+          '.rf-floating-actions [aria-label="Move selected content up"]',
+        ),
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Move selected content up"]',
+        )
+        .click(),
+    );
+    await check(
+      page,
+      `${width}: section move icon reorders only the selected section`,
+      () => {
+        const rows = [...document.querySelectorAll("[data-editor-section]")];
+        return (
+          rows.findIndex((row) => row.hasAttribute("data-skills-dialog")) === 3
+        );
+      },
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Move selected content down"]',
+        )
+        .click(),
+    );
+    await check(
+      page,
+      `${width}: section move down restores order`,
+      () =>
+        [...document.querySelectorAll("[data-editor-section]")].findIndex(
+          (row) => row.hasAttribute("data-skills-dialog"),
+        ) === 4,
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Delete selected content"]',
+        )
+        .click(),
+    );
+    await wait(page, '!!document.querySelector("[role=alertdialog]")');
+    await check(
+      page,
+      `${width}: delete icon keeps explicit confirmation`,
+      () => !!document.querySelector("[data-skills-dialog]"),
+    );
+    await click(page, "Cancel");
+    await page.close();
+  }
+  for (const [view, selector] of [
+    ["auth", ".rf-auth"],
+    ["profile", ".rf-page"],
+    ["library", ".rf-resume-library"],
+    ["editor", ".rf-ux-workspace"],
+  ]) {
+    page = await open(`?view=${view}&motion=on`);
+    await check(
+      page,
+      `${view}: ready page has a finite entrance`,
+      (selector) => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return (
+          style.animationName.includes("rf-studio-arrive") &&
+          parseFloat(style.animationDuration) > 0 &&
+          parseFloat(style.animationDuration) < 1 &&
+          style.animationIterationCount === "1"
+        );
+      },
+      selector,
+    );
+    await check(
+      page,
+      `${view}: motion does not widen the viewport`,
+      () => document.documentElement.scrollWidth <= innerWidth,
+    );
+    if (view === "editor") {
+      await page.eval(() => {
+        for (const animation of document
+          .querySelector(".rf-paper-stage")
+          .getAnimations())
+          animation.finish();
+      });
+      await check(
+        page,
+        "paper entrance releases clipping for floating controls",
+        () =>
+          getComputedStyle(document.querySelector(".rf-paper-stage"))
+            .clipPath === "none",
+      );
+      await page.eval(() =>
+        document
+          .querySelector('[aria-label="Professional summary on resume page"]')
+          .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+      );
+      await wait(page, '!!document.querySelector(".rf-ai-sheen")');
+      await check(
+        page,
+        "AI hover has a finite reveal and light sweep",
+        () =>
+          getComputedStyle(document.querySelector(".rf-floating-actions"))
+            .animationName === "rf-context-arrive" &&
+          getComputedStyle(document.querySelector(".rf-ai-sheen"))
+            .animationName === "rf-ai-ink-sweep" &&
+          getComputedStyle(document.querySelector(".rf-ai-sheen"))
+            .animationIterationCount === "1",
+      );
+      await page.eval(() => {
+        document.documentElement.dataset.reducedMotion = "true";
+      });
+      await check(
+        page,
+        "quiet motion immediately disables page, hover and AI sweep",
+        () =>
+          [
+            ".rf-ux-workspace",
+            ".rf-paper-stage",
+            ".rf-floating-actions",
+            ".rf-ai-sheen",
+          ].every(
+            (selector) =>
+              getComputedStyle(document.querySelector(selector))
+                .animationName === "none",
+          ),
+      );
+      await page.eval(() => {
+        document.documentElement.dataset.reducedMotion = "false";
+      });
+      await page.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+      });
+      await check(
+        page,
+        "OS reduced motion disables page, hover and AI sweep",
+        () =>
+          [
+            ".rf-ux-workspace",
+            ".rf-paper-stage",
+            ".rf-floating-actions",
+            ".rf-ai-sheen",
+          ].every(
+            (selector) =>
+              getComputedStyle(document.querySelector(selector))
+                .animationName === "none",
+          ),
+      );
+      await page.send("Emulation.setEmulatedMedia", {
+        media: "print",
+        features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
+      });
+      await check(
+        page,
+        "print excludes action toolbar and decorative motion",
+        () =>
+          getComputedStyle(document.querySelector(".rf-floating-actions"))
+            .display === "none" &&
+          getComputedStyle(document.querySelector(".rf-paper-stage"))
+            .animationName === "none",
+      );
+    }
+    await page.close();
+  }
   page = await open();
 
   await wait(page, '!!document.querySelector(".rf-paper-stage")');

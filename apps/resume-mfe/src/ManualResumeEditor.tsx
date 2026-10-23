@@ -17,6 +17,10 @@ import {
 } from "react";
 import {
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  EyeOff,
   Check,
   Download,
   Eye,
@@ -42,6 +46,7 @@ import {
   type HistoryAction,
 } from "./editor-history";
 import {
+  canMoveTarget,
   emptyEntry,
   emptySection,
   mutateTarget,
@@ -543,8 +548,6 @@ export function ManualResumeEditor({
       document.removeEventListener("keydown", shortcut);
     };
   }, [session, aiSession, deleting, leaving, mode, announce, saveCurrent]);
-  const itemArrows =
-    selection.type !== "header" && selection.type !== "section";
   const changeAppearance = (value: EditorAppearance) => {
     const result = updateAppearance(history.current, value);
     if (!result.ok) {
@@ -834,10 +837,9 @@ export function ManualResumeEditor({
             style={appearanceVariables(appearance)}
           >
             <div className="rf-document-container" ref={canvasRef}>
-              {mode === "editor" &&
-              actionsVisible &&
-              section?.kind !== "skills" ? (
+              {mode === "editor" && actionsVisible ? (
                 <SectionActions
+                  key={JSON.stringify(selection)}
                   containerRef={canvasRef}
                   toolbarRef={toolbarRef}
                   target={selection}
@@ -867,58 +869,85 @@ export function ManualResumeEditor({
                       }}
                     >
                       Improve with AI
+                      <span className="rf-ai-sheen" aria-hidden="true" />
                     </Button>
                   ) : null}
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="rf-selection-icon"
                     data-selection-edit
                     aria-label="Edit selected content"
+                    title="Edit details"
                     onClick={() => {
                       startEdit();
                     }}
                   >
-                    <Pencil size={15} aria-hidden="true" /> Edit details
+                    <Pencil size={16} aria-hidden="true" />
                   </Button>
                   {selection.type !== "header" ? (
-                    <DropdownMenu
-                      ariaLabel="More selected content actions"
-                      triggerLabel="More"
-                      items={[
-                        ...(itemArrows
-                          ? [
-                              {
-                                id: "up",
-                                label: "Move up",
-                                onSelect: () => {
-                                  act("up");
-                                },
-                              },
-                              {
-                                id: "down",
-                                label: "Move down",
-                                onSelect: () => {
-                                  act("down");
-                                },
-                              },
-                            ]
-                          : []),
-                        {
-                          id: "visibility",
-                          label: hidden ? "Show in resume" : "Hide from resume",
-                          onSelect: () => {
-                            act("hide");
-                          },
-                        },
-                        {
-                          id: "delete",
-                          label: "Delete selected content",
-                          onSelect: () => {
-                            setDeleting(selection);
-                          },
-                        },
-                      ]}
-                    />
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label="Move selected content up"
+                        title="Move up"
+                        disabled={
+                          !canMoveTarget(history.current, selection, "up")
+                        }
+                        onClick={() => {
+                          act("up");
+                        }}
+                      >
+                        <ArrowUp size={16} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label="Move selected content down"
+                        title="Move down"
+                        disabled={
+                          !canMoveTarget(history.current, selection, "down")
+                        }
+                        onClick={() => {
+                          act("down");
+                        }}
+                      >
+                        <ArrowDown size={16} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label={
+                          hidden ? "Show in resume" : "Hide from resume"
+                        }
+                        title={hidden ? "Show in resume" : "Hide from resume"}
+                        onClick={() => {
+                          act("hide");
+                        }}
+                      >
+                        {hidden ? (
+                          <Eye size={16} aria-hidden="true" />
+                        ) : (
+                          <EyeOff size={16} aria-hidden="true" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon rf-selection-delete"
+                        aria-label="Delete selected content"
+                        title="Delete"
+                        onClick={() => {
+                          setDeleting(selection);
+                        }}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                      </Button>
+                    </>
                   ) : null}
                 </SectionActions>
               ) : null}

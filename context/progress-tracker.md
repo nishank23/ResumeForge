@@ -1,5 +1,13 @@
 # Current progress
 
+## Icon controls and coordinated motion — 2026-10-23
+
+Skills now exposes the floating edit controls previously excluded by the builder. Selected content uses direct edit, move up/down, visibility and delete icons, with tooltips, accessible names, disabled ordering boundaries and the existing deletion confirmation. Section moves reuse the same immutable editor mutations. AI remains limited to supported prose. Narrow phones show one labeled AI row and one complete five-icon row.
+
+Shared CSS adds ready-page entrances across sign-in/profile/library/editor, panel/dialog openings, context-action arrival and one AI light sweep. Entrances are finite and do not delay content or use new dependencies. OS reduced motion, Studio quiet mode and printing suppress decoration. The paper releases clipping after its entrance so later hover actions remain visible.
+
+Verified: all five frontend/shared builds; frontend/shared lint and TypeScript; 65 frontend unit tests; 190 synthetic browser checks including Skills editing, icon actions, boundary moves, deletion confirmation, responsive geometry, real motion frames, both reduced-motion settings and print isolation. Desktop and phone screenshots reviewed. No provider calls, merge or production deployment for this UI work.
+
 ## Hover AI toolbar repair — 2026-10-23
 
 Restored the existing floating action bar inside the resume canvas instead of inline above it. Real mouse reproduction previously measured a static toolbar 234 px above the summary footer; the corrected bar is absolutely positioned 6 px below its target. Work-entry hover follows the same anchor. Text buttons now fit their labels while preserving phone target sizes. Click/keyboard actions and the existing scoped AI dialog remain.

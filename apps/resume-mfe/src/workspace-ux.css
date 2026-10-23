@@ -511,3 +511,35 @@
   font-size: 13px;
   font-style: normal;
 }
+
+/* Context controls use the existing shared buttons with icon-only hit targets. */
+.rf-document-container > .rf-floating-actions .rf-selection-icon {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  flex: 0 0 36px;
+}
+.rf-floating-actions .rf-selection-delete {
+  color: var(--destructive);
+}
+@media (max-width: 768px), (pointer: coarse) {
+  .rf-document-container > .rf-floating-actions .rf-selection-icon {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+}
+@media (max-width: 480px) {
+  /* Keep one clear AI row and one complete icon row on phones. */
+  .rf-document-container > .rf-floating-actions:has(.rf-ai-entry-action) {
+    display: grid;
+    grid-template-columns: repeat(5, 44px);
+    column-gap: 2px;
+  }
+  .rf-floating-actions .rf-ai-entry-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

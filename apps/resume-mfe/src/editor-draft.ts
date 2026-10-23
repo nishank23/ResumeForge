@@ -222,6 +222,22 @@ function listFor(
       return section?.languages;
   }
 }
+/** Share ordering boundaries with contextual controls without cloning the draft. */
+export function canMoveTarget(
+  draft: ResumeDraft,
+  target: DraftTarget,
+  direction: "up" | "down",
+): boolean {
+  if (target.type === "header") return false;
+  const list = listFor(draft, target);
+  const id = target.type === "section" ? target.sectionId : target.itemId;
+  const index = list?.findIndex((item) => item.id === id) ?? -1;
+  return (
+    index >= 0 &&
+    (direction === "up" ? index > 0 : index < (list?.length ?? 0) - 1)
+  );
+}
+
 export function mutateTarget(
   draft: ResumeDraft,
   target: DraftTarget,
