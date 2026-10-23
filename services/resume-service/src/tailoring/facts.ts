@@ -1,8 +1,4 @@
-import {
-  computeJdMatch,
-  containsTerm,
-  readinessProjection,
-} from "@resume-forge/resume-core";
+import { containsTerm, readinessProjection } from "@resume-forge/resume-core";
 import {
   applyTailoringPreview,
   type EditorDocument,
@@ -119,31 +115,14 @@ export function localAssessment(
 ) {
   const jd = parseJdText(text),
     projection = readinessProjection(doc);
-  const technologies = projection.sections.flatMap((s) =>
-    s.entries.flatMap((e) => {
-      const text = doc.sections
-        .find((v) => v.id === s.id)
-        ?.entries.find((v) => v.id === e.id)
-        ?.technologies.trim();
-      return text ? [{ sectionId: s.id, itemId: e.id, text }] : [];
-    }),
-  );
-  const evaluation = computeJdMatch(
-    projection,
-    {
-      terms: jd.keywords.map((k) => ({
-        name: k.name,
-        required: k.required,
-        skill: ["technical", "tools", "soft_skills"].includes(k.category),
-      })),
-      responsibilities: jd.responsibilities,
-    },
-    [],
-    technologies,
-  );
-  const rows = [...evaluation.keywords, ...evaluation.skills];
+  // Parsed terms are intake hints only. They are not a calibrated assessment.
+  const visible = JSON.stringify(projection);
   const names = (matched: boolean) => [
-    ...new Set(rows.filter((r) => r.matched === matched).map((r) => r.term)),
+    ...new Set(
+      jd.keywords
+        .filter((keyword) => containsTerm(visible, keyword.name) === matched)
+        .map((keyword) => keyword.name),
+    ),
   ];
   const years = text.match(
     /\b(\d{1,2})(?:\s*[-–]\s*\d{1,2})?\s*\+?\s*years?\b/i,
@@ -180,9 +159,8 @@ export function localAssessment(
   }
   return {
     jd,
-    evaluation,
     analysis: {
-      score: evaluation.score,
+      score: null,
       matched: names(true),
       missing: names(false),
       statedYears,

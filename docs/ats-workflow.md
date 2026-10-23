@@ -1,5 +1,9 @@
 # ATS, JD matching and Gemini wording — 2026-10-09
 
+## Active replacement — 2026-10-23
+
+[Evidence-based job fit](ats-assessment.md) supersedes the readiness/JD scoring sections below. The active editor uses the isolated existing-Gemini ATS service, actual-JD requirements and cited professional evidence. Generic no-JD scores and hardcoded weighted scoring routes are retired. Hover Improve with AI and reviewed tailoring remain. Historical score records and contracts below are retained for compatibility, not current scoring authority.
+
 Full saved-source JD tailoring was added on 2026-10-14 through separate /tailoring routes. [Scope, queue, review-copy contract and manual checks](full-resume-tailoring.md). Full tailoring uses approved Gemini 3.8 Flash with low thinking for initial drafting and medium thinking for independent review/correction, complete professional fact scope, independent coverage/fact review and one bounded correction pass. Tailor-v3 adds an optional experience worksheet and explicit confirmation of entry-local facts before Gemini processing; missing summaries and confirmed tools/skills are independently reviewable additions. Existing Flash-Lite single-target rewrite and semantic-analysis contracts below remain unchanged.
 
 ## Rewrite quality — 2026-10-11
@@ -38,7 +42,6 @@ The shared adapter derives a single `contactComplete` boolean from the private o
 The shared result schema accepts v1 and v2 histories. Run replay requires current saved version, input hash **and rubric version**. Older rubrics trigger automatic reevaluation without editing the immutable resume. Preferences for stale rubrics are rejected; new assessments retain the prior evaluation. All existing authorization, metadata limits, current-version checks, transactional audit and privacy boundaries remain.
 
 The no-JD UI groups individual checks into 13 rule families on a populated document. Completed requires every family instance to pass. Per-entry Dismiss/Restore persists independently, so a mixed family can appear in Pending and Deleted. Every failed/dismissed entry remains navigable/restorable; no blanket rule dismissal or automatic edit occurs. JD feedback retains its existing five-area presentation. [Current checks and manual steps](archive/readme-history.md#alternate-layout-import-and-no-jd-rule-cards--2026-10-09).
-
 
 ## Current scope
 

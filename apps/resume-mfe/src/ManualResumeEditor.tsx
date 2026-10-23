@@ -1,5 +1,5 @@
-import { readinessHints } from "@resume-forge/shared-types";
-import { JdMatchPanel, type JdServices } from "./JdMatchPanel";
+import { AtsJobFitPanel, type AtsJobFitServices } from "./AtsJobFitPanel";
+import type { TailoringServices } from "./TailoringDialog";
 import { TailoringDialog } from "./TailoringDialog";
 import {
   ServerRewriteDialog,
@@ -7,16 +7,9 @@ import {
   type RewriteServices,
 } from "./ServerRewriteDialog";
 import {
-  computeReadiness,
-  readinessProjection,
-  type ReadinessCheck,
-} from "@resume-forge/resume-core";
-import type { ReadinessPanelProps } from "./ReadinessPanel";
-import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useReducer,
   useRef,
   useState,
@@ -71,7 +64,6 @@ import {
   EDITOR_PANELS,
   ContentPanel,
   DesignPanel,
-  AtsPanel,
   type EditorPanel,
 } from "./EditorToolPanels";
 import {
@@ -88,14 +80,13 @@ interface EditSession {
   base: ResumeDraft;
   target: DraftTarget;
   candidate: ResumeDraft;
-  guidance?: ReadinessCheck;
 }
 export function ManualResumeEditor({
   context,
   initialDraft,
   onSave,
   onDownload,
-  readiness,
+  atsAssessment,
   jdMatch,
   rewrite,
   savedVersion = 0,
@@ -107,8 +98,8 @@ export function ManualResumeEditor({
   onSave: (draft: ResumeDraft) => Promise<number>;
   onDownload?: (version: number, title: string) => Promise<void>;
   initialTailoringOpen?: boolean;
-  readiness?: Pick<ReadinessPanelProps, "load" | "run" | "dismiss">;
-  jdMatch?: JdServices;
+  atsAssessment?: AtsJobFitServices;
+  jdMatch?: { tailoring?: TailoringServices };
   rewrite?: RewriteServices;
   savedVersion?: number;
   saveLabel?: string;
@@ -174,16 +165,6 @@ export function ManualResumeEditor({
   const canvasRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const draft = session?.candidate ?? history.current;
-  const readinessPreview = useMemo(
-    () => computeReadiness(readinessProjection(draft), readinessHints(draft)),
-    [draft],
-  );
-  const previewChanged =
-    isDirty(history) ||
-    !!(
-      session &&
-      JSON.stringify(session.candidate) !== JSON.stringify(history.current)
-    );
   const appearance = draft.appearance ?? DEFAULT_APPEARANCE;
   const selection =
     selected.type === "header" || targetValue(history.current, selected)
@@ -384,11 +365,7 @@ export function ManualResumeEditor({
       select(target);
     }, 150);
   };
-  const addEntry = (
-    targetSection = section,
-    base = history.current,
-    guidance?: ReadinessCheck,
-  ) => {
+  const addEntry = (targetSection = section, base = history.current) => {
     if (!targetSection) return;
     const next = structuredClone(base);
     const match = next.sections.find((s) => s.id === targetSection.id);
@@ -401,12 +378,11 @@ export function ManualResumeEditor({
       itemId: id,
     };
     setSelected(target);
-    setSession({ base: next, target, candidate: next, guidance });
+    setSession({ base: next, target, candidate: next });
   };
   const startEdit = (
     target: DraftTarget = selection,
     base = history.current,
-    guidance?: ReadinessCheck,
   ) => {
     const targetSection = sectionFor(base, target);
     if (targetSection?.kind === "skills")
@@ -417,11 +393,11 @@ export function ManualResumeEditor({
       ["experience", "education", "projects"].includes(targetSection.kind) &&
       !targetSection.entries.length
     ) {
-      addEntry(targetSection, base, guidance);
+      addEntry(targetSection, base);
       return;
     }
     setSelected(target);
-    setSession({ base, target, candidate: base, guidance });
+    setSession({ base, target, candidate: base });
   };
   const updatePreview = useCallback((candidate: ResumeDraft) => {
     setSession((current) =>
@@ -600,52 +576,6 @@ export function ManualResumeEditor({
       : dirty || inlinePending || saving
         ? "Save changes before requesting ATS or AI actions."
         : undefined;
-  const onAtsTarget = (check: ReadinessCheck, edit: boolean) => {
-    const target = check.target;
-    if (!target) {
-      const rule = check.id.split(":")[0];
-      const kind = ["professional-section", "entry-details"].includes(
-        rule ?? "",
-      )
-        ? "experience"
-        : ["skills-section", "listed-skills"].includes(rule ?? "")
-          ? "skills"
-          : null;
-      if (edit && kind) {
-        const next = structuredClone(history.current);
-        let targetSection = next.sections.find(
-          (item) => item.kind === kind && !item.hidden,
-        );
-        if (!targetSection) {
-          targetSection = emptySection(kind, crypto.randomUUID());
-          next.sections.push(targetSection);
-        }
-        startEdit(
-          { type: "section", sectionId: targetSection.id },
-          next,
-          check,
-        );
-        return;
-      }
-      setPanel("content");
-      setPanelOpen(true);
-      announce(
-        `${check.title}: ${check.reason} Use Manage sections to add the missing section or entry.`,
-      );
-      return;
-    }
-    if (target.type !== "header" && !targetValue(history.current, target)) {
-      error("This assessment target is no longer present. Save and recheck.");
-      return;
-    }
-    select(target);
-    if (edit) startEdit(target, history.current, check);
-    else {
-      setPanelOpen(false);
-      setMobileView("resume");
-      focusActions(false);
-    }
-  };
   const documentBody = (
     <ResumeDocument
       draft={draft}
@@ -1055,71 +985,21 @@ export function ManualResumeEditor({
                 />
               ) : null}
               {panel === "ats" || panel === "jd" ? (
-                <div
-                  className="rf-issue-filters rf-ats-modes"
-                  aria-label="ATS assessment type"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={panel === "ats"}
-                    onClick={() => {
-                      setPanel("ats");
-                    }}
-                  >
-                    Resume score
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={panel === "jd"}
-                    onClick={() => {
-                      setPanel("jd");
-                    }}
-                  >
-                    Job fit
-                  </button>
-                </div>
-              ) : null}
-              {panel === "ats" ? (
-                <AtsPanel
+                <AtsJobFitPanel
                   reducedMotion={context?.reducedMotion}
-                  {...readiness}
-                  savedVersion={savedVersion}
-                  preview={
-                    previewChanged || !savedVersion
-                      ? readinessPreview
-                      : undefined
-                  }
-                  disabledReason={
-                    !savedVersion
-                      ? "Save this resume before checking readiness."
-                      : conflict
-                        ? "Reopen the latest resume to resolve the save conflict."
-                        : dirty ||
-                            inlinePending ||
-                            saving ||
-                            session ||
-                            aiSession ||
-                            deleting ||
-                            leaving
-                          ? "Save changes and close edit dialogs before checking readiness."
-                          : undefined
-                  }
-                />
-              ) : null}
-              {panel === "jd" ? (
-                <JdMatchPanel
-                  reducedMotion={context?.reducedMotion}
-                  draft={draft}
-                  services={jdMatch}
+                  services={atsAssessment}
                   savedVersion={savedVersion}
                   disabledReason={
                     actionDisabled ||
                     (session || aiSession || deleting || leaving
-                      ? "Close edit dialogs before running JD analysis."
+                      ? "Close edit dialogs before checking job fit."
                       : undefined)
                   }
-                  onTarget={onAtsTarget}
-                  onTailor={(jd) => void requestTailoring(jd)}
+                  onTailor={
+                    jdMatch?.tailoring
+                      ? (jd) => void requestTailoring(jd)
+                      : undefined
+                  }
                 />
               ) : null}
             </aside>
@@ -1167,7 +1047,6 @@ export function ManualResumeEditor({
           sample={sampleDraft}
           base={session.base}
           target={session.target}
-          guidance={session.guidance}
           onImprove={
             rewrite && rewriteTarget(session.base, session.target)
               ? () => {
@@ -1179,13 +1058,6 @@ export function ManualResumeEditor({
               : undefined
           }
           improveDisabledReason={actionDisabled}
-          guidanceResult={
-            session.guidance
-              ? readinessPreview.checks.find(
-                  (check) => check.id === session.guidance?.id,
-                )
-              : undefined
-          }
           onPreview={updatePreview}
           onCancel={() => {
             setSelected(

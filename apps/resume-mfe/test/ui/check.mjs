@@ -173,34 +173,50 @@ try {
     await click(page, "Improve");
     await wait(
       page,
-      'document.querySelector(".rf-compact-score").textContent.includes("Evaluated")',
+      '!!document.querySelector(".rf-ats-job-fit") && !!document.querySelector(".rf-ats-jd-input")',
+    );
+    await wait(
+      page,
+      `${events("request")}.some(e=>e.path.endsWith("/ats-assessment")&&e.method==="GET")`,
     );
     await check(
       page,
-      `${width}: score replaces detailed check lists`,
-      '!!document.querySelector(".rf-compact-score") && !document.querySelector(".rf-assessment-feedback, .rf-priority-check, .rf-all-checks, .rf-readiness-components, .rf-readiness-summary")',
+      `${width}: no ATS score or paid call without a job`,
+      '!document.querySelector(".rf-ats-result, .rf-compact-score, .rf-ats-modes, .rf-assessment-feedback") && window.__resumeUx.events.every(e=>e.name!=="atsRun")',
+    );
+    await fill(
+      page,
+      ".rf-ats-jd-input",
+      "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests. Kubernetes is preferred.",
     );
     await check(
       page,
-      `${width}: existing returned score stays visible`,
-      'document.querySelector(".rf-compact-score").textContent.includes("81")',
+      `${width}: pasting JD never calls AI`,
+      `${events("atsRun")}.length===0`,
     );
-    await click(page, "Recheck resume");
-    await wait(page, `${events("readinessRun")}.length===1`);
+    await click(page, "Check job fit");
+    await wait(page, '!!document.querySelector(".rf-ats-result")');
     await check(
       page,
-      `${width}: manual recheck preserves resume version`,
-      'window.__resumeUx.version===1 && document.querySelector(".rf-compact-score").textContent.includes("81")',
+      `${width}: one consented version-bound evidence request`,
+      `${events("atsRun")}.length===1 && ${events("atsRun")}[0].consent===true && ${events("atsRun")}[0].expectedVersion===1 && window.__resumeUx.version===1`,
     );
-    await click(page, "Job fit");
-    await wait(page, '!!document.querySelector(".rf-jd-match")');
     await check(
       page,
-      `${width}: job fit replaces score without opening tailoring`,
-      '!document.querySelector(".rf-compact-score, .rf-tailoring-dialog")',
+      `${width}: result is requirement coverage not legacy fixed checks`,
+      'document.querySelector(".rf-ats-result").textContent.includes("50") && document.querySelector(".rf-ats-result").textContent.includes("1 of 2 required") && !document.querySelector(".rf-readiness-components, .rf-priority-check")',
     );
-    await click(page, "Resume score");
-    await wait(page, '!!document.querySelector(".rf-compact-score")');
+    await page.eval(
+      () => (document.querySelector(".rf-ats-result details").open = true),
+    );
+    await check(
+      page,
+      `${width}: exact requirement evidence stays available`,
+      'document.querySelector(".rf-ats-result").textContent.includes("Built Python APIs for invoice review.") && document.querySelector(".rf-ats-result").textContent.includes("Uncertain") && document.querySelector(".rf-ats-result").textContent.includes("Missing evidence")',
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-ats-result details").open = false),
+    );
     await page.screenshot({
       path: resolve(out, `improve-${width}.jpg`),
       quality: 88,
@@ -381,7 +397,7 @@ try {
           const panel = document.querySelector(".rf-tailoring-controls");
           panel.scrollTop = panel.scrollHeight;
           return (
-            panel.scrollTop > 0 &&
+            (panel.scrollHeight <= panel.clientHeight || panel.scrollTop > 0) &&
             Math.abs(preview.getBoundingClientRect().top - top) < 1 &&
             preview.getBoundingClientRect().top < 220
           );
@@ -540,17 +556,18 @@ try {
   );
   await click(page, "Design");
   await click(page, "Improve");
-  await wait(page, '!!document.querySelector(".rf-compact-score")');
+  await wait(page, '!!document.querySelector(".rf-ats-job-fit")');
   await check(
     page,
-    "unsaved score remains a preview with saved recheck blocked",
+    "unsaved resume blocks job fit and shows no locally invented score",
     () =>
+      !document.querySelector(".rf-ats-result") &&
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Check job fit",
+      ).disabled &&
       document
-        .querySelector(".rf-compact-score")
-        .textContent.includes("Unsaved preview") &&
-      [...document.querySelectorAll(".rf-compact-score button")].find(
-        (button) => button.textContent.trim() === "Recheck resume",
-      ).disabled,
+        .querySelector(".rf-ats-job-fit")
+        .textContent.includes("Save changes"),
   );
   await click(page, "Write");
   await check(
@@ -943,6 +960,126 @@ try {
     page,
     "explicit import confirmation persists once",
     events("navigate") + ".length===1",
+  );
+  await page.close();
+  for (const failure of ["atsUnauthorized", "atsFails"]) {
+    page = await open();
+    await click(page, "Improve");
+    await wait(
+      page,
+      `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+    );
+    await fill(
+      page,
+      ".rf-ats-jd-input",
+      "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests.",
+    );
+    await page.eval((name) => {
+      window.__resumeUx[name] = true;
+    }, failure);
+    await click(page, "Check job fit");
+    await wait(
+      page,
+      '!!document.querySelector(".rf-ats-job-fit [role=alert]")',
+    );
+    await check(
+      page,
+      `${failure}: safe failure preserves JD with no false score`,
+      '!!document.querySelector(".rf-ats-jd-input").value && !document.querySelector(".rf-ats-result") && !document.querySelector(".rf-ats-job-fit").textContent.includes("PRIVATE PROVIDER DEBUG")',
+    );
+    if (failure === "atsUnauthorized")
+      await check(
+        page,
+        "401 asks for sign-in",
+        'document.querySelector(".rf-ats-job-fit [role=alert]").textContent.includes("Sign in again")',
+      );
+    await page.close();
+  }
+  page = await open();
+  await click(page, "Improve");
+  await wait(
+    page,
+    `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests.",
+  );
+  await page.eval(() => {
+    window.__resumeUx.delayAts = true;
+  });
+  await click(page, "Check job fit");
+  await wait(page, 'typeof window.__resumeUx.resolveAts==="function"');
+  await check(
+    page,
+    "working assessment prevents duplicate paid calls",
+    () =>
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Check job fit",
+      ).disabled &&
+      document.querySelector(".rf-ats-jd-input").disabled &&
+      !document.querySelector(".rf-ats-result"),
+  );
+  await page.eval(() => window.__resumeUx.resolveAts());
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await click(page, "Write");
+  await click(page, "Improve");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "loaded assessment cannot tailor with an unstored JD",
+    () =>
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Tailor for this job",
+      ).disabled &&
+      document
+        .querySelector(".rf-ats-job-fit")
+        .textContent.includes("Paste the job description again"),
+  );
+  await click(page, "Change job description");
+  await check(
+    page,
+    "changing an unstored JD hides the old assessment and requests fresh text",
+    '!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-jd-input").value==="" && document.querySelector(".rf-ats-job-fit").textContent.includes("Paste the job description again")',
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Different job: build Java applications and operate Kafka data services with production incident response.",
+  );
+  await check(
+    page,
+    "changed JD hides stale coverage",
+    '!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-job-fit").textContent.includes("job description changed")',
+  );
+  await click(page, "Clear");
+  await check(
+    page,
+    "clear removes job text without a paid request",
+    'document.querySelector(".rf-ats-jd-input").value==="" && window.__resumeUx.events.filter(e=>e.name==="atsRun").length===1',
+  );
+  await page.close();
+  page = await open();
+  await click(page, "Improve");
+  await wait(
+    page,
+    `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Backend Engineer: work on services and pipelines. Kubernetes is preferred for this position.",
+  );
+  await page.eval(() => {
+    window.__resumeUx.atsPreferredOnly = true;
+  });
+  await click(page, "Check job fit");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "preferred-only jobs explain the score using preferred coverage",
+    'document.querySelector(".rf-ats-result").textContent.includes("0 of 1 preferred") && !document.querySelector(".rf-ats-result").textContent.includes("0 of 0 required")',
   );
   await page.close();
   page = await open("?theme=light", 1440, 1000);

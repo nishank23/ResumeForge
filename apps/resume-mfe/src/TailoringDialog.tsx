@@ -735,12 +735,6 @@ export function TailoringDialog({
                   </label>
                   <div className="rf-tailoring-check-details">
                     <p>
-                      Internal job-fit check: {run.before.score ?? "partial"}{" "}
-                      before; {run.after?.score ?? "partial"} with all
-                      suggestions. This is not an employer ATS rating. Selected
-                      changes are reassessed after saving.
-                    </p>
-                    <p>
                       Evidence still missing:{" "}
                       {run.before.missing.join(", ") ||
                         "No gaps among extracted terms."}{" "}

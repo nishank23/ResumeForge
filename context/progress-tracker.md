@@ -1,5 +1,11 @@
 # Current progress
 
+## Current ATS replacement — 2026-10-23
+
+Personal checkout `/Users/nishankbansal/Downloads/ResumeForge`, feature branch `codex/ats-service`, based on `ux-ui-improvment`. The user selected existing Gemini instead of a new subscription after reviewing documented API prices. Implemented an isolated private ATS service, version-bound owner endpoint and compact Job fit UI. Legacy score creation is retired; hover AI and reviewed tailoring remain. [Contract and investigation evidence](../docs/ats-assessment.md).
+
+Verified: full workspace build and lint/typecheck; 38 ATS service tests; 8 owner-boundary tests; 65 frontend unit tests and 151 browser assertions. Five live synthetic Gemini cases passed, including negation, nursing credentials, synonyms and insufficient experience. Docker safeguard tests 17/17 and configuration/task tests 7/7 passed. Full workspace unit test run passed all 30 tasks (381 tests in package summaries; unchanged tasks may be cached). The added gateway isolation regression also passed, bringing its suite to 8 tests. No merge or production deployment has occurred for this branch. The dated baseline below remains historical.
+
 Updated 2026-10-18. The organization checkout is on feature. Guided, confirmed experience intake now extends the tailoring flow. The saved-source JD tailoring slice and approved Gemini 3.8 Flash writing/review upgrade are implemented. Later roadmap phases remain planned. Development uses native pnpm watchers.
 
 ## Implemented baseline
@@ -201,7 +207,6 @@ The parser/prose-quality changes were local and uncommitted when the 2026-10-16 
 - [x] Fresh affected-frontend build, lint, typecheck and all 61 unit tests passed. The expanded actual-component browser suite passed 89 assertions, including long-title action geometry at 1366/1024/768/390px, source preview during input, fixed preview while scrolling controls, fixed save actions and multi-suggestion choice preservation. Screenshot review covered dark/light and phone/tablet preview switching. Browser fixtures use synthetic API responses with no paid AI calls or production writes.
 - Existing PR remains on `ux-ui-improvment`; this correction is not a production deployment. Current GitHub checks provide Linux cloud-image integration evidence for the pushed head.
 
-
 ## Focused resume builder — 2026-10-21
 
 - [x] Responded to the user's feedback that simultaneous section navigation, document controls and feedback were confusing. The initial view now contains the resume without either sidebar. Write, Improve and Design select one task; Manage sections opens structural controls on demand. Existing shared components, themes and printable document layout remain.
@@ -211,7 +216,6 @@ The parser/prose-quality changes were local and uncommitted when the 2026-10-16 
 - [x] Existing local database and native application restarted. Frontend localhost:3000 and gateway /api/v1/health both returned HTTP 200. The synthetic preview remains at 127.0.0.1:5173/__resume-ux. These are local checks, not a production release or usability study.
 - Changes stay on ux-ui-improvment. No merge, deployment, provider-setting or secret changes were made.
 
-
 ## Relevant details in builder and tailoring — 2026-10-22
 
 - [x] Consolidated builder tools and Preview into one toolbar. Removed repeated writing instructions, title pencil, saved-version label and paper caption. More retains title/contact editing, section management, undo/redo and theme actions. Explicit click/keyboard selection reveals Edit details and AI improvement; move/hide/delete remain in a labeled menu. Hover no longer selects or reveals controls.
@@ -219,7 +223,6 @@ The parser/prose-quality changes were local and uncommitted when the 2026-10-16 
 - [x] Fresh affected frontend build including TypeScript, lint and 61 unit tests passed. Final actual-component browser run passed 139 assertions at desktop/tablet/phone sizes, including intentional selection, secondary menu actions and Undo, conditional extra facts, comparison access, hidden-name persistence, per-change selection, stale/conflict/source guards and PDF retry. Dark/light screenshots were inspected. Tests use synthetic APIs and no paid Gemini calls or production writes.
 - [x] Existing native local app and database restarted; frontend and gateway health returned HTTP 200. Signed-in local library and an existing Alex Example QA resume opened successfully in the full app, showing the new toolbar and Saved state. No saved document was edited during that spot check. Initial Vite optimizer messages did not block the verified library/editor load.
 - Changes remain on ux-ui-improvment for PR review. No release merge or production deployment is included. First-time-user task completion remains unmeasured.
-
 
 ## Resume score and restored hover AI — 2026-10-22
 

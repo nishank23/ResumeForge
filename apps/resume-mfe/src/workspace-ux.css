@@ -464,3 +464,50 @@
     padding-inline: 8px;
   }
 }
+
+.rf-ats-jd-label {
+  display: block;
+  font-weight: 600;
+}
+.rf-ats-jd-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 160px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+}
+.rf-ats-jd-input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.rf-ats-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rf-ats-requirement {
+  margin-block: 20px;
+  overflow-wrap: anywhere;
+}
+.rf-ats-requirement h3 {
+  margin-block: 8px;
+  font-size: 16px;
+}
+.rf-ats-requirement blockquote {
+  margin-inline: 0;
+  padding: 12px;
+  background: var(--surface);
+}
+.rf-ats-requirement cite {
+  font-size: 13px;
+  font-style: normal;
+}

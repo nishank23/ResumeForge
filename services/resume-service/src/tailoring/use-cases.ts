@@ -7,18 +7,12 @@ import {
 } from "@resume-forge/prisma-client";
 import type { AuditEventIntent } from "@resume-forge/audit-contracts";
 import {
-  computeReadiness,
-  readinessProjection,
-} from "@resume-forge/resume-core";
-import {
   applyTailoringPreview,
   editorDocumentSchema,
   tailoringRunSchema,
   tailoringStartSchema,
   tailoringCancelSchema,
   tailoringApplySchema,
-  jdEvaluationSchema,
-  readinessEvaluationSchema,
   type TailoringState,
 } from "@resume-forge/shared-types";
 import type { ResumeServiceContext } from "../resume.js";
@@ -698,8 +692,7 @@ export function createTailoringUseCases(options: {
             r.selectedIds,
           );
           next.title = r.title;
-          const versionId = randomUUID(),
-            assessed = localAssessment(next, stored.run.jdText, now());
+          const versionId = randomUUID();
           const nextContent = metadata({
             ...content,
             title: r.title,
@@ -729,38 +722,8 @@ export function createTailoringUseCases(options: {
                 ),
               ),
             },
-            jdMatching: {
-              dismissed: [],
-              evaluations: [
-                jdEvaluationSchema.parse({
-                  ...assessed.evaluation,
-                  id: randomUUID(),
-                  resumeId: stored.copyId,
-                  resumeVersion: 1,
-                  versionId,
-                  inputHash: hash(readinessProjection(next)),
-                  jdHash: hash(stored.run.jdText),
-                  jdText: stored.run.jdText,
-                  evaluatedAt: new Date(now()).toISOString(),
-                  analysis: "local",
-                  model: null,
-                }),
-              ],
-            },
-            readiness: {
-              evaluations: [
-                readinessEvaluationSchema.parse({
-                  ...computeReadiness(readinessProjection(next)),
-                  id: randomUUID(),
-                  resumeId: stored.copyId,
-                  resumeVersion: 1,
-                  versionId,
-                  inputHash: hash(readinessProjection(next)),
-                  evaluatedAt: new Date(now()).toISOString(),
-                }),
-              ],
-              dismissed: [],
-            },
+            // A copied resume needs its own explicit version-bound Gemini assessment.
+            atsAssessments: [],
           });
           await tx.resume.create({
             data: {

@@ -12,6 +12,7 @@ export const checks = [
   [4001, "/api/v1/auth/me", 401],
   [4002, "/api/v1/profile", 401],
   [4003, "/api/v1/resume", 401],
+  [4004, "/internal/ats/health", 401],
 ];
 export async function checkApp(host = "127.0.0.1") {
   const db = createDatabaseClient(readRuntime().resume.href, {
