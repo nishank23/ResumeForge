@@ -13,6 +13,8 @@ import { createAuthApp } from "../services/auth-service/dist/app.js";
 import { createLocalActorResolver } from "../packages/access-policy/dist/server.js";
 import { createResumeApp } from "../services/resume-service/dist/app.js";
 import { createResumeUseCases } from "../services/resume-service/dist/resume.js";
+import { loadAtsConfig } from "../services/ats-service/dist/config.js";
+import { GEMINI_MODEL } from "../services/resume-service/dist/ats/ai.js";
 import { createGatewayApp } from "../services/gateway/dist/app.js";
 import { loadResumeApi } from "../apps/resume-mfe/test/resume-api-loader.mjs";
 const { serve } = createRequire(
@@ -63,6 +65,8 @@ test("full Docker app, migrated vector database and restricted personal flow", a
               ["http://web:8080/api/v1/resume", 401],
               ["http://web:8080/api/v1/profile", 401],
               ["http://web:8080/internal/auth/resolve", 404],
+              ["http://web:8080/internal/ats/assess", 404],
+              ["http://web:8080/internal/ats/health", 404],
               ["http://web:8080/mfe/missing.js", 404],
             ]
           : [
@@ -208,29 +212,58 @@ test("full Docker app, migrated vector database and restricted personal flow", a
         );
       },
     );
-    const resumes = createResumeUseCases(clients.resume, Date.now, undefined, {
-      geminiAvailable: true,
-      rewriteAvailable: true,
-      tailor: async (source) => ({
-        changes: source.fields.map((field) => {
-          const fact = field.original
-            ? field
-            : source.fields.find((item) => item.original);
-          return {
-            field: field.field,
-            proposed: (fact?.original ?? "").replace("in order to", "to"),
-            facts: [fact?.field ?? field.field],
-          };
+    const atsClient = {
+      model: GEMINI_MODEL,
+      assess: async (input) => ({
+        rubricVersion: "ats-evidence-v1",
+        model: GEMINI_MODEL,
+        score: 0,
+        coverage: {
+          required: { supported: 0, total: 1 },
+          preferred: { supported: 0, total: 0 },
+        },
+        requirements: [
+          {
+            id: "python",
+            requirement: "Professional Python experience",
+            jdQuote: "Required: professional Python experience.",
+            importance: "required",
+            status: "missing",
+            evidence: [],
+          },
+        ],
+        warnings: [],
+      }),
+    };
+    const resumes = createResumeUseCases(
+      clients.resume,
+      Date.now,
+      undefined,
+      {
+        geminiAvailable: true,
+        rewriteAvailable: true,
+        tailor: async (source) => ({
+          changes: source.fields.map((field) => {
+            const fact = field.original
+              ? field
+              : source.fields.find((item) => item.original);
+            return {
+              field: field.field,
+              proposed: (fact?.original ?? "").replace("in order to", "to"),
+              facts: [fact?.field ?? field.field],
+            };
+          }),
         }),
-      }),
-      verifyTailoring: async (source) => ({
-        checks: source.fields.map((field) => ({
-          field: field.field,
-          supported: true,
-          complete: true,
-        })),
-      }),
-    });
+        verifyTailoring: async (source) => ({
+          checks: source.fields.map((field) => ({
+            field: field.field,
+            supported: true,
+            complete: true,
+          })),
+        }),
+      },
+      atsClient,
+    );
     const app = createResumeApp({
       personalEditorOnly: true,
       appOrigin,
@@ -284,7 +317,7 @@ test("full Docker app, migrated vector database and restricted personal flow", a
       },
     );
     await t.test(
-      "foreign resume reads fail; owner PDF rendering and local readiness work",
+      "foreign reads fail; owner PDF and version-bound job fit persist; generic scores are retired",
       async () => {
         await assert.rejects(
           b.load(saved.id),
@@ -296,8 +329,61 @@ test("full Docker app, migrated vector database and restricted personal flow", a
           b.download(saved.id, 2),
           (error) => error.code === "not_found",
         );
-        const readiness = await a.runReadiness(saved.id, 2);
-        assert.ok(readiness);
+        await assert.rejects(
+          a.runReadiness(saved.id, 2),
+          (error) => error.code === "assessment_retired",
+        );
+        assert.equal((await a.atsAssessment(saved.id)).evaluation, null);
+        await assert.rejects(
+          b.atsAssessment(saved.id),
+          (error) => error.code === "not_found",
+        );
+        const jd =
+          "Backend engineer. Required: professional Python experience.";
+        await assert.rejects(
+          b.runAtsAssessment(saved.id, 2, jd),
+          (error) => error.code === "not_found",
+        );
+        const assessed = await a.runAtsAssessment(saved.id, 2, jd);
+        assert.equal(assessed.evaluation.assessment.score, 0);
+        assert.equal(assessed.evaluation.resumeVersion, 2);
+        assert.equal(
+          (await api(alice).atsAssessment(saved.id)).evaluation.id,
+          assessed.evaluation.id,
+        );
+        assert.equal((await a.load(saved.id)).currentVersion, 2);
+        const stored = await owner.resume.findUnique({
+          where: { id: saved.id },
+        });
+        assert.equal(stored.atsBreakdown.atsAssessments.length, 1);
+      },
+    );
+    await t.test(
+      "private ATS runtime requires its key and fails closed without provider settings",
+      async () => {
+        const base = "http://127.0.0.1:4004/internal/ats";
+        assert.equal((await fetch(`${base}/health`)).status, 401);
+        const ats = loadAtsConfig();
+        const headers = {
+          Authorization: `Bearer ${ats.key}`,
+          "Content-Type": "application/json",
+        };
+        const health = await fetch(`${base}/health`, { headers });
+        assert.equal(health.status, 200);
+        const status = await health.json();
+        assert.equal(status.model, GEMINI_MODEL);
+        assert.equal(status.available, false);
+        const unavailable = await fetch(`${base}/assess`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            jdText:
+              "Backend engineer. Required: professional Python experience.",
+            sources: [],
+          }),
+        });
+        assert.equal(unavailable.status, 503);
+        assert.equal((await unavailable.json()).error.code, "ats_unavailable");
       },
     );
     await t.test(
