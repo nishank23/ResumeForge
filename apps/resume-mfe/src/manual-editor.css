@@ -1102,7 +1102,8 @@
   padding-inline: 9px;
 }
 .rf-floating-actions button[aria-label] {
-  width: 32px;
+  width: auto;
+  min-width: 32px;
 }
 .rf-floating-target {
   position: absolute;
@@ -1194,7 +1195,8 @@
     flex-wrap: wrap;
   }
   .rf-floating-actions button[aria-label] {
-    width: 44px;
+    width: auto;
+    min-width: 44px;
     height: 44px;
   }
   .rf-floating-actions button {

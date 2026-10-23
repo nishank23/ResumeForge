@@ -1,5 +1,11 @@
 # Current progress
 
+## Hover AI toolbar repair — 2026-10-23
+
+Restored the existing floating action bar inside the resume canvas instead of inline above it. Real mouse reproduction previously measured a static toolbar 234 px above the summary footer; the corrected bar is absolutely positioned 6 px below its target. Work-entry hover follows the same anchor. Text buttons now fit their labels while preserving phone target sizes. Click/keyboard actions and the existing scoped AI dialog remain.
+
+Verified: frontend TypeScript, lint and production build; 160 synthetic browser checks, including responsive summary/entry geometry and label fit at 1440, 768 and 390 px. No provider call was needed. Updated the existing private ATS review branch; no merge or production deployment.
+
 ## Current ATS replacement — 2026-10-23
 
 Personal checkout `/Users/nishankbansal/Downloads/ResumeForge`, feature branch `codex/ats-service`, based on `ux-ui-improvment`. The user selected existing Gemini instead of a new subscription after reviewing documented API prices. Implemented an isolated private ATS service, version-bound owner endpoint and compact Job fit UI. Legacy score creation is retired; hover AI and reviewed tailoring remain. [Contract and investigation evidence](../docs/ats-assessment.md).

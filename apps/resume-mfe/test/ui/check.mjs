@@ -138,6 +138,71 @@ try {
       `${width}: initial toolbar never overlays document`,
       '!document.querySelector(".rf-floating-actions")',
     );
+    const hoverPoint = await page.eval(() => {
+      const r = document
+        .querySelector('[aria-label="Professional summary on resume page"]')
+        .getBoundingClientRect();
+      return { x: r.left + 20, y: r.top + 10 };
+    });
+    await page.send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      ...hoverPoint,
+    });
+    await wait(
+      page,
+      '!!document.querySelector(".rf-floating-actions .rf-ai-entry-action")',
+    );
+    await check(
+      page,
+      `${width}: hover actions float beside the summary without shifting paper`,
+      () => {
+        const toolbar = document.querySelector(
+          '[aria-label="Selected content actions"]',
+        );
+        const region = document
+          .querySelector('[aria-label="Professional summary on resume page"]')
+          .closest("[data-editor-section]");
+        const r = toolbar.getBoundingClientRect(),
+          target = region.getBoundingClientRect();
+        return (
+          toolbar.parentElement.classList.contains("rf-document-container") &&
+          getComputedStyle(toolbar).position === "absolute" &&
+          Math.abs(r.top - target.bottom - 6) < 2 &&
+          r.left >= 0 &&
+          r.right <= innerWidth &&
+          !!toolbar.querySelector(".rf-ai-entry-action")
+        );
+      },
+    );
+    await check(
+      page,
+      `${width}: floating action labels fit their buttons`,
+      () =>
+        [...document.querySelectorAll(".rf-floating-actions button")].every(
+          (button) => button.scrollWidth <= button.clientWidth + 1,
+        ),
+    );
+    await page.eval(() =>
+      document
+        .querySelector("[data-editor-entry]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      '!!document.querySelector("[data-editor-entry].is-selected")',
+    );
+    await check(page, `${width}: hover toolbar follows the work entry`, () => {
+      const toolbar = document
+        .querySelector(".rf-floating-actions")
+        .getBoundingClientRect();
+      const entry = document
+        .querySelector("[data-editor-entry].is-selected")
+        .getBoundingClientRect();
+      return (
+        Math.abs(toolbar.top - entry.bottom - 6) < 2 &&
+        !!document.querySelector(".rf-floating-actions .rf-ai-entry-action")
+      );
+    });
     if (width < 901) {
       await check(
         page,
@@ -485,7 +550,7 @@ try {
   await check(
     page,
     "hover restores Improve with AI for the summary",
-    'document.querySelector(".rf-selected-actions .rf-ai-entry-action")?.getClientRects().length > 0',
+    'document.querySelector(".rf-floating-actions .rf-ai-entry-action")?.getClientRects().length > 0',
   );
   await page.eval(() => document.querySelector(".rf-ai-entry-action").click());
   await wait(page, '!!document.querySelector("[role=dialog]")');
@@ -513,13 +578,13 @@ try {
       .querySelector('[aria-label="Professional summary on resume page"]')
       .click(),
   );
-  await wait(page, '!!document.querySelector(".rf-selected-actions")');
+  await wait(page, '!!document.querySelector(".rf-floating-actions")');
   await check(
     page,
     "selected content leads with editing and hides secondary actions",
     () =>
       !!document.querySelector("[data-selection-edit]") &&
-      !document.querySelector('.rf-selected-actions [role="menu"]'),
+      !document.querySelector('.rf-floating-actions [role="menu"]'),
   );
   await page.eval(() =>
     document

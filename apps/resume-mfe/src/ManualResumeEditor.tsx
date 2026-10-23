@@ -833,96 +833,95 @@ export function ManualResumeEditor({
             data-editor-mode={mode}
             style={appearanceVariables(appearance)}
           >
-            {mode === "editor" &&
-            actionsVisible &&
-            section?.kind !== "skills" ? (
-              <SectionActions
-                inline
-                containerRef={canvasRef}
-                toolbarRef={toolbarRef}
-                target={selection}
-                layoutKey={`${String(panelOpen)}:${panel}`}
-                draft={draft}
-                hidden={!!session || !!aiSession}
-                onPointerEnter={cancelHover}
-              >
-                <span
-                  className="rf-floating-target"
-                  title={targetLabel(history.current, selection)}
+            <div className="rf-document-container" ref={canvasRef}>
+              {mode === "editor" &&
+              actionsVisible &&
+              section?.kind !== "skills" ? (
+                <SectionActions
+                  containerRef={canvasRef}
+                  toolbarRef={toolbarRef}
+                  target={selection}
+                  layoutKey={`${String(panelOpen)}:${panel}`}
+                  draft={draft}
+                  hidden={!!session || !!aiSession}
+                  onPointerEnter={cancelHover}
                 >
-                  {targetLabel(history.current, selection)}
-                </span>
-                {selection.type !== "header" &&
-                rewriteTarget(history.current, selection) ? (
+                  <span
+                    className="rf-floating-target"
+                    title={targetLabel(history.current, selection)}
+                  >
+                    {targetLabel(history.current, selection)}
+                  </span>
+                  {selection.type !== "header" &&
+                  rewriteTarget(history.current, selection) ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      glow
+                      className="rf-ai-entry-action"
+                      onClick={() => {
+                        setAiSession({
+                          base: structuredClone(historyRef.current.current),
+                          target: structuredClone(selection),
+                        });
+                      }}
+                    >
+                      Improve with AI
+                    </Button>
+                  ) : null}
                   <Button
-                    size="sm"
                     variant="ghost"
-                    glow
-                    className="rf-ai-entry-action"
+                    size="sm"
+                    data-selection-edit
+                    aria-label="Edit selected content"
                     onClick={() => {
-                      setAiSession({
-                        base: structuredClone(historyRef.current.current),
-                        target: structuredClone(selection),
-                      });
+                      startEdit();
                     }}
                   >
-                    Improve with AI
+                    <Pencil size={15} aria-hidden="true" /> Edit details
                   </Button>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-selection-edit
-                  aria-label="Edit selected content"
-                  onClick={() => {
-                    startEdit();
-                  }}
-                >
-                  <Pencil size={15} aria-hidden="true" /> Edit details
-                </Button>
-                {selection.type !== "header" ? (
-                  <DropdownMenu
-                    ariaLabel="More selected content actions"
-                    triggerLabel="More"
-                    items={[
-                      ...(itemArrows
-                        ? [
-                            {
-                              id: "up",
-                              label: "Move up",
-                              onSelect: () => {
-                                act("up");
+                  {selection.type !== "header" ? (
+                    <DropdownMenu
+                      ariaLabel="More selected content actions"
+                      triggerLabel="More"
+                      items={[
+                        ...(itemArrows
+                          ? [
+                              {
+                                id: "up",
+                                label: "Move up",
+                                onSelect: () => {
+                                  act("up");
+                                },
                               },
-                            },
-                            {
-                              id: "down",
-                              label: "Move down",
-                              onSelect: () => {
-                                act("down");
+                              {
+                                id: "down",
+                                label: "Move down",
+                                onSelect: () => {
+                                  act("down");
+                                },
                               },
-                            },
-                          ]
-                        : []),
-                      {
-                        id: "visibility",
-                        label: hidden ? "Show in resume" : "Hide from resume",
-                        onSelect: () => {
-                          act("hide");
+                            ]
+                          : []),
+                        {
+                          id: "visibility",
+                          label: hidden ? "Show in resume" : "Hide from resume",
+                          onSelect: () => {
+                            act("hide");
+                          },
                         },
-                      },
-                      {
-                        id: "delete",
-                        label: "Delete selected content",
-                        onSelect: () => {
-                          setDeleting(selection);
+                        {
+                          id: "delete",
+                          label: "Delete selected content",
+                          onSelect: () => {
+                            setDeleting(selection);
+                          },
                         },
-                      },
-                    ]}
-                  />
-                ) : null}
-              </SectionActions>
-            ) : null}
-            <div className="rf-document-container" ref={canvasRef}>
+                      ]}
+                    />
+                  ) : null}
+                </SectionActions>
+              ) : null}
               {isCompact && mode === "editor" ? (
                 <div className="rf-mobile-document">{documentBody}</div>
               ) : (
