@@ -426,3 +426,158 @@ test("explicit rewrite action sends only saved scope and processing intent, neve
   assert.deepEqual(await api.requestRewrite(id,4,target),proposal);
   assert.deepEqual(sent,{expectedVersion:4,target,consent:true});
 });
+
+const atsFixture = () => ({
+  currentVersion: 1,
+  evaluation: {
+    id: "33333333-3333-4333-8333-333333333333",
+    resumeId: id,
+    versionId: "44444444-4444-4444-8444-444444444444",
+    resumeVersion: 1,
+    inputHash: "a".repeat(64),
+    jdHash: "b".repeat(64),
+    evaluatedAt: "2026-10-23T10:00:00.000Z",
+    assessment: {
+      rubricVersion: "ats-evidence-v1",
+      model: "synthetic-gemini",
+      score: 50,
+      coverage: {
+        required: { supported: 1, total: 2 },
+        preferred: { supported: 0, total: 0 },
+      },
+      requirements: [
+        {
+          id: "python",
+          requirement: "Build Python APIs",
+          jdQuote: "Build Python APIs",
+          importance: "required",
+          status: "supported",
+          evidence: [
+            { sourceId: "experience:role", quote: "Built Python APIs." },
+          ],
+        },
+        {
+          id: "operations",
+          requirement: "Production operations",
+          jdQuote: "Production operations",
+          importance: "required",
+          status: "missing",
+          evidence: [],
+        },
+      ],
+      warnings: [],
+    },
+  },
+});
+test("ATS client loads saved evidence without generating a paid assessment", async () => {
+  const calls = [];
+  const api = createResumeApi(async (path, options) => {
+    calls.push({ path, ...options });
+    return envelope({ currentVersion: 1, evaluation: null });
+  }, workspaceId);
+  assert.deepEqual(await api.atsAssessment(id), {
+    currentVersion: 1,
+    evaluation: null,
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].path, `/api/v1/resume/${id}/ats-assessment`);
+  assert.equal(calls[0].headers["X-Workspace-Id"], workspaceId);
+  assert.equal(calls[0].body, undefined);
+});
+test("ATS client restores the private JD while accepting historical assessments without it", async () => {
+  const saved = atsFixture();
+  saved.evaluation.jdText =
+    "Build Python APIs and PostgreSQL services. Production operations experience is required.";
+  const api = createResumeApi(async () => envelope(saved), workspaceId);
+  assert.deepEqual(await api.atsAssessment(id), saved);
+  for (const invalid of [null, 20, "short", "x".repeat(12001)]) {
+    saved.evaluation.jdText = invalid;
+    await assert.rejects(
+      api.atsAssessment(id),
+      (error) => error.code === "invalid_response",
+    );
+  }
+  delete saved.evaluation.jdText;
+  assert.equal((await api.atsAssessment(id)).evaluation.jdText, undefined);
+});
+test("ATS client submits only explicit JD consent and expected saved version", async () => {
+  const calls = [];
+  const jdText =
+    "Build Python APIs and PostgreSQL services. Production operations experience is required.";
+  const api = createResumeApi(async (path, options) => {
+    calls.push({ path, ...options });
+    return envelope(atsFixture());
+  }, workspaceId);
+  assert.deepEqual(
+    await api.runAtsAssessment(id, 1, `  ${jdText}  `),
+    atsFixture(),
+  );
+  assert.equal(calls[0].method, "POST");
+  assert.deepEqual(JSON.parse(calls[0].body), {
+    expectedVersion: 1,
+    jdText,
+    consent: true,
+  });
+  await assert.rejects(
+    api.runAtsAssessment(id, 1, "short"),
+    (error) => error.code === "invalid_input",
+  );
+  assert.equal(calls.length, 1);
+});
+test("ATS client rejects wrong identity, stale POST versions, invalid evidence and arbitrary scores", async () => {
+  const jdText =
+    "Build Python APIs and PostgreSQL services. Production operations experience is required.";
+  const mutations = [
+    (value) => {
+      value.evaluation.resumeId = workspaceId;
+    },
+    (value) => {
+      value.evaluation.resumeVersion = 2;
+    },
+    (value) => {
+      value.currentVersion = 2;
+    },
+    (value) => {
+      value.evaluation.assessment.score = 99;
+    },
+    (value) => {
+      value.evaluation.assessment.requirements[0].evidence = [];
+    },
+    (value) => {
+      value.evaluation.privateDebug = "PRIVATE PROVIDER DEBUG";
+    },
+  ];
+  for (const mutate of mutations) {
+    const value = atsFixture();
+    mutate(value);
+    const api = createResumeApi(async () => envelope(value), workspaceId);
+    await assert.rejects(
+      api.runAtsAssessment(id, 1, jdText),
+      (error) =>
+        error.code === "invalid_response" && !error.message.includes("PRIVATE"),
+    );
+  }
+});
+test("ATS client reports safe 401 and provider errors without exposing provider response text", async () => {
+  for (const [status, code, expected] of [
+    [401, "unauthenticated", /Sign in again/],
+    [503, "provider_unavailable", /unavailable/],
+  ]) {
+    const api = createResumeApi(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: { code, message: "PRIVATE PROVIDER DEBUG" },
+          }),
+          { status },
+        ),
+      workspaceId,
+    );
+    await assert.rejects(
+      api.atsAssessment(id),
+      (error) =>
+        expected.test(error.message) && !error.message.includes("PRIVATE"),
+    );
+  }
+});

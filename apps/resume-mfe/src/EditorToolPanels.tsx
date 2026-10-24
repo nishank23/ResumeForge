@@ -1,4 +1,3 @@
-export { ReadinessPanel as AtsPanel } from "./ReadinessPanel";
 import { useState, type ReactNode } from "react";
 import {
   ArrowDown,
@@ -38,12 +37,12 @@ import { matchingTemplate, RESUME_TEMPLATES } from "./templates/registry";
 export const EDITOR_PANELS = {
   content: { label: "Sections", icon: FileText },
   design: { label: "Template", icon: Palette },
-  ats: { label: "ATS readiness", icon: Gauge },
-  jd: { label: "Tailor to job", icon: Briefcase },
+  ats: { label: "Job fit", icon: Gauge },
+  jd: { label: "Job fit", icon: Briefcase },
 } as const;
 export type EditorPanel = keyof typeof EDITOR_PANELS;
 
-/** Choose a task before exposing its controls. Writing starts with the document alone. */
+/** Improve opens with saved job fit; Write returns to the document alone. */
 export function EditorRail({
   active,
   onSelect,

@@ -4,7 +4,11 @@
 
 On 2026-10-20 the user approved the reviewed design and requested branch `ux-ui-improvment`, existing Performative UI adapters and compatibility with the Studio design system. Changes cover resume creation/import review, editing, feedback, direct job tailoring and saved PDF handoff. Backend authorization, AI models, factual validation, scoring, storage and deployment configuration remain unchanged.
 
-## Design plan
+## Current Improve default — 2026-10-23
++
++The user now requests Improve as the initial task. The current saved ATS evidence score leads, followed by JD tailoring and concise missing/uncertain requirement guidance. No JD means no numeric score. Loading the saved result costs no provider request. New checks retain their private JD for later tailoring, while legacy results without a JD stay readable. Write still restores document-only editing and the existing hover AI. This supersedes the initial Write-only view and older readiness-score descriptions below; [the ATS contract](ats-assessment.md) defines current scoring and storage.
++
++## Design plan
 
 The document is the main object. Existing professional facts, original/suggested wording and a separate tailored copy carry the experience; decorative effects do not carry workflow meaning.
 

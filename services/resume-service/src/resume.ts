@@ -1,3 +1,4 @@
+import { createAssessmentUseCases, type AtsClient } from "./ats/assessment.js";
 import { createAtsUseCases } from "./ats/use-cases.js";
 import { createTailoringUseCases } from "./tailoring/use-cases.js";
 import type { AiProviders } from "./ats/ai.js";
@@ -106,6 +107,7 @@ export function createResumeUseCases(
   now = Date.now,
   renderPdf = renderSavedResumePdf,
   providers?: AiProviders,
+  atsClient?: AtsClient,
 ) {
   function assertContext(context: ResumeServiceContext) {
     if (
@@ -2372,6 +2374,14 @@ export function createResumeUseCases(
   }
 
   return {
+    ...createAssessmentUseCases({
+      db,
+      now,
+      authorize: authorizeWorkspace,
+      assert: assertContext,
+      audit: createAuditIntent,
+      client: atsClient,
+    }),
     ...createTailoringUseCases({
       db,
       now,

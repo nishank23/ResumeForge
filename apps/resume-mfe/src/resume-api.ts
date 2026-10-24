@@ -1,4 +1,6 @@
 import {
+  atsAssessmentSchema,
+  type AtsAssessment,
   jdStateSchema,
   tailoringStateSchema,
   rewriteProposalSchema,
@@ -25,6 +27,20 @@ export interface SavedResume {
   status: string;
   updatedAt: string;
   content: Record<string, unknown>;
+}
+export interface AtsAssessmentState {
+  currentVersion: number;
+  evaluation: null | {
+    id: string;
+    resumeId: string;
+    versionId: string;
+    resumeVersion: number;
+    inputHash: string;
+    jdHash: string;
+    jdText?: string;
+    evaluatedAt: string;
+    assessment: AtsAssessment;
+  };
 }
 export type ResumeRow = Omit<SavedResume, "content">;
 export class ResumeApiError extends Error {
@@ -63,6 +79,74 @@ function row(value: unknown, workspaceId: string): ResumeRow {
     currentVersion: Number(v.currentVersion),
     status: str(v.status),
     updatedAt: str(v.updatedAt),
+  };
+}
+function atsState(value: unknown, id: string): AtsAssessmentState {
+  const state = record(value);
+  const invalid = () =>
+    new ResumeApiError(
+      "invalid_response",
+      "Job fit result could not be read. Refresh and retry.",
+    );
+  if (
+    Object.keys(state).some(
+      (key) => !["currentVersion", "evaluation"].includes(key),
+    ) ||
+    !Number.isInteger(state.currentVersion) ||
+    Number(state.currentVersion) < 1 ||
+    !("evaluation" in state)
+  )
+    throw invalid();
+  if (state.evaluation === null)
+    return { currentVersion: Number(state.currentVersion), evaluation: null };
+  const evaluation = record(state.evaluation);
+  if (
+    Object.keys(evaluation).some(
+      (key) =>
+        ![
+          "id",
+          "resumeId",
+          "versionId",
+          "resumeVersion",
+          "inputHash",
+          "jdHash",
+          "jdText",
+          "evaluatedAt",
+          "assessment",
+        ].includes(key),
+    ) ||
+    !uuid.test(str(evaluation.id)) ||
+    !uuid.test(str(evaluation.versionId)) ||
+    evaluation.resumeId !== id ||
+    !Number.isInteger(evaluation.resumeVersion) ||
+    Number(evaluation.resumeVersion) < 1 ||
+    !/^[a-f0-9]{64}$/.test(str(evaluation.inputHash)) ||
+    !/^[a-f0-9]{64}$/.test(str(evaluation.jdHash)) ||
+    (evaluation.jdText !== undefined &&
+      (typeof evaluation.jdText !== "string" ||
+        evaluation.jdText.trim().length < 50 ||
+        evaluation.jdText.length > 12000)) ||
+    !/^\d{4}-\d{2}-\d{2}T/.test(str(evaluation.evaluatedAt)) ||
+    !Number.isFinite(Date.parse(str(evaluation.evaluatedAt)))
+  )
+    throw invalid();
+  const assessment = atsAssessmentSchema.safeParse(evaluation.assessment);
+  if (!assessment.success) throw invalid();
+  return {
+    currentVersion: Number(state.currentVersion),
+    evaluation: {
+      id: str(evaluation.id),
+      resumeId: id,
+      versionId: str(evaluation.versionId),
+      resumeVersion: Number(evaluation.resumeVersion),
+      inputHash: str(evaluation.inputHash),
+      jdHash: str(evaluation.jdHash),
+      ...(typeof evaluation.jdText === "string"
+        ? { jdText: evaluation.jdText }
+        : {}),
+      evaluatedAt: str(evaluation.evaluatedAt),
+      assessment: assessment.data,
+    },
   };
 }
 export function blankResume(name = ""): ResumeDraft {
@@ -292,22 +376,31 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
       const code = str(record(envelope.error).code);
       throw new ResumeApiError(
         code,
-        /\/(jd-match|ai-rewrite|tailoring)(?:\/|$)/.test(path) &&
-          str(record(envelope.error).message).length <= 700
-          ? str(record(envelope.error).message) || "ATS request failed. Retry."
-          : code === "revision_conflict"
-            ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
-            : code === "invalid_input" || code === "unsupported_media_type"
-              ? path.endsWith("/parse")
-                ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
-                : "Could not save this document. Check field lengths, links and dates; your edits are kept."
-              : code === "file_too_large"
+        path.endsWith("/ats-assessment")
+          ? code === "unauthenticated" || response.status === 401
+            ? "Sign in again to check job fit."
+            : code === "revision_conflict"
+              ? "Your saved resume changed. Reopen the latest version before checking job fit."
+              : code === "invalid_input"
+                ? "Use a job description between 50 and 12,000 characters and save your resume first."
+                : "Job fit is unavailable. Your resume is unchanged. Retry later."
+          : /\/(jd-match|ai-rewrite|tailoring)(?:\/|$)/.test(path) &&
+              str(record(envelope.error).message).length <= 700
+            ? str(record(envelope.error).message) ||
+              "ATS request failed. Retry."
+            : code === "revision_conflict"
+              ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
+              : code === "invalid_input" || code === "unsupported_media_type"
                 ? path.endsWith("/parse")
-                  ? "File exceeds the upload limit."
-                  : "Document exceeds the save limit. Shorten its content; your edits are kept."
-                : code === "not_found"
-                  ? "This resume is no longer available."
-                  : "Could not load or save your resume. Retry when the service is available.",
+                  ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
+                  : "Could not save this document. Check field lengths, links and dates; your edits are kept."
+                : code === "file_too_large"
+                  ? path.endsWith("/parse")
+                    ? "File exceeds the upload limit."
+                    : "Document exceeds the save limit. Shorten its content; your edits are kept."
+                  : code === "not_found"
+                    ? "This resume is no longer available."
+                    : "Could not load or save your resume. Retry when the service is available.",
       );
     }
     return envelope.data;
@@ -450,6 +543,52 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
           },
         }),
       ),
+    atsAssessment: async (
+      id: string,
+      signal?: AbortSignal,
+    ): Promise<AtsAssessmentState> => {
+      if (!uuid.test(id))
+        throw new ResumeApiError("invalid_input", "Open a saved resume first.");
+      return atsState(
+        await call(
+          `/api/v1/resume/${id}/ats-assessment`,
+          "GET",
+          undefined,
+          signal,
+        ),
+        id,
+      );
+    },
+    runAtsAssessment: async (
+      id: string,
+      expectedVersion: number,
+      jdText: string,
+    ): Promise<AtsAssessmentState> => {
+      savedTarget(id, expectedVersion);
+      const text = jdText.trim();
+      if (text.length < 50 || text.length > 12000)
+        throw new ResumeApiError(
+          "invalid_input",
+          "Use a job description between 50 and 12,000 characters.",
+        );
+      const data = atsState(
+        await call(`/api/v1/resume/${id}/ats-assessment`, "POST", {
+          expectedVersion,
+          jdText: text,
+          consent: true,
+        }),
+        id,
+      );
+      if (
+        data.currentVersion !== expectedVersion ||
+        data.evaluation?.resumeVersion !== expectedVersion
+      )
+        throw new ResumeApiError(
+          "invalid_response",
+          "Job fit does not match this saved resume version. Reopen and retry.",
+        );
+      return data;
+    },
     readiness: async (
       id: string,
       signal?: AbortSignal,

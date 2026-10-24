@@ -1,5 +1,9 @@
 # Architecture
 
+## Private ATS service — 2026-10-23
+
+The active assessment path is browser → gateway → owned resume-service → loopback ATS service :4004 → existing Gemini. Resume-service owns authorization, projection, immutable-version cache/persistence and audit. ATS service owns requirement extraction/evidence validation/coverage only and has no DB or public proxy route. See [ATS contract](../docs/ats-assessment.md).
+
 ## Implemented stack
 
 Four React/Vite microfrontends (shell, auth, profile, resume) use federation and browser-safe shared controls. The shell owns routing, session lifecycle, theme and page errors. Hono gateway/auth/profile/resume services use strict TypeScript, Zod and Prisma/PostgreSQL. Resume-core owns pure scoring/domain types without authentication, storage or HTTP.

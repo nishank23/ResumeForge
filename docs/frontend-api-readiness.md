@@ -1,22 +1,26 @@
 # Frontend API readiness
 
+## Job fit API — 2026-10-23
+
+Use GET/POST `/api/v1/resume/:id/ats-assessment` for the active Job fit panel. POST requires `{expectedVersion,jdText,consent:true}`. No provider request on panel open. Old readiness/JD POST routes return authenticated 410; history remains readable. Hover AI and tailoring routes remain separate. See [ATS contract](ats-assessment.md).
+
 ## Current integration — 2026-10-14
 
-| Capability | Status | Source |
-| --- | --- | --- |
-| Google session and protected shell | ✅ Connected; signed-in landing is the resume library. | [Auth app](../services/auth-service/src/app.ts), [shell](../apps/shell/src/App.tsx) |
-| Optional basic master profile | ✅ Create/read/professional draft update connected. | [Profile remote](../apps/profile-mfe/src/ProfileRemoteRoot.tsx) |
-| Resume library and saved editor | ✅ Owned create/list/load/update, rename, confirmed tombstone deletion/undo and saved PDF. | [Resume remote](../apps/resume-mfe/src/ResumeRemoteRoot.tsx), [gateway](../services/gateway/src/app.ts) |
-| File intake | ✅ Local PDF/DOCX/TXT/MD staging and explicit version-save through /resume/parse. Raw source viewers disabled behind a flag. | [Import dialog](../apps/resume-mfe/src/ResumeImportDialog.tsx) |
-| General readiness | ✅ Version-bound readiness-v2 with grouped actions, stale/error/retry and score-neutral dismissal. | [ATS use cases](../services/resume-service/src/ats/use-cases.ts) |
-| JD matching and selected rewriting | ✅ Local rules; optional paid Gemini evidence, private retrieval and reviewed target-only Apply. No checkbox prerequisite in current dialogs. | [ATS workflow](ats-workflow.md) |
-| Templates | ✅ Classic/Modern/Editorial styles, immutable appearance saves and PDF integration. | [Template registry](../apps/resume-mfe/src/templates/registry.ts) |
-| Master section/contact/complete APIs | Partial: profile-service handlers exist but gateway/browser forms do not expose them. Contact permissions/events need repair. | [Profile app](../services/profile-service/src/app.ts) |
-| Clone, version browsing and JD history | Partial: backend handlers exist but personal allowlist/gateway/UI do not connect them. | [Resume app](../services/resume-service/src/app.ts) |
-| Full saved-source JD tailoring | ✅ Guided confirmed experience, scoped batches, restored owned progress, review/reject/preview and independent-copy save/PDF. | [Contract](full-resume-tailoring.md) |
-| Legacy generation/suggestions/Apply | Gated; client-authoritative Apply and other unsafe suggestions remain unapproved. | [Audit](implementation-audit.md) |
-| Shared workspaces and audit viewer | Partial backend only; no released workspace flow. | [Workspace service](../services/workspace-service/src/workspace.ts) |
-| R2, general task orchestration, LinkedIn archive import, MCP | Not connected; bounded tailoring progress is persisted in resume metadata. | [Product plan](../PLAN.md) |
+| Capability                                                   | Status                                                                                                                                        | Source                                                                                                  |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Google session and protected shell                           | ✅ Connected; signed-in landing is the resume library.                                                                                        | [Auth app](../services/auth-service/src/app.ts), [shell](../apps/shell/src/App.tsx)                     |
+| Optional basic master profile                                | ✅ Create/read/professional draft update connected.                                                                                           | [Profile remote](../apps/profile-mfe/src/ProfileRemoteRoot.tsx)                                         |
+| Resume library and saved editor                              | ✅ Owned create/list/load/update, rename, confirmed tombstone deletion/undo and saved PDF.                                                    | [Resume remote](../apps/resume-mfe/src/ResumeRemoteRoot.tsx), [gateway](../services/gateway/src/app.ts) |
+| File intake                                                  | ✅ Local PDF/DOCX/TXT/MD staging and explicit version-save through /resume/parse. Raw source viewers disabled behind a flag.                  | [Import dialog](../apps/resume-mfe/src/ResumeImportDialog.tsx)                                          |
+| General readiness                                            | ✅ Version-bound readiness-v2 with grouped actions, stale/error/retry and score-neutral dismissal.                                            | [ATS use cases](../services/resume-service/src/ats/use-cases.ts)                                        |
+| JD matching and selected rewriting                           | ✅ Local rules; optional paid Gemini evidence, private retrieval and reviewed target-only Apply. No checkbox prerequisite in current dialogs. | [ATS workflow](ats-workflow.md)                                                                         |
+| Templates                                                    | ✅ Classic/Modern/Editorial styles, immutable appearance saves and PDF integration.                                                           | [Template registry](../apps/resume-mfe/src/templates/registry.ts)                                       |
+| Master section/contact/complete APIs                         | Partial: profile-service handlers exist but gateway/browser forms do not expose them. Contact permissions/events need repair.                 | [Profile app](../services/profile-service/src/app.ts)                                                   |
+| Clone, version browsing and JD history                       | Partial: backend handlers exist but personal allowlist/gateway/UI do not connect them.                                                        | [Resume app](../services/resume-service/src/app.ts)                                                     |
+| Full saved-source JD tailoring                               | ✅ Guided confirmed experience, scoped batches, restored owned progress, review/reject/preview and independent-copy save/PDF.                 | [Contract](full-resume-tailoring.md)                                                                    |
+| Legacy generation/suggestions/Apply                          | Gated; client-authoritative Apply and other unsafe suggestions remain unapproved.                                                             | [Audit](implementation-audit.md)                                                                        |
+| Shared workspaces and audit viewer                           | Partial backend only; no released workspace flow.                                                                                             | [Workspace service](../services/workspace-service/src/workspace.ts)                                     |
+| R2, general task orchestration, LinkedIn archive import, MCP | Not connected; bounded tailoring progress is persisted in resume metadata.                                                                    | [Product plan](../PLAN.md)                                                                              |
 
 Setup is in [README](../README.md). Start the approved personal stack; root pnpm dev includes unfinished services and is not the supported full-app launcher.
 

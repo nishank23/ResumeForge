@@ -43,6 +43,7 @@ export function createGatewayApp(
   app.on(["GET", "POST"], "/api/v1/resume/:id/readiness", proxy);
   app.put("/api/v1/resume/:id/readiness/preferences", proxy);
   app.on(["GET", "POST"], "/api/v1/resume/:id/jd-match", proxy);
+  app.on(["GET", "POST"], "/api/v1/resume/:id/ats-assessment", proxy);
   app.put("/api/v1/resume/:id/jd-match/preferences", proxy);
   app.post("/api/v1/resume/:id/ai-rewrite", proxy);
   app.post("/api/v1/resume/:id/ai-rewrite/apply", proxy);
@@ -80,7 +81,8 @@ export function createGatewayApp(
           signal: AbortSignal.timeout(
             c.req.path.endsWith("/pdf")
               ? 30_000
-              : c.req.path.endsWith("/jd-match") ||
+              : c.req.path.endsWith("/ats-assessment") ||
+                  c.req.path.endsWith("/jd-match") ||
                   c.req.path.endsWith("/ai-rewrite")
                 ? 60_000
                 : 10_000,

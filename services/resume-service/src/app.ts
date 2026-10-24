@@ -59,7 +59,7 @@ export function createResumeApp(config: {
           path,
         ) &&
           ["PUT", "OPTIONS"].includes(method)) ||
-        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(jd-match|ai-rewrite|tailoring)$/i.test(
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(ats-assessment|jd-match|ai-rewrite|tailoring)$/i.test(
           path,
         ) &&
           ["GET", "POST", "OPTIONS"].includes(method)) ||
@@ -102,7 +102,7 @@ export function createResumeApp(config: {
     c: Context,
     code: string,
     message: string,
-    status: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503,
+    status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 415 | 422 | 503,
     requestId: string,
   ) =>
     c.json(
@@ -383,7 +383,7 @@ export function createResumeApp(config: {
 
   const statusMap: Record<
     string,
-    400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 503
+    400 | 401 | 403 | 404 | 409 | 410 | 413 | 415 | 422 | 503
   > = {
     invalid_input: 422,
     file_too_large: 413,
@@ -546,13 +546,26 @@ export function createResumeApp(config: {
       );
     }
   }
-  app.on(["GET", "POST"], "/api/v1/resume/:id/jd-match", (c) =>
+  app.on(["GET", "POST"], "/api/v1/resume/:id/ats-assessment", (c) =>
     atsRequest(c, (context, id, body) =>
       c.req.method === "GET"
-        ? config.resumes.getJdMatch(context, id)
-        : config.resumes.runJdMatch(context, id, body),
+        ? config.resumes.getAtsAssessment(context, id)
+        : config.resumes.runAtsAssessment(context, id, body),
     ),
   );
+  app.on(["GET", "POST"], "/api/v1/resume/:id/jd-match", async (c) => {
+    if (c.req.method === "GET") return atsRequest(c, config.resumes.getJdMatch);
+    const requestId = randomUUID();
+    const auth = await authenticate(c, requestId);
+    if (!auth.authenticated) return auth.response;
+    return fail(
+      c,
+      "assessment_retired",
+      "Use the Job fit assessment with a pasted JD.",
+      410,
+      requestId,
+    );
+  });
   app.put("/api/v1/resume/:id/jd-match/preferences", (c) =>
     atsRequest(c, config.resumes.updateJdPreference),
   );
@@ -580,6 +593,14 @@ export function createResumeApp(config: {
     c.header("X-Request-Id", requestId);
     const auth = await authenticate(c, requestId);
     if (!auth.authenticated) return auth.response;
+    if (c.req.method === "POST")
+      return fail(
+        c,
+        "assessment_retired",
+        "Use Job fit with a pasted JD. Generic resume scores are retired.",
+        410,
+        requestId,
+      );
     try {
       const result =
         c.req.method === "GET"

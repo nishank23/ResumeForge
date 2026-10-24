@@ -5,19 +5,19 @@ import "@resume-forge/shared/styles.css";
 import { summaryFromText } from "@resume-forge/shared";
 import {
   applyTailoringPreview,
-  readinessHints,
   tailoringRunSchema,
 } from "@resume-forge/shared-types";
-import {
-  computeReadiness,
-  readinessProjection,
-  READINESS_RUBRIC,
-} from "@resume-forge/resume-core";
 import { ManualResumeEditor } from "../../src/ManualResumeEditor";
 import { TailoringDialog } from "../../src/TailoringDialog";
 import { ResumeImportDialog } from "../../src/ResumeImportDialog";
+import { AuthRemoteRoot } from "../../../auth-mfe/src/AuthRemoteRoot";
+import { ProfileRemoteRoot } from "../../../profile-mfe/src/ProfileRemoteRoot";
 import { ResumeLibrary } from "../../src/ResumeLibrary";
-import { blankResume, toResumeContent } from "../../src/resume-api";
+import {
+  blankResume,
+  toResumeContent,
+  createResumeApi,
+} from "../../src/resume-api";
 import { emptyEntry, richTextPlain } from "../../src/editor-draft";
 import "../../src/resume-library.css";
 const ids = {
@@ -91,6 +91,11 @@ const qa = {
   pdfFails: false,
   preflightStale: false,
   providerFails: false,
+  atsPreferredOnly: false,
+  atsFails: false,
+  atsUnauthorized: false,
+  delayAts: false,
+  resolveAts: null,
   delaySave: false,
   resolveSave: null,
   finishQueue: false,
@@ -105,9 +110,10 @@ const context = {
   activeWorkspace: { id: ids.workspace, type: "individual", name: "Personal" },
   workspaces: [],
   theme: params.get("theme") === "light" ? "light" : "dark",
-  reducedMotion: true,
+  reducedMotion: params.get("motion") !== "on",
   onNavigate: (path) => event("navigate", { path }),
 };
+document.documentElement.dataset.reducedMotion = String(context.reducedMotion);
 document.documentElement.dataset.theme = context.theme;
 document.documentElement.classList.toggle("dark", context.theme === "dark");
 function row(doc = fixture, id = ids.source, version = 1) {
@@ -125,7 +131,97 @@ qa.request = async (path, options = {}) => {
   const method = options.method ?? "GET";
   event("request", { path, method });
   let data;
-  if (path === "/api/v1/resume" && method === "GET") data = [row()];
+  if (path.endsWith("/ats-assessment")) {
+    if (qa.atsUnauthorized)
+      return new Response(
+        JSON.stringify({ error: { code: "unauthenticated" } }),
+        { status: 401 },
+      );
+    if (qa.atsFails)
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "provider_unavailable",
+            message: "PRIVATE PROVIDER DEBUG",
+          },
+        }),
+        { status: 503 },
+      );
+    if (method === "POST") {
+      const body = JSON.parse(String(options.body));
+      event("atsRun", body);
+      if (qa.delayAts)
+        await new Promise((resolve) => {
+          qa.resolveAts = resolve;
+        });
+      qa.atsEvaluation = {
+        id: ids.run,
+        resumeId: ids.source,
+        versionId: ids.copy,
+        resumeVersion: qa.version,
+        inputHash: "a".repeat(64),
+        jdHash: "b".repeat(64),
+        jdText: body.jdText,
+        evaluatedAt: new Date().toISOString(),
+        assessment: {
+          rubricVersion: "ats-evidence-v1",
+          model: "synthetic-gemini",
+          score: 50,
+          coverage: {
+            required: { supported: 1, total: 2 },
+            preferred: { supported: 0, total: 1 },
+          },
+          requirements: [
+            {
+              id: "python",
+              requirement: "Build Python APIs",
+              jdQuote: "build Python APIs",
+              importance: "required",
+              status: "supported",
+              evidence: [
+                {
+                  sourceId: "experience:backend-role",
+                  quote: "Built Python APIs for invoice review.",
+                },
+              ],
+            },
+            {
+              id: "operations",
+              requirement: "Investigate failed requests",
+              jdQuote: "Investigate failed requests",
+              importance: "required",
+              status: "uncertain",
+              evidence: [],
+            },
+            {
+              id: "kubernetes",
+              requirement: "Kubernetes",
+              jdQuote: "Kubernetes is preferred",
+              importance: "preferred",
+              status: "missing",
+              evidence: [],
+            },
+          ],
+          warnings: ["Synthetic evidence fixture only."],
+        },
+      };
+    }
+    if (qa.atsPreferredOnly && qa.atsEvaluation) {
+      const assessment = qa.atsEvaluation.assessment;
+      assessment.requirements = assessment.requirements.filter(
+        (item) => item.importance === "preferred",
+      );
+      assessment.coverage.required = { supported: 0, total: 0 };
+      assessment.score = 0;
+    }
+    data = {
+      currentVersion: qa.version,
+      evaluation:
+        qa.atsEvaluation?.resumeVersion === qa.version
+          ? qa.atsEvaluation
+          : null,
+    };
+  } else if (path === "/api/v1/resume" && method === "GET") data = [row()];
   else if (path === "/api/v1/resume" && method === "POST") {
     const body = JSON.parse(String(options.body));
     event("create", { content: body.content });
@@ -269,6 +365,11 @@ function Harness() {
       );
     return {
       load: async () => {
+        if (qa.previousTailoringStatus) {
+          storedRun.current = makeRun(qa.previousTailoringStatus);
+          storedRun.current.jdText =
+            "Previous job: create Java applications using Kafka and enterprise data systems.";
+        }
         if (qa.finishQueue && storedRun.current?.status === "queued")
           storedRun.current = makeRun();
         return {
@@ -327,30 +428,13 @@ function Harness() {
       openCopy: (id) => event("openCopy", { id }),
     };
   }, [version]);
-  const readiness = useMemo(() => {
-    const value = {
-      currentVersion: version,
-      dismissed: [],
-      evaluation: {
-        ...computeReadiness(readinessProjection(doc), readinessHints(doc)),
-        id: "checks",
-        resumeVersion: version,
-        rubricVersion: READINESS_RUBRIC,
-        evaluatedAt: new Date().toISOString(),
-      },
-    };
+  const atsAssessment = useMemo(() => {
+    const api = createResumeApi(qa.request, ids.workspace);
     return {
-      load: async () => value,
-      run: async () => {
-        event("readinessRun");
-        return value;
-      },
-      dismiss: async (_id, id, hidden) => ({
-        ...value,
-        dismissed: hidden ? [id] : [],
-      }),
+      load: (signal) => api.atsAssessment(ids.source, signal),
+      run: (text) => api.runAtsAssessment(ids.source, version, text),
     };
-  }, [version, doc]);
+  }, [version]);
   const save = async (next) => {
     event("saveStart", { version, title: next.title });
     if (qa.delaySave)
@@ -382,7 +466,7 @@ function Harness() {
         savedVersion={version}
         initialJd={jd}
         services={services}
-        reducedMotion
+        reducedMotion={context.reducedMotion}
         onClose={close}
       />
     );
@@ -406,24 +490,16 @@ function Harness() {
         onClose={close}
       />
     );
+  if (mode === "auth") return <AuthRemoteRoot context={context} />;
+  if (mode === "profile") return <ProfileRemoteRoot />;
   if (mode === "library") return <ResumeLibrary context={context} />;
   return (
     <ManualResumeEditor
       context={context}
       initialDraft={doc}
       savedVersion={version}
-      readiness={readiness}
-      jdMatch={{
-        tailoring: services,
-        load: async () => ({
-          currentVersion: version,
-          geminiAvailable: true,
-          evaluation: null,
-          dismissed: [],
-        }),
-        run: async () => ({}),
-        dismiss: async () => ({}),
-      }}
+      atsAssessment={atsAssessment}
+      jdMatch={{ tailoring: services }}
       onSave={save}
       onDownload={async (savedVersion, title) => {
         event("pdf", { version: savedVersion, title });

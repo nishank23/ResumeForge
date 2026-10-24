@@ -47,24 +47,14 @@ export function ResumeRemoteRoot({
     [retry, setRetry] = useState(0);
   const readinessId = saved?.id,
     readinessVersion = saved?.currentVersion;
-  const readiness = useMemo(
+  const atsAssessment = useMemo(
     () =>
       readinessId && readinessVersion
         ? {
-            load: (signal?: AbortSignal) => api.readiness(readinessId, signal),
-            run: () => api.runReadiness(readinessId, readinessVersion),
-            dismiss: (
-              evaluationId: string,
-              issueId: string,
-              dismissed: boolean,
-            ) =>
-              api.setReadinessDismissed(
-                readinessId,
-                readinessVersion,
-                evaluationId,
-                issueId,
-                dismissed,
-              ),
+            load: (signal?: AbortSignal) =>
+              api.atsAssessment(readinessId, signal),
+            run: (jdText: string) =>
+              api.runAtsAssessment(readinessId, readinessVersion, jdText),
           }
         : undefined,
     [api, readinessId, readinessVersion],
@@ -73,7 +63,6 @@ export function ResumeRemoteRoot({
     () =>
       readinessId && readinessVersion
         ? {
-            load: (signal?: AbortSignal) => api.jdMatch(readinessId, signal),
             tailoring: {
               load: (signal?: AbortSignal) =>
                 api.tailoring(readinessId, signal),
@@ -120,26 +109,6 @@ export function ResumeRemoteRoot({
               openCopy: (id: string) =>
                 context?.onNavigate?.(`/w/${workspaceId}/resumes/${id}`),
             },
-            run: (text: string, semantic: boolean, consent: boolean) =>
-              api.runJdMatch(
-                readinessId,
-                readinessVersion,
-                text,
-                semantic,
-                consent,
-              ),
-            dismiss: (
-              evaluationId: string,
-              issueId: string,
-              dismissed: boolean,
-            ) =>
-              api.dismissJd(
-                readinessId,
-                readinessVersion,
-                evaluationId,
-                issueId,
-                dismissed,
-              ),
           }
         : undefined,
     [api, readinessId, readinessVersion, context, workspaceId],
@@ -253,7 +222,7 @@ export function ResumeRemoteRoot({
           context={context}
           initialDraft={fromResumeContent(saved.content)}
           savedVersion={saved.currentVersion}
-          readiness={readiness}
+          atsAssessment={atsAssessment}
           jdMatch={jdMatch}
           rewrite={rewrite}
           initialTailoringOpen={

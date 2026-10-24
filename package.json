@@ -35,7 +35,7 @@
     "audit:worker:local": "pnpm --filter @resume-forge/workspace-service... build && node scripts/work-local-audit.mjs",
     "auth:local:init": "node scripts/init-local-auth.mjs",
     "db:test:profile": "pnpm --filter @resume-forge/profile-service... --filter @resume-forge/auth-service... --filter @resume-forge/workspace-service... --filter @resume-forge/gateway... -r build && pnpm --filter @resume-forge/profile-service test:db",
-    "dev:personal": "pnpm --filter @resume-forge/shared... --filter @resume-forge/auth-service... --filter @resume-forge/profile-service... --filter @resume-forge/resume-service... --filter @resume-forge/gateway... -r build && node scripts/start-personal-dev.mjs"
+    "dev:personal": "pnpm --filter @resume-forge/shared... --filter @resume-forge/auth-service... --filter @resume-forge/profile-service... --filter @resume-forge/resume-service... --filter @resume-forge/ats-service... --filter @resume-forge/gateway... -r build && node scripts/start-personal-dev.mjs"
   },
   "devDependencies": {
     "prettier": "^3.5.0",

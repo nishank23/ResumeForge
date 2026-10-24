@@ -171,3 +171,5 @@ export * from "./ats-workflow.js";
 export * from "./tailoring.js";
 
 export { readinessHints } from "./readiness-hints.js";
+
+export * from "./ats-assessment.js";

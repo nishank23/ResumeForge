@@ -1,5 +1,5 @@
-import { readinessHints } from "@resume-forge/shared-types";
-import { JdMatchPanel, type JdServices } from "./JdMatchPanel";
+import { AtsJobFitPanel, type AtsJobFitServices } from "./AtsJobFitPanel";
+import type { TailoringServices } from "./TailoringDialog";
 import { TailoringDialog } from "./TailoringDialog";
 import {
   ServerRewriteDialog,
@@ -7,16 +7,9 @@ import {
   type RewriteServices,
 } from "./ServerRewriteDialog";
 import {
-  computeReadiness,
-  readinessProjection,
-  type ReadinessCheck,
-} from "@resume-forge/resume-core";
-import type { ReadinessPanelProps } from "./ReadinessPanel";
-import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useReducer,
   useRef,
   useState,
@@ -24,6 +17,10 @@ import {
 } from "react";
 import {
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  EyeOff,
   Check,
   Download,
   Eye,
@@ -49,6 +46,7 @@ import {
   type HistoryAction,
 } from "./editor-history";
 import {
+  canMoveTarget,
   emptyEntry,
   emptySection,
   mutateTarget,
@@ -71,7 +69,6 @@ import {
   EDITOR_PANELS,
   ContentPanel,
   DesignPanel,
-  AtsPanel,
   type EditorPanel,
 } from "./EditorToolPanels";
 import {
@@ -88,14 +85,13 @@ interface EditSession {
   base: ResumeDraft;
   target: DraftTarget;
   candidate: ResumeDraft;
-  guidance?: ReadinessCheck;
 }
 export function ManualResumeEditor({
   context,
   initialDraft,
   onSave,
   onDownload,
-  readiness,
+  atsAssessment,
   jdMatch,
   rewrite,
   savedVersion = 0,
@@ -107,8 +103,8 @@ export function ManualResumeEditor({
   onSave: (draft: ResumeDraft) => Promise<number>;
   onDownload?: (version: number, title: string) => Promise<void>;
   initialTailoringOpen?: boolean;
-  readiness?: Pick<ReadinessPanelProps, "load" | "run" | "dismiss">;
-  jdMatch?: JdServices;
+  atsAssessment?: AtsJobFitServices;
+  jdMatch?: { tailoring?: TailoringServices };
   rewrite?: RewriteServices;
   savedVersion?: number;
   saveLabel?: string;
@@ -148,9 +144,9 @@ export function ManualResumeEditor({
     error: boolean;
   } | null>(null);
   const [noticeKey, setNoticeKey] = useState(0);
-  const [panel, setPanel] = useState<EditorPanel>("content");
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<"resume" | "tools">("resume");
+  const [panel, setPanel] = useState<EditorPanel>("ats");
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [mobileView, setMobileView] = useState<"resume" | "tools">("tools");
   const [tailoringOpen, setTailoringOpen] = useState(initialTailoringOpen);
   const [tailoringJd, setTailoringJd] = useState("");
   const [tailoringVersion, setTailoringVersion] = useState<number | null>(null);
@@ -174,16 +170,6 @@ export function ManualResumeEditor({
   const canvasRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const draft = session?.candidate ?? history.current;
-  const readinessPreview = useMemo(
-    () => computeReadiness(readinessProjection(draft), readinessHints(draft)),
-    [draft],
-  );
-  const previewChanged =
-    isDirty(history) ||
-    !!(
-      session &&
-      JSON.stringify(session.candidate) !== JSON.stringify(history.current)
-    );
   const appearance = draft.appearance ?? DEFAULT_APPEARANCE;
   const selection =
     selected.type === "header" || targetValue(history.current, selected)
@@ -384,11 +370,7 @@ export function ManualResumeEditor({
       select(target);
     }, 150);
   };
-  const addEntry = (
-    targetSection = section,
-    base = history.current,
-    guidance?: ReadinessCheck,
-  ) => {
+  const addEntry = (targetSection = section, base = history.current) => {
     if (!targetSection) return;
     const next = structuredClone(base);
     const match = next.sections.find((s) => s.id === targetSection.id);
@@ -401,12 +383,11 @@ export function ManualResumeEditor({
       itemId: id,
     };
     setSelected(target);
-    setSession({ base: next, target, candidate: next, guidance });
+    setSession({ base: next, target, candidate: next });
   };
   const startEdit = (
     target: DraftTarget = selection,
     base = history.current,
-    guidance?: ReadinessCheck,
   ) => {
     const targetSection = sectionFor(base, target);
     if (targetSection?.kind === "skills")
@@ -417,11 +398,11 @@ export function ManualResumeEditor({
       ["experience", "education", "projects"].includes(targetSection.kind) &&
       !targetSection.entries.length
     ) {
-      addEntry(targetSection, base, guidance);
+      addEntry(targetSection, base);
       return;
     }
     setSelected(target);
-    setSession({ base, target, candidate: base, guidance });
+    setSession({ base, target, candidate: base });
   };
   const updatePreview = useCallback((candidate: ResumeDraft) => {
     setSession((current) =>
@@ -567,8 +548,6 @@ export function ManualResumeEditor({
       document.removeEventListener("keydown", shortcut);
     };
   }, [session, aiSession, deleting, leaving, mode, announce, saveCurrent]);
-  const itemArrows =
-    selection.type !== "header" && selection.type !== "section";
   const changeAppearance = (value: EditorAppearance) => {
     const result = updateAppearance(history.current, value);
     if (!result.ok) {
@@ -600,52 +579,6 @@ export function ManualResumeEditor({
       : dirty || inlinePending || saving
         ? "Save changes before requesting ATS or AI actions."
         : undefined;
-  const onAtsTarget = (check: ReadinessCheck, edit: boolean) => {
-    const target = check.target;
-    if (!target) {
-      const rule = check.id.split(":")[0];
-      const kind = ["professional-section", "entry-details"].includes(
-        rule ?? "",
-      )
-        ? "experience"
-        : ["skills-section", "listed-skills"].includes(rule ?? "")
-          ? "skills"
-          : null;
-      if (edit && kind) {
-        const next = structuredClone(history.current);
-        let targetSection = next.sections.find(
-          (item) => item.kind === kind && !item.hidden,
-        );
-        if (!targetSection) {
-          targetSection = emptySection(kind, crypto.randomUUID());
-          next.sections.push(targetSection);
-        }
-        startEdit(
-          { type: "section", sectionId: targetSection.id },
-          next,
-          check,
-        );
-        return;
-      }
-      setPanel("content");
-      setPanelOpen(true);
-      announce(
-        `${check.title}: ${check.reason} Use Manage sections to add the missing section or entry.`,
-      );
-      return;
-    }
-    if (target.type !== "header" && !targetValue(history.current, target)) {
-      error("This assessment target is no longer present. Save and recheck.");
-      return;
-    }
-    select(target);
-    if (edit) startEdit(target, history.current, check);
-    else {
-      setPanelOpen(false);
-      setMobileView("resume");
-      focusActions(false);
-    }
-  };
   const documentBody = (
     <ResumeDocument
       draft={draft}
@@ -903,96 +836,121 @@ export function ManualResumeEditor({
             data-editor-mode={mode}
             style={appearanceVariables(appearance)}
           >
-            {mode === "editor" &&
-            actionsVisible &&
-            section?.kind !== "skills" ? (
-              <SectionActions
-                inline
-                containerRef={canvasRef}
-                toolbarRef={toolbarRef}
-                target={selection}
-                layoutKey={`${String(panelOpen)}:${panel}`}
-                draft={draft}
-                hidden={!!session || !!aiSession}
-                onPointerEnter={cancelHover}
-              >
-                <span
-                  className="rf-floating-target"
-                  title={targetLabel(history.current, selection)}
+            <div className="rf-document-container" ref={canvasRef}>
+              {mode === "editor" && actionsVisible ? (
+                <SectionActions
+                  key={JSON.stringify(selection)}
+                  containerRef={canvasRef}
+                  toolbarRef={toolbarRef}
+                  target={selection}
+                  layoutKey={`${String(panelOpen)}:${panel}`}
+                  draft={draft}
+                  hidden={!!session || !!aiSession}
+                  onPointerEnter={cancelHover}
                 >
-                  {targetLabel(history.current, selection)}
-                </span>
-                {selection.type !== "header" &&
-                rewriteTarget(history.current, selection) ? (
+                  <span
+                    className="rf-floating-target"
+                    title={targetLabel(history.current, selection)}
+                  >
+                    {targetLabel(history.current, selection)}
+                  </span>
+                  {selection.type !== "header" &&
+                  rewriteTarget(history.current, selection) ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      glow
+                      className="rf-ai-entry-action"
+                      onClick={() => {
+                        setAiSession({
+                          base: structuredClone(historyRef.current.current),
+                          target: structuredClone(selection),
+                        });
+                      }}
+                    >
+                      Improve with AI
+                      <span className="rf-ai-sheen" aria-hidden="true" />
+                    </Button>
+                  ) : null}
                   <Button
-                    size="sm"
                     variant="ghost"
-                    glow
-                    className="rf-ai-entry-action"
+                    size="icon"
+                    className="rf-selection-icon"
+                    data-selection-edit
+                    aria-label="Edit selected content"
+                    title="Edit details"
                     onClick={() => {
-                      setAiSession({
-                        base: structuredClone(historyRef.current.current),
-                        target: structuredClone(selection),
-                      });
+                      startEdit();
                     }}
                   >
-                    Improve with AI
+                    <Pencil size={16} aria-hidden="true" />
                   </Button>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-selection-edit
-                  aria-label="Edit selected content"
-                  onClick={() => {
-                    startEdit();
-                  }}
-                >
-                  <Pencil size={15} aria-hidden="true" /> Edit details
-                </Button>
-                {selection.type !== "header" ? (
-                  <DropdownMenu
-                    ariaLabel="More selected content actions"
-                    triggerLabel="More"
-                    items={[
-                      ...(itemArrows
-                        ? [
-                            {
-                              id: "up",
-                              label: "Move up",
-                              onSelect: () => {
-                                act("up");
-                              },
-                            },
-                            {
-                              id: "down",
-                              label: "Move down",
-                              onSelect: () => {
-                                act("down");
-                              },
-                            },
-                          ]
-                        : []),
-                      {
-                        id: "visibility",
-                        label: hidden ? "Show in resume" : "Hide from resume",
-                        onSelect: () => {
+                  {selection.type !== "header" ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label="Move selected content up"
+                        title="Move up"
+                        disabled={
+                          !canMoveTarget(history.current, selection, "up")
+                        }
+                        onClick={() => {
+                          act("up");
+                        }}
+                      >
+                        <ArrowUp size={16} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label="Move selected content down"
+                        title="Move down"
+                        disabled={
+                          !canMoveTarget(history.current, selection, "down")
+                        }
+                        onClick={() => {
+                          act("down");
+                        }}
+                      >
+                        <ArrowDown size={16} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon"
+                        aria-label={
+                          hidden ? "Show in resume" : "Hide from resume"
+                        }
+                        title={hidden ? "Show in resume" : "Hide from resume"}
+                        onClick={() => {
                           act("hide");
-                        },
-                      },
-                      {
-                        id: "delete",
-                        label: "Delete selected content",
-                        onSelect: () => {
+                        }}
+                      >
+                        {hidden ? (
+                          <Eye size={16} aria-hidden="true" />
+                        ) : (
+                          <EyeOff size={16} aria-hidden="true" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rf-selection-icon rf-selection-delete"
+                        aria-label="Delete selected content"
+                        title="Delete"
+                        onClick={() => {
                           setDeleting(selection);
-                        },
-                      },
-                    ]}
-                  />
-                ) : null}
-              </SectionActions>
-            ) : null}
-            <div className="rf-document-container" ref={canvasRef}>
+                        }}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                      </Button>
+                    </>
+                  ) : null}
+                </SectionActions>
+              ) : null}
               {isCompact && mode === "editor" ? (
                 <div className="rf-mobile-document">{documentBody}</div>
               ) : (
@@ -1055,71 +1013,26 @@ export function ManualResumeEditor({
                 />
               ) : null}
               {panel === "ats" || panel === "jd" ? (
-                <div
-                  className="rf-issue-filters rf-ats-modes"
-                  aria-label="ATS assessment type"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={panel === "ats"}
-                    onClick={() => {
-                      setPanel("ats");
-                    }}
-                  >
-                    Resume score
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={panel === "jd"}
-                    onClick={() => {
-                      setPanel("jd");
-                    }}
-                  >
-                    Job fit
-                  </button>
-                </div>
-              ) : null}
-              {panel === "ats" ? (
-                <AtsPanel
+                <AtsJobFitPanel
                   reducedMotion={context?.reducedMotion}
-                  {...readiness}
-                  savedVersion={savedVersion}
-                  preview={
-                    previewChanged || !savedVersion
-                      ? readinessPreview
-                      : undefined
-                  }
-                  disabledReason={
-                    !savedVersion
-                      ? "Save this resume before checking readiness."
-                      : conflict
-                        ? "Reopen the latest resume to resolve the save conflict."
-                        : dirty ||
-                            inlinePending ||
-                            saving ||
-                            session ||
-                            aiSession ||
-                            deleting ||
-                            leaving
-                          ? "Save changes and close edit dialogs before checking readiness."
-                          : undefined
-                  }
-                />
-              ) : null}
-              {panel === "jd" ? (
-                <JdMatchPanel
-                  reducedMotion={context?.reducedMotion}
-                  draft={draft}
-                  services={jdMatch}
+                  onWrite={() => {
+                    setPanelOpen(false);
+                    setMobileView("resume");
+                    setMode("editor");
+                  }}
+                  services={atsAssessment}
                   savedVersion={savedVersion}
                   disabledReason={
                     actionDisabled ||
                     (session || aiSession || deleting || leaving
-                      ? "Close edit dialogs before running JD analysis."
+                      ? "Close edit dialogs before checking job fit."
                       : undefined)
                   }
-                  onTarget={onAtsTarget}
-                  onTailor={(jd) => void requestTailoring(jd)}
+                  onTailor={
+                    jdMatch?.tailoring
+                      ? (jd) => void requestTailoring(jd)
+                      : undefined
+                  }
                 />
               ) : null}
             </aside>
@@ -1167,7 +1080,6 @@ export function ManualResumeEditor({
           sample={sampleDraft}
           base={session.base}
           target={session.target}
-          guidance={session.guidance}
           onImprove={
             rewrite && rewriteTarget(session.base, session.target)
               ? () => {
@@ -1179,13 +1091,6 @@ export function ManualResumeEditor({
               : undefined
           }
           improveDisabledReason={actionDisabled}
-          guidanceResult={
-            session.guidance
-              ? readinessPreview.checks.find(
-                  (check) => check.id === session.guidance?.id,
-                )
-              : undefined
-          }
           onPreview={updatePreview}
           onCancel={() => {
             setSelected(

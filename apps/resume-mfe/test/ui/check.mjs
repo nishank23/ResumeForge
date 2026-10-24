@@ -34,8 +34,8 @@ const wait = async (page, expression) => {
   }
   throw new Error("UI did not settle: " + expression);
 };
-const check = async (page, name, expression) => {
-  const result = await page.eval(expression);
+const check = async (page, name, expression, argument) => {
+  const result = await page.eval(expression, argument);
   assert.ok(result, name);
   results.push(name);
 };
@@ -98,14 +98,21 @@ const open = async (query = "", width = 1440, height = 1000) => {
     width,
     height,
     mobile: width < 600,
-    reducedMotion: true,
+    reducedMotion: !query.includes("motion=on"),
   });
   lastPage = page;
   await page.goto(url + query, { settleMs: 350 });
   await wait(
     page,
-    '!!window.__resumeUx && !!document.querySelector(".rf-ux-workspace, [role=dialog], .rf-resume-library")',
+    '!!window.__resumeUx && !!document.querySelector(".rf-ux-workspace, [role=dialog], .rf-resume-library, .rf-auth, .rf-page")',
   );
+  return page;
+};
+// Editing/motion scenarios explicitly choose Write; default Improve is verified separately.
+const openWriting = async (...args) => {
+  const page = await open(...args);
+  if (await page.eval('!!document.querySelector("[data-editor-write]")'))
+    await click(page, "Write");
   return page;
 };
 const events = (name) =>
@@ -117,6 +124,55 @@ try {
     [390, 844],
   ]) {
     const page = await open("", width, height);
+    await wait(
+      page,
+      '!!document.querySelector(".rf-ats-jd-input") && !document.querySelector(".rf-request-feedback")',
+    );
+    await check(
+      page,
+      `${width}: Improve and ATS summary open by default`,
+      () => {
+        const active = document.querySelector(
+          '.rf-rail-tabs button[aria-pressed="true"]',
+        );
+        const card = document.querySelector(".rf-ats-score-card");
+        const jd = document.querySelector(".rf-ats-jd-input");
+        const r = card.getBoundingClientRect();
+        return (
+          active.textContent.trim() === "Improve" &&
+          card.textContent.includes("ATS score") &&
+          !!card.querySelector('[data-unavailable="true"]') &&
+          r.top >= 0 &&
+          r.bottom <= innerHeight &&
+          r.bottom <= jd.getBoundingClientRect().top &&
+          getComputedStyle(document.querySelector(".rf-editor-tool-panel"))
+            .display !== "none"
+        );
+      },
+    );
+    await check(
+      page,
+      `${width}: initial assessment never starts a paid request`,
+      'window.__resumeUx.events.every(e=>e.name!=="atsRun") && !document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-job-context").textContent.includes("Tailor for this job")',
+    );
+    await check(
+      page,
+      `${width}: score and JD actions fit without a first-screen scroll`,
+      () => {
+        const card = document
+          .querySelector(".rf-ats-score-card")
+          .getBoundingClientRect();
+        const tailor = [...document.querySelectorAll(".rf-ats-job-fit button")]
+          .find((b) => b.textContent.trim() === "Tailor for this job")
+          .getBoundingClientRect();
+        return card.top >= 0 && tailor.bottom <= innerHeight;
+      },
+    );
+    await page.screenshot({
+      path: resolve(out, `improve-default-${width}.jpg`),
+      quality: 88,
+    });
+    await click(page, "Write");
     await wait(page, '!!document.querySelector(".rf-paper-stage")');
     await check(
       page,
@@ -138,6 +194,93 @@ try {
       `${width}: initial toolbar never overlays document`,
       '!document.querySelector(".rf-floating-actions")',
     );
+    const hoverPoint = await page.eval(() => {
+      const r = document
+        .querySelector('[aria-label="Professional summary on resume page"]')
+        .getBoundingClientRect();
+      return { x: r.left + 20, y: r.top + 10 };
+    });
+    await page.send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      ...hoverPoint,
+    });
+    await wait(
+      page,
+      '!!document.querySelector(".rf-floating-actions .rf-ai-entry-action")',
+    );
+    await check(
+      page,
+      `${width}: hover actions float beside the summary without shifting paper`,
+      () => {
+        const toolbar = document.querySelector(
+          '[aria-label="Selected content actions"]',
+        );
+        const region = document
+          .querySelector('[aria-label="Professional summary on resume page"]')
+          .closest("[data-editor-section]");
+        const r = toolbar.getBoundingClientRect(),
+          target = region.getBoundingClientRect();
+        return (
+          toolbar.parentElement.classList.contains("rf-document-container") &&
+          getComputedStyle(toolbar).position === "absolute" &&
+          Math.abs(r.top - target.bottom - 6) < 2 &&
+          r.left >= 0 &&
+          r.right <= innerWidth &&
+          !!toolbar.querySelector(".rf-ai-entry-action")
+        );
+      },
+    );
+    await check(
+      page,
+      `${width}: floating action labels fit their buttons`,
+      () =>
+        [...document.querySelectorAll(".rf-floating-actions button")].every(
+          (button) => button.scrollWidth <= button.clientWidth + 1,
+        ),
+    );
+    if (width < 481) {
+      await check(
+        page,
+        "phone: AI label and utility icons use two complete rows",
+        () => {
+          const ai = document
+            .querySelector(".rf-ai-entry-action")
+            .getBoundingClientRect();
+          const icons = [
+            ...document.querySelectorAll(
+              ".rf-floating-actions .rf-selection-icon",
+            ),
+          ].map((button) => button.getBoundingClientRect());
+          return (
+            icons.length === 5 &&
+            icons.every(
+              (r) => r.top >= ai.bottom && Math.abs(r.top - icons[0].top) < 1,
+            )
+          );
+        },
+      );
+    }
+    await page.eval(() =>
+      document
+        .querySelector("[data-editor-entry]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      '!!document.querySelector("[data-editor-entry].is-selected")',
+    );
+    await check(page, `${width}: hover toolbar follows the work entry`, () => {
+      const toolbar = document
+        .querySelector(".rf-floating-actions")
+        .getBoundingClientRect();
+      const entry = document
+        .querySelector("[data-editor-entry].is-selected")
+        .getBoundingClientRect();
+      return (
+        Math.abs(toolbar.top - entry.bottom - 6) < 2 &&
+        !!document.querySelector(".rf-floating-actions .rf-ai-entry-action")
+      );
+    });
     if (width < 901) {
       await check(
         page,
@@ -173,34 +316,65 @@ try {
     await click(page, "Improve");
     await wait(
       page,
-      'document.querySelector(".rf-compact-score").textContent.includes("Evaluated")',
+      '!!document.querySelector(".rf-ats-job-fit") && !!document.querySelector(".rf-ats-jd-input")',
+    );
+    await wait(
+      page,
+      `${events("request")}.some(e=>e.path.endsWith("/ats-assessment")&&e.method==="GET")`,
     );
     await check(
       page,
-      `${width}: score replaces detailed check lists`,
-      '!!document.querySelector(".rf-compact-score") && !document.querySelector(".rf-assessment-feedback, .rf-priority-check, .rf-all-checks, .rf-readiness-components, .rf-readiness-summary")',
+      `${width}: no ATS score or paid call without a job`,
+      '!document.querySelector(".rf-ats-result, .rf-compact-score, .rf-ats-modes, .rf-assessment-feedback") && window.__resumeUx.events.every(e=>e.name!=="atsRun")',
+    );
+    await fill(
+      page,
+      ".rf-ats-jd-input",
+      "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests. Kubernetes is preferred.",
     );
     await check(
       page,
-      `${width}: existing returned score stays visible`,
-      'document.querySelector(".rf-compact-score").textContent.includes("81")',
+      `${width}: pasting JD never calls AI`,
+      `${events("atsRun")}.length===0`,
     );
-    await click(page, "Recheck resume");
-    await wait(page, `${events("readinessRun")}.length===1`);
+    await click(page, "Check job fit");
+    await wait(page, '!!document.querySelector(".rf-ats-result")');
     await check(
       page,
-      `${width}: manual recheck preserves resume version`,
-      'window.__resumeUx.version===1 && document.querySelector(".rf-compact-score").textContent.includes("81")',
+      `${width}: one consented version-bound evidence request`,
+      `${events("atsRun")}.length===1 && ${events("atsRun")}[0].consent===true && ${events("atsRun")}[0].expectedVersion===1 && window.__resumeUx.version===1`,
     );
-    await click(page, "Job fit");
-    await wait(page, '!!document.querySelector(".rf-jd-match")');
     await check(
       page,
-      `${width}: job fit replaces score without opening tailoring`,
-      '!document.querySelector(".rf-compact-score, .rf-tailoring-dialog")',
+      `${width}: result is requirement coverage not legacy fixed checks`,
+      'document.querySelector(".rf-ats-result").textContent.includes("50") && document.querySelector(".rf-ats-result").textContent.includes("1 of 2 required") && !document.querySelector(".rf-readiness-components, .rf-priority-check")',
     );
-    await click(page, "Resume score");
-    await wait(page, '!!document.querySelector(".rf-compact-score")');
+    await check(
+      page,
+      `${width}: improvement guidance is visible before evidence disclosure`,
+      () => {
+        const steps = document.querySelector(".rf-ats-next-steps");
+        const items = [...steps.querySelectorAll("li")];
+        return (
+          items[0].textContent.includes("Investigate failed requests") &&
+          items[0].textContent.includes("Required") &&
+          items[1].textContent.includes("Kubernetes") &&
+          steps.textContent.includes("Add only experience you actually have") &&
+          !document.querySelector(".rf-ats-result details").open
+        );
+      },
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-ats-result details").open = true),
+    );
+    await check(
+      page,
+      `${width}: exact requirement evidence stays available`,
+      'document.querySelector(".rf-ats-result").textContent.includes("Built Python APIs for invoice review.") && document.querySelector(".rf-ats-result").textContent.includes("Uncertain") && document.querySelector(".rf-ats-result").textContent.includes("Missing evidence")',
+    );
+    await page.eval(
+      () => (document.querySelector(".rf-ats-result details").open = false),
+    );
     await page.screenshot({
       path: resolve(out, `improve-${width}.jpg`),
       quality: 88,
@@ -381,7 +555,7 @@ try {
           const panel = document.querySelector(".rf-tailoring-controls");
           panel.scrollTop = panel.scrollHeight;
           return (
-            panel.scrollTop > 0 &&
+            (panel.scrollHeight <= panel.clientHeight || panel.scrollTop > 0) &&
             Math.abs(preview.getBoundingClientRect().top - top) < 1 &&
             preview.getBoundingClientRect().top < 220
           );
@@ -458,7 +632,7 @@ try {
     );
     await page.close();
   }
-  let page = await open();
+  let page = await openWriting();
   await page.eval(async () => {
     const summary = document.querySelector(
       '[aria-label="Professional summary on resume page"]',
@@ -469,7 +643,7 @@ try {
   await check(
     page,
     "hover restores Improve with AI for the summary",
-    'document.querySelector(".rf-selected-actions .rf-ai-entry-action")?.getClientRects().length > 0',
+    'document.querySelector(".rf-floating-actions .rf-ai-entry-action")?.getClientRects().length > 0',
   );
   await page.eval(() => document.querySelector(".rf-ai-entry-action").click());
   await wait(page, '!!document.querySelector("[role=dialog]")');
@@ -497,20 +671,42 @@ try {
       .querySelector('[aria-label="Professional summary on resume page"]')
       .click(),
   );
-  await wait(page, '!!document.querySelector(".rf-selected-actions")');
+  await wait(page, '!!document.querySelector(".rf-floating-actions")');
   await check(
     page,
     "selected content leads with editing and hides secondary actions",
     () =>
       !!document.querySelector("[data-selection-edit]") &&
-      !document.querySelector('.rf-selected-actions [role="menu"]'),
+      !document.querySelector('.rf-floating-actions [role="menu"]'),
+  );
+  await check(
+    page,
+    "selected actions expose icons with accessible names and no utility text",
+    () => {
+      const labels = [
+        "Edit selected content",
+        "Move selected content up",
+        "Move selected content down",
+        "Delete selected content",
+      ];
+      return labels.every((label) => {
+        const button = document.querySelector(
+          `.rf-floating-actions button[aria-label="${label}"]`,
+        );
+        return (
+          button &&
+          button.querySelector("svg") &&
+          button.textContent.trim() === "" &&
+          !!button.title
+        );
+      });
+    },
   );
   await page.eval(() =>
     document
-      .querySelector('[aria-label="More selected content actions"]')
+      .querySelector('.rf-floating-actions [aria-label="Hide from resume"]')
       .click(),
   );
-  await click(page, "Hide from resume");
   await check(page, "hidden content action remains connected", () =>
     document
       .querySelector('[aria-label="Professional summary on resume page"]')
@@ -531,7 +727,222 @@ try {
         .classList.contains("is-hidden"),
   );
   await page.close();
-  page = await open();
+  for (const width of [1440, 768, 390]) {
+    page = await openWriting("", width, 1000);
+    await page.eval(() =>
+      document
+        .querySelector("[data-skills-dialog]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      '!!document.querySelector("[data-skills-dialog].is-selected") && !!document.querySelector(".rf-floating-actions [data-selection-edit]")',
+    );
+    await check(
+      page,
+      `${width}: Skills hover has edit and section movement icons without unsupported AI`,
+      () => {
+        const actions = document.querySelector(".rf-floating-actions");
+        const r = actions.getBoundingClientRect(),
+          skills = document
+            .querySelector("[data-skills-dialog]")
+            .getBoundingClientRect();
+        return (
+          !!actions.querySelector('[aria-label="Edit selected content"]') &&
+          !!actions.querySelector('[aria-label="Move selected content up"]') &&
+          !actions.querySelector(".rf-ai-entry-action") &&
+          Math.abs(r.top - skills.bottom - 6) < 2 &&
+          r.left >= 0 &&
+          r.right <= innerWidth
+        );
+      },
+    );
+    await page.eval(() =>
+      document
+        .querySelector(".rf-floating-actions [data-selection-edit]")
+        .click(),
+    );
+    await wait(page, '!!document.querySelector("[role=dialog]")');
+    await check(
+      page,
+      `${width}: Skills hover edit opens its existing complete form`,
+      () =>
+        document.querySelector("[role=dialog]").textContent.includes("Skills"),
+    );
+    await click(page, "Cancel");
+    await page.eval(() =>
+      document
+        .querySelector("[data-skills-dialog]")
+        .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+    );
+    await wait(
+      page,
+      () =>
+        !!document.querySelector(
+          '.rf-floating-actions [aria-label="Move selected content up"]',
+        ),
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Move selected content up"]',
+        )
+        .click(),
+    );
+    await check(
+      page,
+      `${width}: section move icon reorders only the selected section`,
+      () => {
+        const rows = [...document.querySelectorAll("[data-editor-section]")];
+        return (
+          rows.findIndex((row) => row.hasAttribute("data-skills-dialog")) === 3
+        );
+      },
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Move selected content down"]',
+        )
+        .click(),
+    );
+    await check(
+      page,
+      `${width}: section move down restores order`,
+      () =>
+        [...document.querySelectorAll("[data-editor-section]")].findIndex(
+          (row) => row.hasAttribute("data-skills-dialog"),
+        ) === 4,
+    );
+    await page.eval(() =>
+      document
+        .querySelector(
+          '.rf-floating-actions [aria-label="Delete selected content"]',
+        )
+        .click(),
+    );
+    await wait(page, '!!document.querySelector("[role=alertdialog]")');
+    await check(
+      page,
+      `${width}: delete icon keeps explicit confirmation`,
+      () => !!document.querySelector("[data-skills-dialog]"),
+    );
+    await click(page, "Cancel");
+    await page.close();
+  }
+  for (const [view, selector] of [
+    ["auth", ".rf-auth"],
+    ["profile", ".rf-page"],
+    ["library", ".rf-resume-library"],
+    ["editor", ".rf-ux-workspace"],
+  ]) {
+    page = await openWriting(`?view=${view}&motion=on`);
+    await check(
+      page,
+      `${view}: ready page has a finite entrance`,
+      (selector) => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return (
+          style.animationName.includes("rf-studio-arrive") &&
+          parseFloat(style.animationDuration) > 0 &&
+          parseFloat(style.animationDuration) < 1 &&
+          style.animationIterationCount === "1"
+        );
+      },
+      selector,
+    );
+    await check(
+      page,
+      `${view}: motion does not widen the viewport`,
+      () => document.documentElement.scrollWidth <= innerWidth,
+    );
+    if (view === "editor") {
+      await page.eval(() => {
+        for (const animation of document
+          .querySelector(".rf-paper-stage")
+          .getAnimations())
+          animation.finish();
+      });
+      await check(
+        page,
+        "paper entrance releases clipping for floating controls",
+        () =>
+          getComputedStyle(document.querySelector(".rf-paper-stage"))
+            .clipPath === "none",
+      );
+      await page.eval(() =>
+        document
+          .querySelector('[aria-label="Professional summary on resume page"]')
+          .dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+      );
+      await wait(page, '!!document.querySelector(".rf-ai-sheen")');
+      await check(
+        page,
+        "AI hover has a finite reveal and light sweep",
+        () =>
+          getComputedStyle(document.querySelector(".rf-floating-actions"))
+            .animationName === "rf-context-arrive" &&
+          getComputedStyle(document.querySelector(".rf-ai-sheen"))
+            .animationName === "rf-ai-ink-sweep" &&
+          getComputedStyle(document.querySelector(".rf-ai-sheen"))
+            .animationIterationCount === "1",
+      );
+      await page.eval(() => {
+        document.documentElement.dataset.reducedMotion = "true";
+      });
+      await check(
+        page,
+        "quiet motion immediately disables page, hover and AI sweep",
+        () =>
+          [
+            ".rf-ux-workspace",
+            ".rf-paper-stage",
+            ".rf-floating-actions",
+            ".rf-ai-sheen",
+          ].every(
+            (selector) =>
+              getComputedStyle(document.querySelector(selector))
+                .animationName === "none",
+          ),
+      );
+      await page.eval(() => {
+        document.documentElement.dataset.reducedMotion = "false";
+      });
+      await page.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+      });
+      await check(
+        page,
+        "OS reduced motion disables page, hover and AI sweep",
+        () =>
+          [
+            ".rf-ux-workspace",
+            ".rf-paper-stage",
+            ".rf-floating-actions",
+            ".rf-ai-sheen",
+          ].every(
+            (selector) =>
+              getComputedStyle(document.querySelector(selector))
+                .animationName === "none",
+          ),
+      );
+      await page.send("Emulation.setEmulatedMedia", {
+        media: "print",
+        features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
+      });
+      await check(
+        page,
+        "print excludes action toolbar and decorative motion",
+        () =>
+          getComputedStyle(document.querySelector(".rf-floating-actions"))
+            .display === "none" &&
+          getComputedStyle(document.querySelector(".rf-paper-stage"))
+            .animationName === "none",
+      );
+    }
+    await page.close();
+  }
+  page = await openWriting();
 
   await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await editSummary(
@@ -540,17 +951,18 @@ try {
   );
   await click(page, "Design");
   await click(page, "Improve");
-  await wait(page, '!!document.querySelector(".rf-compact-score")');
+  await wait(page, '!!document.querySelector(".rf-ats-job-fit")');
   await check(
     page,
-    "unsaved score remains a preview with saved recheck blocked",
+    "unsaved resume blocks job fit and shows no locally invented score",
     () =>
+      !document.querySelector(".rf-ats-result") &&
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Check job fit",
+      ).disabled &&
       document
-        .querySelector(".rf-compact-score")
-        .textContent.includes("Unsaved preview") &&
-      [...document.querySelectorAll(".rf-compact-score button")].find(
-        (button) => button.textContent.trim() === "Recheck resume",
-      ).disabled,
+        .querySelector(".rf-ats-job-fit")
+        .textContent.includes("Save changes"),
   );
   await click(page, "Write");
   await check(
@@ -573,7 +985,7 @@ try {
       "[0].version===2",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Backend developer building Python API services with automated checks.",
@@ -588,7 +1000,7 @@ try {
       '.length===0 && document.body.innerText.includes("Backend developer building Python API services with automated checks.")',
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Backend developer building Python API services with automated checks.",
@@ -608,7 +1020,7 @@ try {
     events("start") + "[0].version===2",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(page, "First edits to Python API summary before saving.");
   await page.eval("window.__resumeUx.delaySave=true");
   await click(page, "Save & tailor");
@@ -630,7 +1042,7 @@ try {
       ".length===0",
   );
   await page.close();
-  page = await open();
+  page = await openWriting();
   await editSummary(
     page,
     "Python API summary with new testing details before saving.",
@@ -652,7 +1064,7 @@ try {
     '!document.querySelector(".rf-tailoring-dialog") && !!document.querySelector("[role=dialog]")',
   );
   await page.close();
-  page = await open("", 390, 844);
+  page = await openWriting("", 390, 844);
   await wait(
     page,
     () => !!document.querySelector(".rf-mobile-document .tiptap"),
@@ -670,7 +1082,7 @@ try {
     '!!document.querySelector(".rf-mobile-document") && window.__resumeUx.latest.appearance===undefined',
   );
   await page.close();
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval('document.querySelector(".rf-tailoring-optional").open=true');
   await wait(page, '!!document.querySelector("#experience-answer")');
   await fill(
@@ -698,7 +1110,7 @@ try {
   );
   await page.close();
   for (const scenario of ["stale", "expired"]) {
-    page = await open("?view=tailoring&case=" + scenario);
+    page = await openWriting("?view=tailoring&case=" + scenario);
     await wait(page, '!!document.querySelector(".rf-tailoring-review")');
     await check(
       page,
@@ -707,7 +1119,7 @@ try {
     );
     await page.close();
   }
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval("window.__resumeUx.preflightStale=true");
   await click(page, "Tailor my resume");
   await wait(page, 'document.body.innerText.includes("saved version changed")');
@@ -717,7 +1129,7 @@ try {
     events("start") + ".length===0",
   );
   await page.close();
-  page = await open("?view=tailoring");
+  page = await openWriting("?view=tailoring");
   await page.eval("window.__resumeUx.providerFails=true");
   await click(page, "Tailor my resume");
   await wait(page, 'document.body.innerText.includes("Provider unavailable")');
@@ -735,7 +1147,7 @@ try {
     events("start") + "[0].id===" + events("start") + "[1].id",
   );
   await page.close();
-  page = await open("?case=queued");
+  page = await openWriting("?case=queued");
   await click(page, "Tailor for a job");
   await wait(
     page,
@@ -761,7 +1173,7 @@ try {
     events("cancel") + ".length===1 && " + events("apply") + ".length===0",
   );
   await page.close();
-  page = await open("?view=tailoring&case=empty");
+  page = await openWriting("?view=tailoring&case=empty");
   await wait(
     page,
     'document.body.innerText.includes("No supported changes were needed")',
@@ -772,7 +1184,7 @@ try {
     '!document.querySelector(".rf-ai-dialog-footer button:last-child").disabled',
   );
   await page.close();
-  page = await open("?view=tailoring&case=saved");
+  page = await openWriting("?view=tailoring&case=saved");
   await wait(page, '!!document.querySelector(".rf-tailoring-ready")');
   await click(page, "Download PDF");
   await wait(page, events("copyPdf") + ".length===1");
@@ -783,7 +1195,7 @@ try {
   );
   await page.close();
   for (const width of [1366, 1024, 768, 390]) {
-    page = await open("?view=library&long-title", width, 800);
+    page = await openWriting("?view=library&long-title", width, 800);
     await wait(page, '!!document.querySelector(".rf-library-name")');
     await check(
       page,
@@ -809,7 +1221,7 @@ try {
     });
     await page.close();
   }
-  page = await open("?view=tailoring&case=multiple", 1366, 768);
+  page = await openWriting("?view=tailoring&case=multiple", 1366, 768);
   await wait(
     page,
     () => !!document.querySelector("[aria-label='Choose suggestion']"),
@@ -885,7 +1297,7 @@ try {
       '[0].selected[0]==="role-change"',
   );
   await page.close();
-  page = await open("?view=library");
+  page = await openWriting("?view=library");
   await wait(page, '!!document.querySelector(".rf-library-name")');
   await click(page, "Tailor for a job");
   await check(
@@ -894,7 +1306,7 @@ try {
     events("navigate") + '[0].path.endsWith("?action=tailor")',
   );
   await page.close();
-  page = await open("?view=library");
+  page = await openWriting("?view=library");
   await wait(page, '!!document.querySelector(".rf-library-name")');
   await click(page, "Start from scratch");
   await wait(page, events("create") + ".length===1");
@@ -904,7 +1316,7 @@ try {
     events("navigate") + ".length===1",
   );
   await page.close();
-  page = await open("?view=import", 390, 844);
+  page = await openWriting("?view=import", 390, 844);
   const { root } = await page.send("DOM.getDocument");
   const { nodeId } = await page.send("DOM.querySelector", {
     nodeId: root.nodeId,
@@ -945,7 +1357,204 @@ try {
     events("navigate") + ".length===1",
   );
   await page.close();
-  page = await open("?theme=light", 1440, 1000);
+  for (const failure of ["atsUnauthorized", "atsFails"]) {
+    page = await openWriting();
+    await click(page, "Improve");
+    await wait(
+      page,
+      `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+    );
+    await fill(
+      page,
+      ".rf-ats-jd-input",
+      "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests.",
+    );
+    await page.eval((name) => {
+      window.__resumeUx[name] = true;
+    }, failure);
+    await click(page, "Check job fit");
+    await wait(
+      page,
+      '!!document.querySelector(".rf-ats-job-fit [role=alert]")',
+    );
+    await check(
+      page,
+      `${failure}: safe failure preserves JD with no false score`,
+      '!!document.querySelector(".rf-ats-jd-input").value && !document.querySelector(".rf-ats-result") && !document.querySelector(".rf-ats-job-fit").textContent.includes("PRIVATE PROVIDER DEBUG")',
+    );
+    if (failure === "atsUnauthorized")
+      await check(
+        page,
+        "401 asks for sign-in",
+        'document.querySelector(".rf-ats-job-fit [role=alert]").textContent.includes("Sign in again")',
+      );
+    await page.close();
+  }
+  page = await openWriting();
+  await click(page, "Improve");
+  await wait(
+    page,
+    `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Backend Engineer: build Python APIs and PostgreSQL data services. Investigate failed requests.",
+  );
+  await page.eval(() => {
+    window.__resumeUx.delayAts = true;
+  });
+  await click(page, "Check job fit");
+  await wait(page, 'typeof window.__resumeUx.resolveAts==="function"');
+  await check(
+    page,
+    "working assessment prevents duplicate paid calls",
+    () =>
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Check job fit",
+      ).disabled &&
+      document.querySelector(".rf-ats-jd-input").disabled &&
+      !document.querySelector(".rf-ats-result"),
+  );
+  await page.eval(() => window.__resumeUx.resolveAts());
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await click(page, "Write");
+  await click(page, "Improve");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "saved assessment restores JD and tailoring without a new paid request",
+    () =>
+      ![...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (button) => button.textContent.trim() === "Tailor for this job",
+      ).disabled &&
+      document
+        .querySelector(".rf-ats-job-excerpt")
+        .textContent.includes("Backend Engineer") &&
+      window.__resumeUx.events.filter((e) => e.name === "atsRun").length === 1,
+  );
+  await click(page, "Tailor for this job");
+  await wait(page, '!!document.querySelector("[role=dialog]")');
+  await check(page, "job-based improvement receives the checked JD", () =>
+    document
+      .querySelector(".rf-tailoring-job textarea")
+      .value.includes("Backend Engineer"),
+  );
+  await click(page, "Back to resume");
+  for (const status of ["ready", "saved", "queued"]) {
+    await page.eval((status) => {
+      window.__resumeUx.previousTailoringStatus = status;
+    }, status);
+    await click(page, "Tailor for this job");
+    await wait(page, '!!document.querySelector("[role=dialog]")');
+    if (status === "queued") {
+      await wait(
+        page,
+        'document.querySelector("[role=dialog]").textContent.includes("another job is already in progress")',
+      );
+      await check(
+        page,
+        "another active job is explicit and never silently replaced",
+        () =>
+          !document.querySelector(".rf-tailoring-job") &&
+          window.__resumeUx.events.every(
+            (e) => !["start", "cancel"].includes(e.name),
+          ),
+      );
+      await click(page, "Close and continue later");
+    } else {
+      await wait(
+        page,
+        '!!document.querySelector(".rf-tailoring-job textarea")',
+      );
+      await check(
+        page,
+        `${status}: previous job never replaces the checked JD`,
+        () =>
+          document
+            .querySelector(".rf-tailoring-job textarea")
+            .value.includes("Backend Engineer") &&
+          !document.querySelector(".rf-tailoring-review") &&
+          window.__resumeUx.events.every((e) => e.name !== "start"),
+      );
+      await click(page, "Back to resume");
+    }
+  }
+  await page.eval(() => {
+    window.__resumeUx.previousTailoringStatus = null;
+  });
+  await click(page, "Change job description");
+  await check(
+    page,
+    "opening the JD editor retains the unchanged assessed score",
+    '!!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-jd-input").value.includes("Backend Engineer")',
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Different job: build Java applications and operate Kafka data services with production incident response.",
+  );
+  await check(
+    page,
+    "changed JD hides stale coverage",
+    '!document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-job-fit").textContent.includes("job description changed")',
+  );
+  await click(page, "Clear");
+  await check(
+    page,
+    "clear removes job text without a paid request",
+    'document.querySelector(".rf-ats-jd-input").value==="" && window.__resumeUx.events.filter(e=>e.name==="atsRun").length===1',
+  );
+  await page.eval(() => {
+    delete window.__resumeUx.atsEvaluation.jdText;
+  });
+  await click(page, "Write");
+  await click(page, "Improve");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "historical scores stay visible with a clear JD-reuse fallback",
+    () =>
+      document.querySelector(".rf-ats-score-card").textContent.includes("50") &&
+      document
+        .querySelector(".rf-ats-job-context")
+        .textContent.includes("older assessment") &&
+      [...document.querySelectorAll(".rf-ats-job-fit button")].find(
+        (b) => b.textContent.trim() === "Tailor for this job",
+      ).disabled,
+  );
+  await click(page, "Edit resume");
+  await check(
+    page,
+    "improvement action returns to the editable resume",
+    () =>
+      !document.querySelector(".rf-editor-tool-panel") &&
+      document.querySelector(".rf-paper-stage").dataset.editorMode === "editor",
+  );
+  await page.close();
+  page = await openWriting();
+  await click(page, "Improve");
+  await wait(
+    page,
+    `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
+  );
+  await fill(
+    page,
+    ".rf-ats-jd-input",
+    "Backend Engineer: work on services and pipelines. Kubernetes is preferred for this position.",
+  );
+  await page.eval(() => {
+    window.__resumeUx.atsPreferredOnly = true;
+  });
+  await click(page, "Check job fit");
+  await wait(page, '!!document.querySelector(".rf-ats-result")');
+  await check(
+    page,
+    "preferred-only jobs explain the score using preferred coverage",
+    'document.querySelector(".rf-ats-result").textContent.includes("0 of 1 preferred") && !document.querySelector(".rf-ats-result").textContent.includes("0 of 0 required")',
+  );
+  await page.close();
+  page = await openWriting("?theme=light", 1440, 1000);
   await wait(page, '!!document.querySelector(".rf-paper-stage")');
   await page.screenshot({
     path: resolve(out, "editor-light-1440.jpg"),

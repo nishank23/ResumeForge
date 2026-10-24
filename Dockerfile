@@ -16,6 +16,7 @@ COPY packages/prisma-client/package.json packages/prisma-client/package.json
 COPY packages/resume-core/package.json packages/resume-core/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/shared-types/package.json packages/shared-types/package.json
+COPY services/ats-service/package.json services/ats-service/package.json
 COPY services/auth-service/package.json services/auth-service/package.json
 COPY services/gateway/package.json services/gateway/package.json
 COPY services/profile-service/package.json services/profile-service/package.json
