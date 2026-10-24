@@ -87,8 +87,8 @@ export function TailoringExperience({
           One useful detail at a time
         </h3>
         <p>
-          Only gaps worth clarifying. Up to three optional questions across your
-          resume. You can review your facts at any time.
+          Add only real work you left out. Answer any useful question, then
+          confirm your added facts below. You can leave every question blank.
         </p>
       </div>
       {entry && question && target ? (

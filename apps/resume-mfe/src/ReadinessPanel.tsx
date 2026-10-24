@@ -5,19 +5,14 @@ import {
   DocumentStatus,
   RequestFeedback,
 } from "@resume-forge/shared";
-import type {
-  ReadinessCheck,
-  ReadinessResult,
-} from "@resume-forge/resume-core";
+import type { ReadinessResult } from "@resume-forge/resume-core";
 import type { ReadinessState } from "@resume-forge/shared-types";
-import { AssessmentFeedback } from "./AssessmentFeedback";
 import { READINESS_RUBRIC } from "@resume-forge/resume-core";
 import { needsReadinessCheck } from "./readiness-feedback";
 export interface ReadinessPanelProps {
   savedVersion: number;
   reducedMotion?: boolean;
   disabledReason?: string;
-  navigationDisabled?: boolean;
   preview?: ReadinessResult;
   load?: (signal?: AbortSignal) => Promise<ReadinessState>;
   run?: () => Promise<ReadinessState>;
@@ -26,20 +21,14 @@ export interface ReadinessPanelProps {
     issueId: string,
     dismissed: boolean,
   ) => Promise<ReadinessState>;
-  label?: (check: ReadinessCheck) => string;
-  onTarget: (check: ReadinessCheck, edit: boolean) => void;
 }
 export function ReadinessPanel({
   savedVersion,
   reducedMotion,
   disabledReason,
-  navigationDisabled,
   preview,
   load,
   run,
-  dismiss,
-  onTarget,
-  label,
 }: ReadinessPanelProps) {
   const [state, setState] = useState<ReadinessState | null>(null);
   const [busy, setBusy] = useState(false),
@@ -108,149 +97,80 @@ export function ReadinessPanel({
   };
   return (
     <div className="rf-service-tools">
-      <section
-        className="rf-ats-readiness"
-        aria-labelledby="rf-ats-meter-heading"
-      >
-        <div className="rf-ats-meter-heading">
-          <h3 id="rf-ats-meter-heading">Resume readiness</h3>
-          <DocumentStatus
-            className="rf-ats-status"
-            tone={
-              preview || loading || busy || stale
-                ? "pending"
-                : evaluation
-                  ? "saved"
-                  : "neutral"
-            }
-          >
-            {preview
-              ? "Unsaved preview"
-              : loading || busy
-                ? "Checking…"
-                : !evaluation
-                  ? "Not evaluated"
-                  : stale
-                    ? "Needs recheck"
-                    : "Evaluated"}
-          </DocumentStatus>
-        </div>
-        <AssessmentMeter
-          value={result?.score}
-          label="General resume readiness"
+      {loading || busy ? (
+        <RequestFeedback
+          label="Checking resume"
+          reducedMotion={reducedMotion}
         />
-        <p>General readiness · no JD needed.</p>
-        <details className="rf-assessment-details">
-          <summary>Score breakdown & details</summary>
-          <p>
-            Internal content checks; not an employer ATS rating or PDF parsing
-            test.
-          </p>
-          {preview ? (
-            <p>Unsaved preview. Save changes to store a new assessment.</p>
-          ) : evaluation ? (
-            <p>
-              Saved version {evaluation.resumeVersion} ·{" "}
-              {evaluation.rubricVersion}
-              <br />
-              Checked {new Date(evaluation.evaluatedAt).toLocaleString()}
-            </p>
-          ) : (
-            <p>Saved resumes are checked automatically.</p>
-          )}
-          {result ? (
-            <section
-              aria-label="Readiness breakdown"
-              className="rf-readiness-components"
-            >
-              {result.components.map((c) => (
-                <div key={c.id}>
-                  <span>
-                    {c.label}
-                    <small>
-                      {c.weight}% weight · {c.passed}/{c.total} checks
-                    </small>
-                  </span>
-                  <strong>{c.score}/100</strong>
-                </div>
-              ))}
-            </section>
-          ) : null}
-        </details>
-        {stale && !preview ? (
-          <p role="status">
-            This assessment belongs to an older saved version or rule set. It
-            remains visible until the latest check succeeds.
-          </p>
-        ) : null}
-        {disabledReason && !preview ? (
-          <p role="status">{disabledReason}</p>
-        ) : null}
-        {error ? (
-          <div role="alert">
-            <p>{error}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={blocked}
-              onClick={() => {
-                setRetry((n) => n + 1);
-              }}
-            >
-              Retry readiness check
-            </Button>
-          </div>
-        ) : null}
-        {evaluation && !error ? (
+      ) : null}
+      {disabledReason && !preview ? (
+        <p role="status">{disabledReason}</p>
+      ) : null}
+      {error ? (
+        <div role="alert">
+          <p>{error}</p>
           <Button
             size="sm"
-            variant="ghost"
-            disabled={blocked}
-            aria-busy={busy || loading}
+            variant="outline"
+            disabled={busy || loading}
             onClick={() => {
-              if (run) void mutate(run);
+              setRetry((value) => value + 1);
             }}
           >
-            Recheck readiness
+            Retry resume check
+          </Button>
+        </div>
+      ) : null}
+      <section
+        className="rf-ats-readiness rf-compact-score"
+        aria-label="Resume score"
+      >
+        <DocumentStatus
+          tone={
+            preview || loading || busy || stale
+              ? "pending"
+              : evaluation
+                ? "saved"
+                : "neutral"
+          }
+        >
+          {preview
+            ? "Unsaved preview"
+            : loading || busy
+              ? "Checking…"
+              : !evaluation
+                ? "Not evaluated"
+                : stale
+                  ? "Needs recheck"
+                  : "Evaluated"}
+        </DocumentStatus>
+        <AssessmentMeter value={result?.score} label="Resume score" />
+        <p>
+          Internal content score. Use Job fit to compare with a job description.
+        </p>
+        {preview ? (
+          <p role="status">Save your changes to update the saved score.</p>
+        ) : null}
+        {stale && !preview ? (
+          <p role="status">
+            This score belongs to an older version. Recheck to update it.
+          </p>
+        ) : null}
+        {!result && !loading && !error ? (
+          <p role="status">Save your resume to get a score.</p>
+        ) : null}
+        {run ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={blocked}
+            aria-busy={busy || loading}
+            onClick={() => void mutate(run)}
+          >
+            Recheck resume
           </Button>
         ) : null}
       </section>
-      {result ? (
-        <>
-          {result.truncated ? (
-            <p role="status">
-              Showing the first 100 checks. The score uses all checks.
-            </p>
-          ) : null}
-          <AssessmentFeedback
-            mode="rules"
-            label={label}
-            checks={result.checks}
-            dismissed={state?.dismissed ?? []}
-            disabled={navigationDisabled || (!preview && (blocked || stale))}
-            onTarget={onTarget}
-            onDismiss={
-              dismiss && evaluation && !preview && !stale && !blocked
-                ? (check, hidden) => {
-                    void mutate(() => dismiss(evaluation.id, check.id, hidden));
-                  }
-                : undefined
-            }
-          />
-        </>
-      ) : (
-        <div className="rf-panel-empty" role="status">
-          {loading ? (
-            <RequestFeedback
-              label="Checking your resume"
-              reducedMotion={reducedMotion}
-            />
-          ) : (
-            <strong>No saved assessment</strong>
-          )}
-          <p>Save your resume to get a versioned assessment.</p>
-        </div>
-      )}
     </div>
   );
 }

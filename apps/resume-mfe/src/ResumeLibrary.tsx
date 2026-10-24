@@ -183,6 +183,17 @@ export function ResumeLibrary({
       setDownloading(null);
     }
   };
+  if (uploadOpen)
+    return (
+      <ResumeImportDialog
+        context={context}
+        api={api}
+        onClose={() => {
+          setUploadOpen(false);
+          if (initialUploadOpen) context.onNavigate?.(prefix);
+        }}
+      />
+    );
   const shown = rows
     .filter((r) =>
       r.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
@@ -258,7 +269,7 @@ export function ResumeLibrary({
                   reducedMotion={context.reducedMotion}
                 />
               ) : (
-                "Create resume"
+                "Start from scratch"
               )}
             </Button>
           </div>
@@ -419,6 +430,25 @@ export function ResumeLibrary({
                       <td>
                         <div className="rf-library-row-actions">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={
+                              creating ||
+                              loadingMore ||
+                              !!downloading ||
+                              deleting ||
+                              restoring
+                            }
+                            onClick={() =>
+                              context.onNavigate?.(
+                                `${prefix}/${r.id}?action=tailor`,
+                              )
+                            }
+                            aria-label={`Tailor ${r.title} for a job`}
+                          >
+                            Tailor for a job
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="icon"
                             aria-label={
@@ -492,16 +522,6 @@ export function ResumeLibrary({
           ) : null}
         </section>
       </div>
-      {uploadOpen ? (
-        <ResumeImportDialog
-          context={context}
-          api={api}
-          onClose={() => {
-            setUploadOpen(false);
-            if (initialUploadOpen) context.onNavigate?.(prefix);
-          }}
-        />
-      ) : null}
       <ConfirmDeleteDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {

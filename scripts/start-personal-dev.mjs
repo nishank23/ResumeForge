@@ -21,7 +21,7 @@ for (const file of [".local/runtime-database.env", ".local/auth-transport.env"])
       "Missing managed local configuration. See README sign-in setup.",
     );
 const busy = await Promise.all(
-  [3000, 3001, 3002, 3003, 4000, 4001, 4002, 4003].map(
+  [3000, 3001, 3002, 3003, 4000, 4001, 4002, 4003, 4004].map(
     (port) =>
       new Promise((done) => {
         const socket = createConnection({ host: "localhost", port });
@@ -58,6 +58,7 @@ const child = spawn(
       "auth-service",
       "profile-service",
       "resume-service",
+      "ats-service",
     ].flatMap((name) => ["--filter", `@resume-forge/${name}`]),
     "dev",
   ],

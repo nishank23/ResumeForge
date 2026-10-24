@@ -1,3 +1,4 @@
+import { createAtsClient } from "./ats/assessment.js";
 import { createAiProviders, loadAiSettings } from "./ats/ai.js";
 import { serve } from "@hono/node-server";
 import {
@@ -19,6 +20,7 @@ const resumes = createResumeUseCases(
   Date.now,
   undefined,
   createAiProviders(loadAiSettings()),
+  createAtsClient(config.authKey),
 );
 let workerBusy = false;
 const worker = setInterval(() => {

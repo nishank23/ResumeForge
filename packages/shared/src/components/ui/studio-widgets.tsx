@@ -139,6 +139,7 @@ export function StudioPrompt({
   placeholder,
   submitLabel,
   submitSparkle = false,
+  hideSubmit = false,
 }: {
   label: string;
   value: string;
@@ -152,6 +153,7 @@ export function StudioPrompt({
   placeholder?: string;
   submitLabel: string;
   submitSparkle?: boolean;
+  hideSubmit?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -170,9 +172,19 @@ export function StudioPrompt({
     );
     if (submit) {
       submit.disabled = disabled || submitDisabled;
+      submit.hidden = hideSubmit;
       submit.setAttribute("aria-label", submitLabel);
     }
-  }, [disabled, submitDisabled, hero, id, label, maxLength, submitLabel]);
+  }, [
+    disabled,
+    submitDisabled,
+    hideSubmit,
+    hero,
+    id,
+    label,
+    maxLength,
+    submitLabel,
+  ]);
   // Upstream 0.7.0 form may attach internal submit handlers. Capture gives one guarded submission.
   return (
     <div

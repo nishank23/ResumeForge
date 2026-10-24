@@ -5,6 +5,7 @@ import {
   updateInlineDraft,
   emptyEntry,
   mutateTarget,
+  canMoveTarget,
   safeLink,
   validateEntry,
   formatDates,
@@ -177,6 +178,7 @@ test("boundary and stale moves leave draft and history untouched", () => {
     { type: "entry", sectionId: "exp", itemId: "missing" },
   ]) {
     assert.equal(mutateTarget(draft, target, "up").ok, false);
+    assert.equal(canMoveTarget(draft, target, "up"), false);
   }
   assert.equal(
     mutateTarget(
@@ -185,6 +187,27 @@ test("boundary and stale moves leave draft and history untouched", () => {
       "down",
     ).ok,
     false,
+  );
+  assert.equal(canMoveTarget(draft, { type: "header" }, "down"), false);
+  assert.equal(
+    canMoveTarget(
+      draft,
+      { type: "entry", sectionId: "exp", itemId: "a" },
+      "down",
+    ),
+    true,
+  );
+  assert.equal(
+    canMoveTarget(
+      draft,
+      { type: "entry", sectionId: "exp", itemId: "b" },
+      "down",
+    ),
+    false,
+  );
+  assert.equal(
+    canMoveTarget(draft, { type: "section", sectionId: "summary" }, "down"),
+    true,
   );
   assert.deepEqual(draft, original);
   assert.equal(history.past.length, 0);

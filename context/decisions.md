@@ -2,15 +2,17 @@
 
 ## Confirmed
 
+- On 2026-10-23 the user approved an owned ATS microservice using existing Gemini and no new subscription. This supersedes the fixed readiness/JD weights and earlier no-new-service restriction for scoring. Active Job fit requires a pasted JD, extracts actual requirements, validates exact evidence and computes transparent supported-requirement coverage. No generic formatting/length scores, proprietary ATS parity or guaranteed hiring result. Historical scores remain stored; hover Improve with AI stays. [Contract](../docs/ats-assessment.md).
+
 - On 2026-10-20 the user selected personal private `nishank23/ResumeForge` for the complete product, including organization `feature` tailoring. Canonical local path: `/Users/nishankbansal/Downloads/ResumeForge`, remote `origin`, release branch `main`. Existing cloud deployment/loader and private data/configuration must survive integration. Local organization checkout retirement follows preservation and verified personal publication; remote organization branches are retained.
 - Resume-first entry; a completed master profile is optional. Imported facts remain staged until review and do not silently merge into UserProfile/UserContact.
 - Forge Studio violet light/dark theme, Performative wrappers, original templates and device-aware theme behavior.
 - Paid Gemini supplies scoped wording and semantic JD evidence through server adapters. OpenCode/Textkernel are removed from active runtime. Embeddings use gemini-embedding-001/768 for private exact-version retrieval.
-- Readiness weights: structure 25%, experience 25%, skills 20%, clarity 15%, dates 15%. JD weights: keywords 30%, experience 25%, skills 20%, structure 15%, readability 10%. Scores are internal heuristics.
+- Historical readiness weights: structure 25%, experience 25%, skills 20%, clarity 15%, dates 15%. JD weights: keywords 30%, experience 25%, skills 20%, structure 15%, readability 10%. Scores are internal heuristics.
 - Labeled AI actions supply processing intent after visible scope disclosure. No extra checkbox. Generated proposals require review, server grounding and exact version/target checks; no automatic master write.
 - Separate contacts, preserve 27 permissions, immutable versions, audit and current personal route gates. Shared roles/consent/contact policy are not complete.
 - The first Phase 1 saved-resume + pasted-JD slice is approved. Use pnpm for development. Full tailoring creates a reviewed independent copy from saved visible facts; no master-profile merging or missing-qualification insertion.
-- Reuse existing paid Gemini REST, current score weights and resume-service grants. Persist bounded leased runs in resume metadata; no new SDK, provider, service or schema migration for this slice.
+- Original tailoring-slice decision: reuse existing paid Gemini REST, then-current score weights and resume-service grants. Persist bounded leased runs in resume metadata; no new SDK, provider, service or schema migration for this slice.
 
 - The user approved Gemini 3.8 Flash for complete JD tailoring on 2026-10-14. Use medium thinking, independent fact/coverage review and one bounded correction pass. Keep Flash-Lite for small edits/semantic analysis. Preserve supported source detail instead of padding a page or promising 100 ATS. Existing private paid Gemini settings suffice.
 

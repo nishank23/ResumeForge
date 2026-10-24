@@ -38,8 +38,10 @@ function start(name, command, args, cwd = "/app") {
     "GEMINI_API_KEY",
     "GEMINI_DATA_MODE",
   ]) {
-    const owner = key.startsWith("GOOGLE_") ? "auth-service" : "resume-service";
-    if (name !== owner || !env[key]?.trim()) delete env[key];
+    const owners = key.startsWith("GOOGLE_")
+      ? ["auth-service"]
+      : ["resume-service", "ats-service"];
+    if (!owners.includes(name) || !env[key]?.trim()) delete env[key];
   }
   const child = spawn(command, args, { cwd, env, stdio: "inherit" });
   children.push(child);
@@ -67,6 +69,7 @@ try {
     ["gateway", 4000],
     ["auth-service", 4001],
     ["profile-service", 4002],
+    ["ats-service", 4004],
     ["resume-service", 4003],
   ]) {
     start(name, "node", [`services/${name}/dist/index.js`]);

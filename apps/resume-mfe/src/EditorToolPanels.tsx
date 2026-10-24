@@ -1,4 +1,3 @@
-export { ReadinessPanel as AtsPanel } from "./ReadinessPanel";
 import { useState, type ReactNode } from "react";
 import {
   ArrowDown,
@@ -12,8 +11,6 @@ import {
   Palette,
   Gauge,
   Briefcase,
-  Minimize2,
-  PanelRightOpen,
 } from "lucide-react";
 import { Button } from "@resume-forge/shared";
 import {
@@ -38,65 +35,54 @@ import { TemplateGallery } from "./templates/TemplateGallery";
 import { matchingTemplate, RESUME_TEMPLATES } from "./templates/registry";
 
 export const EDITOR_PANELS = {
-  content: { label: "Content", icon: FileText },
+  content: { label: "Sections", icon: FileText },
   design: { label: "Template", icon: Palette },
-  ats: { label: "ATS readiness", icon: Gauge },
-  jd: { label: "Tailor to job", icon: Briefcase },
+  ats: { label: "Job fit", icon: Gauge },
+  jd: { label: "Job fit", icon: Briefcase },
 } as const;
 export type EditorPanel = keyof typeof EDITOR_PANELS;
 
+/** Improve opens with saved job fit; Write returns to the document alone. */
 export function EditorRail({
   active,
-  open,
   onSelect,
   children,
-  onToggle,
 }: {
-  active: EditorPanel;
-  open: boolean;
-  onSelect: (panel: EditorPanel) => void;
   children?: ReactNode;
-  onToggle: () => void;
+  active?: EditorPanel;
+  onSelect: (panel: "write" | "ats" | "design") => void;
 }) {
+  const tasks = [
+    { key: "write", label: "Write", icon: Pencil },
+    { key: "ats", label: "Improve", icon: Gauge },
+    { key: "design", label: "Design", icon: Palette },
+  ] as const;
   return (
     <nav className="rf-editor-rail" aria-label="Resume editor tools">
       <div className="rf-rail-tabs">
-        {(["content", "design", "ats"] as const).map((key) => {
-          const { label, icon: Icon } = EDITOR_PANELS[key];
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={
-                (active === key || (key === "ats" && active === "jd")) && open
-              }
-              aria-controls="rf-editor-tool-panel"
-              onClick={() => {
-                onSelect(key);
-              }}
-            >
-              <Icon size={21} aria-hidden="true" />
-              <span>{key === "ats" ? "Review" : label}</span>
-            </button>
-          );
-        })}
+        {tasks.map(({ key, label, icon: Icon }) => (
+          <Button
+            key={key}
+            variant="ghost"
+            size="sm"
+            data-editor-write={key === "write" ? "" : undefined}
+            aria-pressed={
+              key === "write"
+                ? !active || active === "content"
+                : key === "ats"
+                  ? active === "ats" || active === "jd"
+                  : active === key
+            }
+            onClick={() => {
+              onSelect(key);
+            }}
+          >
+            <Icon size={18} aria-hidden="true" />
+            {label}
+          </Button>
+        ))}
       </div>
-      {children}
-      <button
-        className="rf-panel-toggle"
-        type="button"
-        aria-label={open ? "Focus on resume" : "Show tools"}
-        aria-expanded={open}
-        aria-controls="rf-editor-tool-panel"
-        onClick={onToggle}
-      >
-        {open ? (
-          <Minimize2 size={19} aria-hidden="true" />
-        ) : (
-          <PanelRightOpen size={19} aria-hidden="true" />
-        )}
-        <span>{open ? "Focus" : "Show tools"}</span>
-      </button>
+      <div className="rf-rail-utility">{children}</div>
     </nav>
   );
 }

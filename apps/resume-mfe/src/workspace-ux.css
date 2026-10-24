@@ -1,0 +1,629 @@
+/* Improve opens beside the document; Write returns to the document alone. */
+.rf-ux-workspace .rf-editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 28px;
+  overflow: visible;
+  border-bottom: 0;
+  background: var(--surface);
+}
+.rf-ux-workspace .rf-studio-back {
+  font-size: 13px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.rf-ux-workspace .rf-editor-title {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+  max-width: none;
+}
+.rf-ux-workspace .rf-editor-title > div {
+  min-width: 0;
+}
+.rf-ux-workspace .rf-editor-title h1 {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rf-ux-workspace .rf-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto;
+}
+.rf-ux-workspace .rf-editor-actions .rf-button {
+  min-height: 44px;
+  font-size: 14px;
+}
+.rf-ux-workspace .rf-editor-rail {
+  justify-content: space-between;
+  max-width: 1260px;
+  margin-inline: auto;
+  padding: 16px 28px;
+  border: 0;
+  background: var(--background);
+}
+.rf-ux-workspace .rf-rail-tabs {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 8px;
+}
+.rf-ux-workspace .rf-editor-rail button {
+  flex-direction: row;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 24px;
+}
+.rf-ux-workspace .rf-editor-rail button[aria-pressed="true"] {
+  box-shadow: none;
+  background: var(--surface-muted);
+}
+.rf-ux-workspace .rf-tools-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 794px);
+  grid-template-areas: "paper";
+  justify-content: center;
+  gap: 28px;
+  align-items: start;
+  padding: 0 28px 36px;
+  max-width: 1260px;
+  margin: auto;
+}
+.rf-ux-workspace .rf-tools-layout.has-panel {
+  grid-template-columns: minmax(0, 794px) 340px;
+  grid-template-areas: "paper tools";
+}
+.rf-ux-workspace .rf-paper-stage {
+  grid-area: paper;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  overflow: visible;
+}
+.rf-ux-workspace .rf-paper-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  min-height: 48px;
+  margin-bottom: 12px;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.rf-paper-view-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rf-paper-view-actions .rf-button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.rf-ux-workspace .rf-editor-tool-panel {
+  grid-area: tools;
+  min-width: 0;
+  padding: 20px;
+  border: 0;
+  background: var(--surface);
+  position: sticky;
+  top: calc(var(--editor-header-height, 80px) + 16px);
+  max-height: calc(100dvh - var(--editor-header-height, 80px) - 32px);
+  overflow-y: auto;
+  border-radius: 12px;
+}
+.rf-ux-workspace .rf-inspector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 16px;
+  min-height: 0;
+  background: none;
+  border: 0;
+}
+.rf-ux-workspace .rf-inspector-heading h2 {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+.rf-ux-workspace .rf-inspector-heading .rf-button {
+  flex-shrink: 0;
+}
+.rf-ux-workspace .rf-paper-caption {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 16px;
+}
+.rf-ux-workspace .rf-tool-hint,
+.rf-ux-workspace .rf-service-tools p {
+  font-size: 14px;
+}
+.rf-priority-navigation {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.rf-priority-navigation .rf-button {
+  min-height: 44px;
+}
+.rf-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rf-priority-checks {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.rf-priority-check {
+  background: var(--surface-muted);
+  padding: 18px;
+  overflow-wrap: anywhere;
+}
+.rf-priority-check h4 {
+  font-size: 16px;
+  line-height: 1.4;
+  margin: 0 0 8px;
+}
+.rf-priority-check p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 8px 0 14px;
+  color: var(--foreground);
+}
+.rf-priority-check .rf-priority-target {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.rf-priority-check small {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  margin: 0 0 12px;
+}
+.rf-priority-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rf-priority-actions .rf-button {
+  white-space: normal;
+  min-height: 44px;
+  text-align: left;
+}
+.rf-all-checks,
+.rf-readiness-summary {
+  margin-top: 22px;
+  font-size: 14px;
+}
+.rf-all-checks > summary,
+.rf-readiness-summary > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  color: var(--muted-foreground);
+}
+.rf-all-checks > summary:focus-visible,
+.rf-readiness-summary > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.rf-ux-workspace .rf-assessment-feedback > h3 {
+  font-size: 19px;
+  line-height: 1.35;
+}
+.rf-ux-workspace .rf-readiness-summary .rf-ats-readiness {
+  margin-top: 12px;
+}
+.rf-ux-workspace .rf-editor-inline-notice {
+  padding: 8px 28px;
+  background: var(--surface);
+}
+.rf-ux-workspace .rf-editor-inline-notice p {
+  font-size: 14px;
+}
+.rf-import-review-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 28px;
+  background: var(--surface-muted);
+}
+.rf-import-review-banner h2 {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+.rf-import-review-banner p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+.rf-import-fullpage > .rf-import-source {
+  padding: 16px 28px;
+  margin: 0;
+}
+.rf-import-fullpage {
+  min-width: 0;
+}
+@media (max-width: 1199px) {
+  .rf-ux-workspace .rf-tools-layout.has-panel {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+  }
+}
+@media (max-width: 900px) {
+  .rf-ux-workspace .rf-editor-bar {
+    position: static;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .rf-ux-workspace .rf-studio-back {
+    min-width: 0;
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
+  .rf-ux-workspace .rf-editor-title {
+    flex: 1;
+    min-width: 140px;
+  }
+  .rf-ux-workspace .rf-editor-title h1 {
+    font-size: 16px;
+  }
+  .rf-ux-workspace .rf-editor-actions {
+    width: 100%;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  .rf-ux-workspace .rf-editor-actions .rf-button {
+    font-size: 13px;
+    padding-inline: 12px;
+  }
+  .rf-ux-workspace .rf-tools-layout,
+  .rf-ux-workspace .rf-tools-layout.has-panel {
+    display: block;
+    padding: 0 16px 24px;
+  }
+  .rf-ux-workspace .rf-editor-tool-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 20px;
+    top: auto;
+  }
+  .rf-ux-workspace[data-mobile-view="resume"] .rf-editor-tool-panel,
+  .rf-ux-workspace[data-mobile-view="tools"] .rf-paper-stage {
+    display: none;
+  }
+  .rf-ux-workspace .rf-editor-rail {
+    padding: 12px 16px;
+    margin: 0;
+  }
+  .rf-ux-workspace .rf-rail-tabs {
+    width: 100%;
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .rf-ux-workspace .rf-editor-rail .rf-rail-tabs button {
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+  .rf-import-review-banner {
+    padding: 16px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .rf-import-review-banner h2 {
+    font-size: 20px;
+  }
+  .rf-import-fullpage > .rf-import-source {
+    padding-inline: 16px;
+  }
+  .rf-ux-workspace .rf-editor-inline-notice {
+    padding: 8px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rf-ux-workspace *,
+  .rf-tailoring-ux * {
+    scroll-behavior: auto !important;
+  }
+}
+.rf-ux-workspace .rf-selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--surface);
+  color: var(--foreground);
+  border-radius: 8px;
+}
+.rf-ux-workspace .rf-selected-actions[hidden] {
+  display: none;
+}
+.rf-ux-workspace .rf-selected-actions .rf-floating-target {
+  display: block;
+  font-size: 13px;
+  margin-right: auto;
+  padding: 4px;
+}
+.rf-ux-workspace .rf-selected-actions .rf-button {
+  min-height: 40px;
+}
+@media print {
+  .rf-selected-actions {
+    display: none !important;
+  }
+}
+/* Phone writing uses a readable, reflowing surface. Preview/PDF keep exact stored typography. */
+.rf-ux-workspace[data-target-active="false"] .rf-paper-selectable.is-selected {
+  outline: none;
+  box-shadow: none;
+}
+.rf-mobile-document {
+  --paper-body-size: 16px;
+  --paper-body-line: 1.65;
+  --paper-heading-size: 18px;
+  --paper-heading-line: 1.4;
+  --paper-subheading-size: 16px;
+  --paper-subheading-line: 1.5;
+  --paper-section-size: 18px;
+  --paper-section-line: 1.4;
+  --paper-sectionGap: 24px;
+  --paper-itemGap: 16px;
+}
+.rf-mobile-document .rf-resume-document {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  padding: 24px 20px;
+  box-shadow: none;
+  font-size: 16px;
+  line-height: 1.65;
+  background: white;
+}
+.rf-mobile-document .rf-resume-document .tiptap,
+.rf-mobile-document .rf-resume-document .tiptap p {
+  font-size: 16px;
+  line-height: 1.65;
+}
+.rf-mobile-document .rf-resume-document h3 {
+  padding-top: 18px;
+  margin-top: 12px;
+}
+.rf-mobile-document .rf-resume-skills {
+  font-size: 16px;
+  line-height: 1.65;
+}
+@media (max-width: 768px) {
+  .rf-ux-workspace .rf-paper-meta {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .rf-ux-workspace .rf-paper-meta > span {
+    max-width: 100%;
+    font-size: 13px;
+  }
+}
+
+/* One toolbar. Secondary document controls live in More. */
+.rf-rail-utility {
+  display: flex;
+  flex: 0 0 auto;
+}
+.rf-ux-workspace .rf-rail-utility .rf-button {
+  font-size: 13px;
+  padding-inline: 12px;
+}
+.rf-ux-workspace .rf-editor-tool-panel .rf-assessment-feedback > h3 {
+  display: none;
+}
+@media (max-width: 900px) {
+  .rf-ux-workspace .rf-editor-rail {
+    gap: 8px;
+  }
+  .rf-ux-workspace .rf-rail-tabs {
+    width: auto;
+    min-width: 0;
+  }
+  .rf-ux-workspace .rf-rail-tabs svg {
+    display: none;
+  }
+  .rf-ux-workspace .rf-editor-rail .rf-rail-tabs button {
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+  .rf-ux-workspace .rf-rail-utility .rf-button {
+    padding-inline: 8px;
+  }
+}
+
+.rf-review-panel .rf-inspector-heading {
+  min-height: 34px;
+  margin-bottom: 12px;
+}
+.rf-ats-overview,
+.rf-ats-job-context,
+.rf-ats-next-steps {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.rf-ats-job-fit p,
+.rf-ats-job-fit h3 {
+  margin: 0;
+}
+.rf-ats-score-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.rf-ats-score-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rf-ats-score-heading > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.rf-ats-score-card .rf-assessment-meter {
+  margin-block: 8px;
+}
+.rf-ats-score-card
+  .rf-assessment-meter[data-unavailable="true"]
+  .rf-temperature-display {
+  display: none;
+}
+.rf-ats-score-card .rf-studio-score {
+  margin-block: 10px;
+}
+.rf-ats-score-card .rf-tool-hint {
+  font-size: 11px;
+}
+.rf-ats-score-card > p + p {
+  margin-top: 6px;
+}
+.rf-ats-job-context,
+.rf-ats-next-steps {
+  padding-block: 4px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.rf-ats-job-context > .rf-button {
+  width: 100%;
+}
+.rf-ats-job-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rf-ats-next-steps ul {
+  display: grid;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rf-ats-next-steps li {
+  display: grid;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 2px solid var(--primary);
+  overflow-wrap: anywhere;
+}
+.rf-ats-next-steps li strong {
+  font-size: 14px;
+}
+.rf-ats-next-steps li > span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.rf-ats-jd-label {
+  display: block;
+  font-weight: 600;
+}
+.rf-ats-jd-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 104px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+}
+.rf-ats-jd-input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.rf-ats-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rf-ats-requirement {
+  margin-block: 20px;
+  overflow-wrap: anywhere;
+}
+.rf-ats-requirement h3 {
+  margin-block: 8px;
+  font-size: 16px;
+}
+.rf-ats-requirement blockquote {
+  margin-inline: 0;
+  padding: 12px;
+  background: var(--surface);
+}
+.rf-ats-requirement cite {
+  font-size: 13px;
+  font-style: normal;
+}
+
+/* Context controls use the existing shared buttons with icon-only hit targets. */
+.rf-document-container > .rf-floating-actions .rf-selection-icon {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  flex: 0 0 36px;
+}
+.rf-floating-actions .rf-selection-delete {
+  color: var(--destructive);
+}
+@media (max-width: 768px), (pointer: coarse) {
+  .rf-document-container > .rf-floating-actions .rf-selection-icon {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+}
+@media (max-width: 480px) {
+  /* Keep one clear AI row and one complete icon row on phones. */
+  .rf-document-container > .rf-floating-actions:has(.rf-ai-entry-action) {
+    display: grid;
+    grid-template-columns: repeat(5, 44px);
+    column-gap: 2px;
+  }
+  .rf-floating-actions .rf-ai-entry-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
