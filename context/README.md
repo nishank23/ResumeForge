@@ -1,6 +1,6 @@
 # Project documentation
 
-Start with [setup](../README.md), [current implementation](../docs/implementation-audit.md), and the [product plan](../PLAN.md). The first saved-source tailoring slice is approved and connected; later phases remain planned.
+Start with [setup](../docs/setup.md), [current implementation](../docs/implementation-audit.md), and the [product plan](../PLAN.md). The first saved-source tailoring slice is approved and connected; later phases remain planned.
 
 ## Active context
 
