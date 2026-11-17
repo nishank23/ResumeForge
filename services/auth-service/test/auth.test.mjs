@@ -250,6 +250,40 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
       },
     );
     await t.test(
+      "rotated token retried within grace keeps the session; later replay or logout still revokes",
+      async () => {
+        const first = cookie(await finish(await begin()), "refresh_token");
+        // The browser lost this response, so it still holds `first`.
+        const lost = await refresh(first);
+        assert.equal(lost.status, 200);
+        const lostToken = (await lost.json()).data.accessToken;
+        time += 1000;
+        const retry = await refresh(first);
+        assert.equal(retry.status, 200);
+        const next = cookie(retry, "refresh_token");
+        const auth = (token) => ({
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        assert.equal(
+          (await request("me", auth((await retry.json()).data.accessToken)))
+            .status,
+          200,
+        );
+        assert.equal((await request("me", auth(lostToken))).status, 401);
+        time += 30_000;
+        assert.equal((await refresh(first)).status, 401);
+        assert.equal((await refresh(next)).status, 401);
+
+        const signedOut = cookie(await finish(await begin()), "refresh_token");
+        const rotated = cookie(await refresh(signedOut), "refresh_token");
+        await request("logout", {
+          method: "POST",
+          headers: { Cookie: rotated, Origin: "http://localhost:3000" },
+        });
+        assert.equal((await refresh(signedOut)).status, 401);
+      },
+    );
+    await t.test(
       "restricted real HTTP actor resolution is minimal and derives each user's personal scope",
       async () => {
         const signedIn = await finish(await begin());
@@ -388,6 +422,7 @@ test("Google local auth with synthetic provider and real PostgreSQL", async (t) 
         };
         assert.equal((await internal(current.token)).status, 401);
         assert.equal((await internal(next.token)).status, 200);
+        time += 30_000;
         assert.equal((await refresh(current.credential)).status, 401);
         assert.equal((await internal(next.token)).status, 401);
         current = await signIn();

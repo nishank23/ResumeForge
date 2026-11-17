@@ -11,6 +11,8 @@ type Database = ReturnType<typeof createDatabaseClient>;
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 const lifetime = 30 * 24 * 60 * 60;
+/** A just-rotated token may return once more when the browser lost the rotation response (reload, abort). */
+const rotationGraceMs = 30_000;
 
 /** Single-process local implementation. Restart invalidates pending OAuth and access tokens. */
 export function createAuthApp({
@@ -219,10 +221,24 @@ export function createAuthApp({
       return c.json({ error: "Unauthorized" }, 401);
     const raw = randomBytes(32).toString("hex");
     const rotated = await db.$transaction(async (tx) => {
-      const current = await tx.session.findUnique({
+      const presented = await tx.session.findUnique({
         where: { refreshHash: hash(credential) },
       });
-      if (!current) return null;
+      if (!presented) return null;
+      let current = presented;
+      // Within the grace window, a rotated token whose replacement is still
+      // active rotates that replacement instead of counting as theft.
+      // Logout, expiry or a later rotation leave no active replacement.
+      if (
+        presented.revokedAt &&
+        presented.replacedById &&
+        now() - presented.revokedAt.getTime() < rotationGraceMs
+      ) {
+        const successor = await tx.session.findUnique({
+          where: { id: presented.replacedById },
+        });
+        if (successor && !successor.revokedAt) current = successor;
+      }
       if (current.revokedAt || current.expiresAt.getTime() <= now()) {
         await tx.session.updateMany({
           where: { familyId: current.familyId, revokedAt: null },
