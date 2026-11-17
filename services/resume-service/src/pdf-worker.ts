@@ -1,8 +1,16 @@
 import { parentPort, workerData } from "node:worker_threads";
+import { editorDocumentSchema } from "@resume-forge/shared-types";
 import { renderResumePdf } from "./resume-pdf-template.js";
 try {
-  const bytes = await renderResumePdf(workerData as unknown);
-  parentPort?.postMessage({ bytes: new Uint8Array(bytes) });
+  const input = workerData as { draft: unknown; inspect: boolean };
+  const draft = editorDocumentSchema.parse(input.draft);
+  const bytes = await renderResumePdf(draft);
+  if (input.inspect) {
+    const { inspectPdfBytes } = await import("./inspect-pdf.js");
+    parentPort?.postMessage({
+      analysis: await inspectPdfBytes(draft, new Uint8Array(bytes)),
+    });
+  } else parentPort?.postMessage({ bytes: new Uint8Array(bytes) });
 } catch (error) {
   const code =
     error instanceof Error &&

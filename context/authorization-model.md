@@ -1,5 +1,9 @@
 # Authorization and Privacy Model
 
+## PDF readability — 2026-10-26
+
+GET/POST `/resume/:id/readability` requires authenticated personal ownership and both `resume.read` and `resume.download`. The result includes private extracted header/contact text, so `ats.view` alone is insufficient. Recheck access/expiry after worker execution, owner/deletion/revision in the write transaction, and session identity before HTTP retrieval. Existing 27 permission names and organization/vendor gates remain unchanged. [Contract](../docs/resume-readability.md).
+
 ## Current audit snapshot — 2026-10-11
 
 Canonical 27 permissions and owned personal checks exist. Contact handlers still use broad profile permissions/profile events; the shared role resolver grants resume editing to common roles unlike the proposed read-only viewer bundle. These are repair blockers. Shared version/PDF/task/MCP privacy remains incomplete.

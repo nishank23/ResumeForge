@@ -177,7 +177,12 @@ export function createSessionController(transport: SessionTransport) {
       await restore(true);
       if (!active()) throw new Error("Session unavailable");
     }
-    const timeout = path.includes("/pdf?version=") ? 30_000 : 10_000;
+    const timeout = path.includes("/pdf?version=")
+      ? 30_000
+      : path.endsWith("/readability") &&
+          options.method?.toUpperCase() === "POST"
+        ? 45_000
+        : 10_000;
     const send = () => {
       const headers = new Headers(options.headers);
       headers.set("Authorization", `Bearer ${token ?? ""}`);

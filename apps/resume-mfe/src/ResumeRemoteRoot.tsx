@@ -47,6 +47,18 @@ export function ResumeRemoteRoot({
     [retry, setRetry] = useState(0);
   const readinessId = saved?.id,
     readinessVersion = saved?.currentVersion;
+  const readability = useMemo(
+    () =>
+      readinessId && readinessVersion
+        ? {
+            load: (signal?: AbortSignal) =>
+              api.readability(readinessId, signal),
+            run: (signal?: AbortSignal) =>
+              api.runReadability(readinessId, readinessVersion, signal),
+          }
+        : undefined,
+    [api, readinessId, readinessVersion],
+  );
   const atsAssessment = useMemo(
     () =>
       readinessId && readinessVersion
@@ -223,6 +235,7 @@ export function ResumeRemoteRoot({
           initialDraft={fromResumeContent(saved.content)}
           savedVersion={saved.currentVersion}
           atsAssessment={atsAssessment}
+          readability={readability}
           jdMatch={jdMatch}
           rewrite={rewrite}
           initialTailoringOpen={

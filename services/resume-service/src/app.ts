@@ -59,7 +59,7 @@ export function createResumeApp(config: {
           path,
         ) &&
           ["PUT", "OPTIONS"].includes(method)) ||
-        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(ats-assessment|jd-match|ai-rewrite|tailoring)$/i.test(
+        (/^\/api\/v1\/resume\/[0-9a-f-]{36}\/(readability|ats-assessment|jd-match|ai-rewrite|tailoring)$/i.test(
           path,
         ) &&
           ["GET", "POST", "OPTIONS"].includes(method)) ||
@@ -427,6 +427,79 @@ export function createResumeApp(config: {
       );
     }
   });
+  app.on(
+    ["GET", "POST"],
+    "/api/v1/resume/:id/readability",
+    bodyLimit({
+      maxSize: 1024,
+      onError: (c) => {
+        const requestId = randomUUID();
+        c.header("X-Request-Id", requestId);
+        return c.json(
+          {
+            error: {
+              code: "file_too_large",
+              message: "Readability request is too large.",
+            },
+            requestId,
+          },
+          413,
+        );
+      },
+    }),
+    async (c) => {
+      const requestId = randomUUID();
+      c.header("X-Request-Id", requestId);
+      const auth = await authenticate(c, requestId);
+      if (!auth.authenticated) return auth.response;
+      try {
+        const result =
+          c.req.method === "GET"
+            ? await config.resumes.getReadability(
+                auth.context,
+                c.req.param("id"),
+              )
+            : await config.resumes.runReadability(
+                auth.context,
+                c.req.param("id"),
+                await c.req.json(),
+              );
+        const latest = await authenticate(c, requestId);
+        if (!latest.authenticated) return latest.response;
+        if (
+          latest.context.actor.userId !== auth.context.actor.userId ||
+          latest.context.actor.personalWorkspaceId !==
+            auth.context.actor.personalWorkspaceId
+        )
+          return fail(c, "unauthenticated", "Session changed.", 401, requestId);
+        return c.json({ data: result, requestId });
+      } catch (error) {
+        if (error instanceof SyntaxError || error instanceof z.ZodError)
+          return fail(
+            c,
+            "invalid_input",
+            "Use a valid saved PDF check request.",
+            422,
+            requestId,
+          );
+        if (error instanceof ResumeError)
+          return fail(
+            c,
+            error.code,
+            error.message,
+            statusMap[error.code] ?? 422,
+            requestId,
+          );
+        return fail(
+          c,
+          "resume_unavailable",
+          "Could not check the saved PDF. Retry.",
+          503,
+          requestId,
+        );
+      }
+    },
+  );
   app.get("/api/v1/resume/:id/pdf", async (c) => {
     const requestId = randomUUID();
     c.header("X-Request-Id", requestId);

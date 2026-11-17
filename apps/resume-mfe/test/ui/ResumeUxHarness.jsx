@@ -131,7 +131,90 @@ qa.request = async (path, options = {}) => {
   const method = options.method ?? "GET";
   event("request", { path, method });
   let data;
-  if (path.endsWith("/ats-assessment")) {
+  if (path.endsWith("/readability")) {
+    if (qa.readabilityUnauthorized)
+      return new Response(
+        JSON.stringify({ error: { code: "unauthenticated" } }),
+        { status: 401 },
+      );
+    if (qa.readabilityFails)
+      return new Response(
+        JSON.stringify({
+          error: { code: "resume_unavailable", message: "PRIVATE DEBUG DATA" },
+        }),
+        { status: 503 },
+      );
+    if (method === "POST") {
+      const body = JSON.parse(String(options.body));
+      event("readabilityRun", body);
+      if (qa.delayReadability)
+        await new Promise((resolve) => {
+          qa.resolveReadability = resolve;
+        });
+      if (body.expectedVersion !== qa.version)
+        return new Response(
+          JSON.stringify({ error: { code: "revision_conflict" } }),
+          { status: 409 },
+        );
+      qa.readabilityEvaluation = {
+        resumeId: ids.source,
+        versionId: ids.copy,
+        resumeVersion: qa.version,
+        documentHash: "c".repeat(64),
+        checkedAt: new Date().toISOString(),
+        analysis: {
+          engineVersion: "pdf-readability-v1",
+          status: qa.readabilityNeedsReview ? "needs_review" : "readable",
+          checkedBlocks: 4,
+          recoveredBlocks: qa.readabilityNeedsReview ? 2 : 4,
+          pages: [
+            {
+              page: 1,
+              text:
+                "Morgan Example\nBackend developer building Python APIs and SQL data services." +
+                (qa.longReadability
+                  ? Array.from(
+                      { length: 30 },
+                      (_, i) =>
+                        `\n\nExperience ${i + 1}\nBuilt documented Python APIs and SQL reporting tools. Supported incident investigation and maintained tested queries.`,
+                    ).join("")
+                  : "") +
+                (qa.readabilityXss
+                  ? "\n<script>window.__readabilityUnsafe=true</script>"
+                  : ""),
+            },
+            { page: 2, text: "Skills\nPython, SQL, PostgreSQL, pytest, Git" },
+          ],
+          issues: qa.readabilityNeedsReview
+            ? [
+                {
+                  kind: "missing_text",
+                  label: "Experience",
+                  sectionId: work.id,
+                  affectedBlocks: 1,
+                  excerpts: ["Built Python APIs for invoice review."],
+                },
+                {
+                  kind: "reading_order",
+                  label: "Education",
+                  sectionId: education.id,
+                  affectedBlocks: 1,
+                  excerpts: ["Example University"],
+                },
+              ]
+            : [],
+        },
+      };
+    }
+    data = {
+      currentVersion: qa.version,
+      evaluation:
+        qa.readabilityEvaluation?.resumeVersion === qa.version
+          ? qa.readabilityEvaluation
+          : null,
+    };
+    if (qa.staleReadability && method === "POST") data.currentVersion++;
+  } else if (path.endsWith("/ats-assessment")) {
     if (qa.atsUnauthorized)
       return new Response(
         JSON.stringify({ error: { code: "unauthenticated" } }),
@@ -428,6 +511,13 @@ function Harness() {
       openCopy: (id) => event("openCopy", { id }),
     };
   }, [version]);
+  const readability = useMemo(() => {
+    const api = createResumeApi(qa.request, ids.workspace);
+    return {
+      load: (signal) => api.readability(ids.source, signal),
+      run: (signal) => api.runReadability(ids.source, version, signal),
+    };
+  }, [version]);
   const atsAssessment = useMemo(() => {
     const api = createResumeApi(qa.request, ids.workspace);
     return {
@@ -499,6 +589,7 @@ function Harness() {
       initialDraft={doc}
       savedVersion={version}
       atsAssessment={atsAssessment}
+      readability={readability}
       jdMatch={{ tailoring: services }}
       onSave={save}
       onDownload={async (savedVersion, title) => {

@@ -1,5 +1,9 @@
 # Frontend API readiness
 
+## PDF readability API — 2026-10-26
+
+Improve now starts in Readability, with Job fit as a separate tab. GET `/api/v1/resume/:id/readability` retrieves the matching saved result; POST takes only `{expectedVersion}` and explicitly checks the current exported PDF. Both require personal ownership plus `resume.read` and `resume.download`. No JD, AI call, arbitrary score or automatic rendering on open/save. Dirty drafts require Save changes first. [Measurement, limits, privacy and UI](resume-readability.md).
+
 ## Job fit API — 2026-10-23
 
 Use GET/POST `/api/v1/resume/:id/ats-assessment` for the active Job fit panel. POST requires `{expectedVersion,jdText,consent:true}`. No provider request on panel open. Old readiness/JD POST routes return authenticated 410; history remains readable. Hover AI and tailoring routes remain separate. See [ATS contract](ats-assessment.md).

@@ -1,5 +1,9 @@
 # Data Model
 
+## Saved PDF readability metadata — 2026-10-26
+
+`Resume.atsBreakdown.pdfReadability` retains one latest derived check, bound to owner resume, immutable version ID/number, complete-document SHA-256 hash and `pdf-readability-v1` engine. It stores bounded extracted pages and measured issue groups, including private header/contact text recovered from the PDF. Unlike contact-free AI assessments, this owner export result requires both `resume.read` and `resume.download` and never enters a provider projection or audit payload. Library/detail DTOs exclude the metadata. A new explicit check replaces only this latest cache, preserves other namespaces and obeys a 2 MB combined metadata cap. No schema migration or content-version mutation. [Contract](../docs/resume-readability.md).
+
 ## Current audit snapshot — 2026-10-11
 
 The schema includes identity/sessions, workspace/organization/vendor/membership/grants, profiles/contacts/sections, JDs, resumes/versions/tasks, audit/outbox and ResumeSearchChunk. Current resume vectors are gemini-embedding-001/768/professional-v1. Artifact/preset/fact-provenance/invitation-token/default-preference models remain proposed. Table presence does not activate legacy routes.

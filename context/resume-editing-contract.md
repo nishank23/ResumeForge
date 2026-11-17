@@ -8,6 +8,10 @@ Dialog Save modifies the local draft. Save changes persists captured content aga
 
 The existing inline/editor actions operate on the selected stable target. Repeated entries and sections use separate order scopes. Reject impossible moves without a state/history change. Skills/languages use their validated dialog rather than AI toolbar actions. Contact/header fields are private manual fields and never AI targets.
 
+## Saved PDF readability — 2026-10-26
+
+Readability is the first Improve tab, separate from JD-based Job fit. The owner saves changes explicitly before checking; opening tools or saving never starts PDF work. The check reads the current immutable exported PDF and compares visible text/order with the saved editor document. Results and plain-text page preview bind resume/version/hash/engine, hide during unsaved changes and invalidate on a new version. Empty, stale, unavailable and error states never imply a pass. Existing hover AI, history and printable appearance remain. Private extracted text requires both resume read and download authority, is never sent to AI and changes no content version. [API, bounds and verification](../docs/resume-readability.md).
+
 ## Current Gemini proposal contract
 
 The explicit Improve with AI action uses only a clean saved Summary or selected experience/project description plus visible achievements. Opening/selecting does not submit. The labeled action and scope copy supply processing intent; no extra consent checkbox is required.

@@ -9,8 +9,8 @@ Internal task ownership for scripts/development-task.mjs. Private locks stay loc
   "task": null,
   "owner": null,
   "startedAt": null,
-  "updatedAt": "2026-10-23T18:12:28.967Z",
-  "lastResult": "Improve opens with current ATS score, actionable JD guidance and private JD reuse. Frontend/service builds, TypeScript/lint, 66 frontend unit, 9 owner and 208 browser checks passed. Not deployed."
+  "updatedAt": "2026-10-26T05:42:06.742Z",
+  "lastResult": "PDF readability: 148 service, 71 frontend, 18 shared, 9 gateway tests; 247 browser checks. Native PDF/reload verified. Builds and lint passed. Local only."
 }
 ```
 <!-- END:CURRENT_TASK -->

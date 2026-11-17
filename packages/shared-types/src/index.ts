@@ -173,3 +173,4 @@ export * from "./tailoring.js";
 export { readinessHints } from "./readiness-hints.js";
 
 export * from "./ats-assessment.js";
+export * from "./resume-readability.js";

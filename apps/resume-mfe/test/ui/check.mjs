@@ -128,42 +128,43 @@ try {
       page,
       '!!document.querySelector(".rf-ats-jd-input") && !document.querySelector(".rf-request-feedback")',
     );
+    await check(page, `${width}: Improve opens with no-JD readability`, () => {
+      const active = document.querySelector(
+        '.rf-rail-tabs button[aria-pressed="true"]',
+      );
+      const card = document.querySelector(".rf-readability-intro");
+      const jd = document.querySelector(".rf-readability-panel > button");
+      const r = card.getBoundingClientRect();
+      return (
+        active.textContent.trim() === "Improve" &&
+        card.textContent.includes("No job description needed") &&
+        document
+          .getElementById("rf-improve-tab-readability")
+          .getAttribute("aria-selected") === "true" &&
+        !document.getElementById("rf-improve-readability").hidden &&
+        r.top >= 0 &&
+        r.bottom <= innerHeight &&
+        r.bottom <= jd.getBoundingClientRect().top &&
+        getComputedStyle(document.querySelector(".rf-editor-tool-panel"))
+          .display !== "none"
+      );
+    });
     await check(
       page,
-      `${width}: Improve and ATS summary open by default`,
-      () => {
-        const active = document.querySelector(
-          '.rf-rail-tabs button[aria-pressed="true"]',
-        );
-        const card = document.querySelector(".rf-ats-score-card");
-        const jd = document.querySelector(".rf-ats-jd-input");
-        const r = card.getBoundingClientRect();
-        return (
-          active.textContent.trim() === "Improve" &&
-          card.textContent.includes("ATS score") &&
-          !!card.querySelector('[data-unavailable="true"]') &&
-          r.top >= 0 &&
-          r.bottom <= innerHeight &&
-          r.bottom <= jd.getBoundingClientRect().top &&
-          getComputedStyle(document.querySelector(".rf-editor-tool-panel"))
-            .display !== "none"
-        );
-      },
-    );
-    await check(
-      page,
-      `${width}: initial assessment never starts a paid request`,
+      `${width}: initial view never starts PDF work or a paid request`,
       'window.__resumeUx.events.every(e=>e.name!=="atsRun") && !document.querySelector(".rf-ats-result") && document.querySelector(".rf-ats-job-context").textContent.includes("Tailor for this job")',
     );
     await check(
       page,
-      `${width}: score and JD actions fit without a first-screen scroll`,
+      `${width}: readability action fits without first-screen scrolling`,
       () => {
         const card = document
-          .querySelector(".rf-ats-score-card")
+          .querySelector(".rf-readability-intro")
           .getBoundingClientRect();
-        const tailor = [...document.querySelectorAll(".rf-ats-job-fit button")]
-          .find((b) => b.textContent.trim() === "Tailor for this job")
+        const tailor = [
+          ...document.querySelectorAll(".rf-readability-panel button"),
+        ]
+          .find((b) => b.textContent.trim() === "Check readability")
           .getBoundingClientRect();
         return card.top >= 0 && tailor.bottom <= innerHeight;
       },
@@ -314,6 +315,7 @@ try {
       quality: 88,
     });
     await click(page, "Improve");
+    await click(page, "Job fit");
     await wait(
       page,
       '!!document.querySelector(".rf-ats-job-fit") && !!document.querySelector(".rf-ats-jd-input")',
@@ -951,6 +953,7 @@ try {
   );
   await click(page, "Design");
   await click(page, "Improve");
+  await click(page, "Job fit");
   await wait(page, '!!document.querySelector(".rf-ats-job-fit")');
   await check(
     page,
@@ -1360,6 +1363,7 @@ try {
   for (const failure of ["atsUnauthorized", "atsFails"]) {
     page = await openWriting();
     await click(page, "Improve");
+    await click(page, "Job fit");
     await wait(
       page,
       `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
@@ -1392,6 +1396,7 @@ try {
   }
   page = await openWriting();
   await click(page, "Improve");
+  await click(page, "Job fit");
   await wait(
     page,
     `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
@@ -1420,6 +1425,7 @@ try {
   await wait(page, '!!document.querySelector(".rf-ats-result")');
   await click(page, "Write");
   await click(page, "Improve");
+  await click(page, "Job fit");
   await wait(page, '!!document.querySelector(".rf-ats-result")');
   await check(
     page,
@@ -1510,6 +1516,7 @@ try {
   });
   await click(page, "Write");
   await click(page, "Improve");
+  await click(page, "Job fit");
   await wait(page, '!!document.querySelector(".rf-ats-result")');
   await check(
     page,
@@ -1534,6 +1541,7 @@ try {
   await page.close();
   page = await openWriting();
   await click(page, "Improve");
+  await click(page, "Job fit");
   await wait(
     page,
     `${events("request")}.some(e=>e.path.endsWith("/ats-assessment"))`,
@@ -1552,6 +1560,278 @@ try {
     page,
     "preferred-only jobs explain the score using preferred coverage",
     'document.querySelector(".rf-ats-result").textContent.includes("0 of 1 preferred") && !document.querySelector(".rf-ats-result").textContent.includes("0 of 0 required")',
+  );
+  await page.close();
+  for (const [width, height] of [
+    [1440, 900],
+    [768, 1024],
+    [390, 844],
+  ]) {
+    page = await open("", width, height);
+    await wait(page, '!!document.querySelector(".rf-readability-panel")');
+    await check(
+      page,
+      `${width}: no PDF work on initial load`,
+      `${events("readabilityRun")}.length===0`,
+    );
+    await click(page, "Check readability");
+    await wait(page, '!!document.querySelector(".rf-readability-result")');
+    await check(
+      page,
+      `${width}: readability uses one explicit saved-version request`,
+      `${events("readabilityRun")}.length===1 && ${events("readabilityRun")}[0].expectedVersion===1 && ${events("atsRun")}.length===0 && ${events("start")}.length===0`,
+    );
+    await check(
+      page,
+      `${width}: readable result has no invented score`,
+      () =>
+        document
+          .querySelector(".rf-readability-result")
+          .textContent.includes("Text recovered in order") &&
+        !document.querySelector('.rf-readability-panel [role="meter"]'),
+    );
+    await page.screenshot({
+      path: resolve(out, `readability-result-${width}.jpg`),
+      quality: 88,
+    });
+    await click(page, "View extracted text");
+    await wait(page, '!!document.querySelector(".rf-readability-extracted")');
+    await check(
+      page,
+      `${width}: preview preserves readable full text and viewport`,
+      () =>
+        document
+          .querySelector(".rf-readability-extracted")
+          .textContent.includes("Morgan Example") &&
+        document.documentElement.scrollWidth <= innerWidth &&
+        Number.parseFloat(
+          getComputedStyle(document.querySelector(".rf-readability-extracted"))
+            .fontSize,
+        ) >= 16,
+    );
+    await page.screenshot({
+      path: resolve(out, `readability-preview-${width}.jpg`),
+      quality: 88,
+    });
+    await page.eval(() =>
+      document.querySelector('[aria-label="Next extracted page"]').click(),
+    );
+    await check(
+      page,
+      `${width}: page navigation is real and bounded`,
+      () =>
+        document
+          .querySelector(".rf-readability-extracted")
+          .textContent.includes("pytest") &&
+        document.querySelector('[aria-label="Next extracted page"]').disabled &&
+        !document.querySelector('[aria-label="Previous extracted page"]')
+          .disabled,
+    );
+    await click(page, "Back to improvements");
+    await page.eval(() =>
+      document.getElementById("rf-improve-tab-readability").focus(),
+    );
+    await page.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "ArrowRight",
+      code: "ArrowRight",
+      windowsVirtualKeyCode: 39,
+    });
+    await page.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "ArrowRight",
+      code: "ArrowRight",
+      windowsVirtualKeyCode: 39,
+    });
+    await check(
+      page,
+      `${width}: improvement tabs support keyboard switching`,
+      () =>
+        document
+          .getElementById("rf-improve-tab-job-fit")
+          .getAttribute("aria-selected") === "true" &&
+        document.activeElement.id === "rf-improve-tab-job-fit" &&
+        document.getElementById("rf-improve-readability").hidden,
+    );
+    await click(page, "Readability");
+    await check(
+      page,
+      `${width}: switching tasks retains the checked result`,
+      `${events("readabilityRun")}.length===1 && !!document.querySelector(".rf-readability-result")`,
+    );
+    await click(page, "Write");
+    await click(page, "Improve");
+    await wait(page, '!!document.querySelector(".rf-readability-result")');
+    await check(
+      page,
+      `${width}: reopening uses a saved result without rerendering`,
+      `${events("readabilityRun")}.length===1`,
+    );
+    await page.close();
+    page = await open("", width, height);
+    await page.eval(() => {
+      window.__resumeUx.longReadability = true;
+    });
+    await click(page, "Check readability");
+    await click(page, "View extracted text");
+    await check(
+      page,
+      `${width}: long preview scrolls within a bounded dialog`,
+      () => {
+        const dialog = document.querySelector(".rf-readability-dialog"),
+          body = document.querySelector(".rf-readability-dialog-body"),
+          r = dialog.getBoundingClientRect(),
+          footer = dialog.lastElementChild.getBoundingClientRect();
+        return (
+          r.top >= 0 &&
+          r.bottom <= innerHeight &&
+          r.width >= Math.min(700, innerWidth - 64) &&
+          body.scrollHeight > body.clientHeight &&
+          document.querySelector(".rf-readability-extracted").scrollHeight <=
+            document.querySelector(".rf-readability-extracted").clientHeight +
+              1 &&
+          footer.bottom <= innerHeight &&
+          document.documentElement.scrollWidth <= innerWidth
+        );
+      },
+    );
+    await page.screenshot({
+      path: resolve(out, `readability-long-preview-${width}.jpg`),
+      quality: 88,
+    });
+    await click(page, "Back to improvements");
+    await check(
+      page,
+      `${width}: selected improvement tab has a visible treatment`,
+      () => {
+        const active = getComputedStyle(
+            document.getElementById("rf-improve-tab-readability"),
+          ),
+          inactive = getComputedStyle(
+            document.getElementById("rf-improve-tab-job-fit"),
+          );
+        return (
+          active.backgroundColor !== inactive.backgroundColor &&
+          active.color !== inactive.color
+        );
+      },
+    );
+    await page.close();
+  }
+  page = await open();
+  await page.eval(() => {
+    window.__resumeUx.readabilityNeedsReview = true;
+  });
+  await click(page, "Check readability");
+  await wait(page, '!!document.querySelector(".rf-readability-result")');
+  await check(
+    page,
+    "measured problems name source sections and quoted text",
+    () =>
+      document.querySelector(".rf-readability-result").dataset.status ===
+        "needs_review" &&
+      document
+        .querySelector(".rf-readability-result")
+        .textContent.includes("Built Python APIs") &&
+      document.querySelectorAll(".rf-readability-issue").length === 2,
+  );
+  await page.screenshot({
+    path: resolve(out, "readability-issues-1440.jpg"),
+    quality: 88,
+  });
+  await click(page, "Edit resume");
+  await editSummary(
+    page,
+    "Updated supported summary with PostgreSQL service details.",
+  );
+  await click(page, "Improve");
+  await check(
+    page,
+    "unsaved edits hide obsolete readability and offer Save changes",
+    () =>
+      !document.querySelector(".rf-readability-result") &&
+      [...document.querySelectorAll(".rf-readability-panel button")].some(
+        (b) => b.textContent.trim() === "Save changes",
+      ),
+  );
+  await page.eval(() => {
+    window.__resumeUx.readabilityNeedsReview = false;
+  });
+  await page.eval(() =>
+    [...document.querySelectorAll(".rf-readability-panel button")]
+      .find((b) => b.textContent.trim() === "Save changes")
+      .click(),
+  );
+  await wait(page, `${events("saveComplete")}.length===1`);
+  await wait(
+    page,
+    '[...document.querySelectorAll(".rf-readability-panel button")].some(b=>b.textContent.trim()==="Check readability"&&!b.disabled)',
+  );
+  await check(
+    page,
+    "saving does not silently perform PDF work",
+    `${events("readabilityRun")}.length===1 && window.__resumeUx.version===2`,
+  );
+  await click(page, "Check readability");
+  await wait(page, '!!document.querySelector(".rf-readability-result")');
+  await check(
+    page,
+    "next check binds the newly saved version",
+    `${events("readabilityRun")}.length===2 && ${events("readabilityRun")}[1].expectedVersion===2 && document.querySelector(".rf-readability-result").textContent.includes("version 2")`,
+  );
+  await page.close();
+  for (const flag of [
+    "readabilityFails",
+    "readabilityUnauthorized",
+    "staleReadability",
+  ]) {
+    page = await open();
+    await page.eval((flag) => {
+      window.__resumeUx[flag] = true;
+    }, flag);
+    await click(page, "Check readability");
+    await wait(
+      page,
+      '!!document.querySelector(".rf-readability-panel [role=alert]")',
+    );
+    await check(
+      page,
+      `${flag}: errors never expose a false result or raw diagnostics`,
+      () =>
+        !document.querySelector(".rf-readability-result") &&
+        !document
+          .querySelector(".rf-readability-panel")
+          .textContent.includes("PRIVATE DEBUG DATA"),
+    );
+    await page.close();
+  }
+  page = await open();
+  await page.eval(() => {
+    window.__resumeUx.delayReadability = true;
+    window.__resumeUx.readabilityXss = true;
+  });
+  await click(page, "Check readability");
+  await wait(page, 'typeof window.__resumeUx.resolveReadability==="function"');
+  await check(
+    page,
+    "PDF work prevents duplicate clicks",
+    () =>
+      [...document.querySelectorAll(".rf-readability-panel button")].find(
+        (b) => b.textContent.trim() === "Checking PDF…",
+      ).disabled && !document.querySelector(".rf-readability-result"),
+  );
+  await page.eval(() => window.__resumeUx.resolveReadability());
+  await wait(page, '!!document.querySelector(".rf-readability-result")');
+  await click(page, "View extracted text");
+  await check(
+    page,
+    "extracted document markup is displayed as text",
+    () =>
+      document
+        .querySelector(".rf-readability-extracted")
+        .textContent.includes("<script>") &&
+      !document.querySelector(".rf-readability-extracted script") &&
+      !window.__readabilityUnsafe,
   );
   await page.close();
   page = await openWriting("?theme=light", 1440, 1000);

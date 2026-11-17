@@ -1,5 +1,11 @@
 # Current progress
 
+## Saved PDF readability — 2026-10-26
+
+Implemented on `codex/resume-readability` from personal `main`. Improve now starts with Readability beside Job fit. The explicit check renders the actual current saved PDF and compares visible source fragments with extracted text/order. It shows a readable result or measured issues plus a plain-text page preview. Dirty/new resumes save first; opening/saving never automatically renders or calls AI. Existing hover AI, direct icons and JD tailoring remain. [Contract](../docs/resume-readability.md).
+
+Verified: frontend production build; shared-types/shared and owner-service/gateway builds; frontend/service/gateway TypeScript and lint. Service suite 148/148, frontend unit 71/71, shared session 18/18 and gateway 9/9. Component browser suite 247 checks across 1440, 768 and 390 px passed, including tab keys, initial actions, version/dirty/save/cache/error guards, safe text, real page controls and long-preview scrolling without text overlap. Screenshots were reviewed and the active tab/desktop width/mobile scrolling corrected. The signed-in native local stack checked the existing synthetic `forge-quality-import-qa`, recovered its actual one-page PDF and reloaded the stored result at version 1. No content edit or provider request was needed. Private configuration is unchanged. No GitHub push, merge or production deployment; this does not prove production capacity or universal ATS acceptance.
+
 ## Improve opens with ATS guidance — 2026-10-23
 
 The builder now opens in Improve. The latest current-version ATS evidence score leads, followed by the checked job's tailoring action and up to three missing/uncertain actual-JD requirements, with required evidence first. Full quotations stay in a secondary disclosure. Edit resume returns to writing and the existing hover AI. Empty/stale/loading/error states never invent a number or trigger a paid request. Compact default controls fit the first screen at 1440×800, 768×1024 and 390×844.

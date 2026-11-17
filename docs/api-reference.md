@@ -1,5 +1,9 @@
 # API reference
 
+## Saved PDF readability — 2026-10-26
+
+GET/POST `/api/v1/resume/:id/readability` is connected through the gateway and personal allowlist. POST accepts strict `{expectedVersion}`; GET only retrieves the matching private result. Both require the personal owner plus `resume.read` and `resume.download`. Extraction includes owner header/contact text, so this is an export boundary rather than a public score. Shared `ReadabilityState` binds current version, immutable snapshot, document hash and engine. No JD/provider call, content mutation or schema migration. [Full contract](resume-readability.md).
+
 ## Current route availability — 2026-10-14
 
 Full saved-source tailoring adds GET/POST `/api/v1/resume/:id/tailoring`, POST `/tailoring/cancel` and POST `/tailoring/apply` beneath the same owned resume. Start queues bounded work; Apply creates an independent copy from stored selections. [Bodies, scope, limits and manual checks](full-resume-tailoring.md). These routes do not activate the legacy `/tailor`, `/clone`, `/generate` or client-authored Apply paths.
@@ -16,6 +20,8 @@ All external paths below use the /api/v1 prefix. Current source: [gateway](../se
 | Gateway GET/PUT/DELETE | /resume/:id |
 | Gateway POST | /resume/:id/restore — undo tombstone; not saved-version restoration. |
 | Gateway GET | /resume/:id/pdf — current saved version stream. |
+| Gateway GET/POST | /resume/:id/readability — private actual-PDF check. |
+| Gateway GET/POST | /resume/:id/ats-assessment — current JD-based Job fit. |
 | Gateway GET/POST, PUT preferences | /resume/:id/readiness and /resume/:id/readiness/preferences |
 | Gateway GET/POST, PUT preferences | /resume/:id/jd-match and /resume/:id/jd-match/preferences |
 | Gateway POST | /resume/:id/ai-rewrite and /resume/:id/ai-rewrite/apply |

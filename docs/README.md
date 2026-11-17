@@ -12,6 +12,7 @@
 
 - [API availability](api-reference.md), [frontend API readiness](frontend-api-readiness.md), [profile API](profile-api.md) and [experience API](experience-api.md).
 - [ATS/Gemini workflow](ats-workflow.md), [provider configuration](ats-providers.md) and [private vector retrieval](resume-vector-search.md).
+- [Saved PDF readability](resume-readability.md): no-JD extraction, measured issues, private version-bound cache and text preview.
 - [Full-resume tailoring](full-resume-tailoring.md): scope, persisted limits, API and manual checklist.
 - [Resume UX improvements](ux-ui-improvements.md): three-phase tailoring, readable mobile editing, feedback and repeatable component-browser checks.
 - [Editing](../context/resume-editing-contract.md), [data](../context/data-model.md) and [authorization](../context/authorization-model.md).

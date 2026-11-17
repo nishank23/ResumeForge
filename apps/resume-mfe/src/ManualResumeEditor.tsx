@@ -1,4 +1,6 @@
-import { AtsJobFitPanel, type AtsJobFitServices } from "./AtsJobFitPanel";
+import type { AtsJobFitServices } from "./AtsJobFitPanel";
+import { ResumeImprovePanel } from "./ResumeImprovePanel";
+import type { ReadabilityServices } from "./ResumeReadabilityPanel";
 import type { TailoringServices } from "./TailoringDialog";
 import { TailoringDialog } from "./TailoringDialog";
 import {
@@ -92,6 +94,7 @@ export function ManualResumeEditor({
   onSave,
   onDownload,
   atsAssessment,
+  readability,
   jdMatch,
   rewrite,
   savedVersion = 0,
@@ -104,6 +107,7 @@ export function ManualResumeEditor({
   onDownload?: (version: number, title: string) => Promise<void>;
   initialTailoringOpen?: boolean;
   atsAssessment?: AtsJobFitServices;
+  readability?: ReadabilityServices;
   jdMatch?: { tailoring?: TailoringServices };
   rewrite?: RewriteServices;
   savedVersion?: number;
@@ -1013,16 +1017,36 @@ export function ManualResumeEditor({
                 />
               ) : null}
               {panel === "ats" || panel === "jd" ? (
-                <AtsJobFitPanel
+                <ResumeImprovePanel
+                  readability={readability}
+                  dirty={dirty || inlinePending}
+                  saving={saving}
+                  onSave={() => {
+                    void saveCurrent();
+                  }}
+                  onDesign={() => {
+                    setPanel("design");
+                    setPanelOpen(true);
+                    setMobileView("tools");
+                  }}
+                  disabledReason={
+                    conflict
+                      ? "Reopen the latest resume before checking."
+                      : session || aiSession || deleting || leaving
+                        ? "Close edit dialogs before checking your PDF."
+                        : downloading
+                          ? "Wait for your PDF download to finish."
+                          : undefined
+                  }
                   reducedMotion={context?.reducedMotion}
                   onWrite={() => {
                     setPanelOpen(false);
                     setMobileView("resume");
                     setMode("editor");
                   }}
-                  services={atsAssessment}
+                  atsAssessment={atsAssessment}
                   savedVersion={savedVersion}
-                  disabledReason={
+                  atsDisabledReason={
                     actionDisabled ||
                     (session || aiSession || deleting || leaving
                       ? "Close edit dialogs before checking job fit."

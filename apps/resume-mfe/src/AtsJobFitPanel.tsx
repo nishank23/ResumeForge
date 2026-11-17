@@ -153,7 +153,7 @@ export function AtsJobFitPanel({
       >
         <div className="rf-ats-score-card">
           <div className="rf-ats-score-heading">
-            <h3>ATS score</h3>
+            <h3>Job fit score</h3>
             {result ? (
               <DocumentStatus tone="saved">
                 Version {evaluation?.resumeVersion}
@@ -164,7 +164,7 @@ export function AtsJobFitPanel({
           </div>
           <AssessmentMeter
             value={result?.score}
-            label="ATS score · job fit evidence coverage"
+            label="Job fit evidence coverage"
           />
           {result ? (
             result.score === null ? (
@@ -320,7 +320,7 @@ export function AtsJobFitPanel({
           <>
             <section
               className="rf-ats-next-steps"
-              aria-label="Ways to improve ATS score"
+              aria-label="Ways to improve job fit"
             >
               <h3>
                 {improvements.length

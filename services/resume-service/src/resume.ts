@@ -1,3 +1,4 @@
+import { createReadabilityUseCases } from "./readability.js";
 import { createAssessmentUseCases, type AtsClient } from "./ats/assessment.js";
 import { createAtsUseCases } from "./ats/use-cases.js";
 import { createTailoringUseCases } from "./tailoring/use-cases.js";
@@ -2374,6 +2375,13 @@ export function createResumeUseCases(
   }
 
   return {
+    ...createReadabilityUseCases({
+      db,
+      now,
+      authorize: authorizeWorkspace,
+      assert: assertContext,
+      audit: createAuditIntent,
+    }),
     ...createAssessmentUseCases({
       db,
       now,
