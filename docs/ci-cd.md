@@ -24,7 +24,7 @@ The user approved these permissions and the first automated deployment on 2026-1
 
 The configured service account is `resumeforge-github@resume-forge-dev.iam.gserviceaccount.com`. Workload Identity pool `resumeforge-github` and OIDC provider `github-main` use issuer `https://token.actions.githubusercontent.com` in project number `551688915016`.
 
-GitHub API verification confirmed private repository ID `1417241992` and owner ID `80453652`. The provider maps:
+GitHub API verification confirmed repository ID `1417241992` and owner ID `80453652`. The provider maps:
 
 ```text
 google.subject=assertion.sub
@@ -37,13 +37,12 @@ attribute.ref=assertion.ref
 attribute.workflow_ref=assertion.workflow_ref
 ```
 
-The configured admission condition is:
+The configured admission condition is below. Since 2026-11-17 the repository is public, so the condition no longer requires `repository_visibility == 'private'`; fork pull requests never receive an ID token because deploy runs only on push or dispatch to `main`.
 
 ```text
 assertion.repository_id == '1417241992' &&
 assertion.repository_owner_id == '80453652' &&
 assertion.repository == 'nishank23/ResumeForge' &&
-assertion.repository_visibility == 'private' &&
 assertion.ref == 'refs/heads/main' &&
 assertion.workflow_ref == 'nishank23/ResumeForge/.github/workflows/cloud-deploy.yml@refs/heads/main' &&
 assertion.event_name in ['push', 'workflow_dispatch']

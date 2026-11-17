@@ -24,7 +24,7 @@ env:
 jobs:
   verify:
     if: >-
-      github.repository == 'nishank23/ResumeForge' && github.event.repository.private &&
+      github.repository == 'nishank23/ResumeForge' &&
       (github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || vars.CLOUD_DEPLOY_ENABLED != 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -36,7 +36,7 @@ jobs:
 
   deploy:
     if: >-
-      github.repository == 'nishank23/ResumeForge' && github.event.repository.private &&
+      github.repository == 'nishank23/ResumeForge' &&
       github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.CLOUD_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
