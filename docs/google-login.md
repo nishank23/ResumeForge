@@ -8,6 +8,7 @@ The cloud runtime uses its configured canonical HTTPS origin and Secure cookies.
 
 - [x] ✅ Google PKCE callback, provider identity and personal Workspace bootstrap.
 - [x] ✅ Database refresh-session rotation/revocation and protected shell routing.
+- [x] ✅ Rotation grace (2026-11-17): a refresh token rotated less than 30 seconds ago, whose replacement is still active, rotates that replacement instead of revoking the family. This keeps users signed in when a reload or aborted request loses the rotation response. Reuse after 30 seconds, after logout, or after the replacement was itself rotated still revokes the whole family.
 - [x] ✅ Authenticated users land in My resumes; signed-out users see the full-screen Forge Studio sign-in without workspace sidebar.
 - [ ] LinkedIn login/linking and hosted identity/cookie/service configuration remain incomplete.
 
