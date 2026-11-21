@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   existsSync,
+  statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,6 +44,7 @@ if (command === 'docker') {
   if (args[0] === 'compose') {
     const service = args.at(-1);
     if (args.includes('ps')) output = service + '-container';
+    if (args.includes('logs')) output = 'PRIVATE_CANARY app startup error';
     if (args.includes('up')) {
       const candidate = state[service + 'Tag'];
       if ((mode === service || mode === 'rollback') && candidate.startsWith('new')) code = 1;
@@ -149,7 +151,14 @@ function trial(mode, id = release) {
       .map(JSON.parse);
     const state = JSON.parse(readFileSync(stateFile, "utf8"));
     const marker = join(root, "var/lib/resumeforge/current-release");
+    const failureLog = join(root, `var/lib/resumeforge/failed-${id}.log`);
     return {
+      failureLog: existsSync(failureLog)
+        ? {
+            text: readFileSync(failureLog, "utf8"),
+            mode: statSync(failureLog).mode & 0o777,
+          }
+        : null,
       ...result,
       calls,
       state,
@@ -202,6 +211,10 @@ for (const mode of ["app", "web"])
       ["old-app", "old-web", null],
     );
     assert.match(result.stderr, /Previous release restored/);
+    // Failed app logs are kept root-only on the VM, never in workflow output.
+    assert.match(result.failureLog.text, /PRIVATE_CANARY app startup error/);
+    assert.equal(result.failureLog.mode, 0o600);
+    assert.match(result.stderr, /Failed app logs saved on the VM/);
   });
 for (const mode of [
   "backup",
@@ -213,6 +226,7 @@ for (const mode of [
 ])
   test(`${mode} failure stops before any running service changes`, () => {
     const result = trial(mode);
+    assert.equal(result.failureLog, null);
     assert.notEqual(result.status, 0, result.stdout);
     assert.equal(starts(result).length, 0);
     assert.deepEqual(
