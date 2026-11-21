@@ -67,6 +67,11 @@ deploy_release() {
     trap - ERR HUP INT TERM
     set +e
     echo 'Release failed; restoring the previous app and web images.' >&2
+    # Recreating the app removes the failed container and its logs. Keep them
+    # root-only on the VM; workflow output is public and must not include them.
+    local failure_log="$state/failed-$release_id.log"
+    (umask 077; { "${compose[@]}" ps -a app; "${compose[@]}" logs --no-color --timestamps --tail 300 app; } >"$failure_log" 2>&1) || true
+    echo "Failed app logs saved on the VM: $failure_log" >&2
     docker tag "$old_app" forge-studio:cloud
     docker tag "$old_web" forge-studio-web:cloud
     local rollback_status=0
