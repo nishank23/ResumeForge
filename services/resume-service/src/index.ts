@@ -7,6 +7,7 @@ import {
 } from "@resume-forge/prisma-client";
 import { createLocalActorResolver } from "@resume-forge/access-policy/server";
 import { createResumeApp } from "./app.js";
+import { aiUsageLimitsFromEnv, createAiUsageLimiter } from "./ai-usage.js";
 import { createResumeUseCases } from "./resume.js";
 import { loadResumeConfig } from "./config.js";
 
@@ -43,6 +44,7 @@ process.once("exit", () => {
 });
 const app = createResumeApp({
   personalEditorOnly: true,
+  aiUsage: createAiUsageLimiter(aiUsageLimitsFromEnv(process.env)),
   appOrigin: config.appOrigin,
   resolveActor: createLocalActorResolver({
     endpoint: config.endpoint,
