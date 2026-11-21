@@ -112,3 +112,20 @@ test("invalid targets are rejected before requesting PDF work", async () => {
   await assert.rejects(api.runReadability(id, 0));
   assert.equal(calls, 0);
 });
+test("usage limits show the server's reset message on every AI action", async () => {
+  const message =
+    "Daily limit reached: 20 job fit checks per day. Try again after 00:00 UTC.";
+  const api = createResumeApi(
+    async () =>
+      new Response(
+        JSON.stringify({ error: { code: "rate_limited", message } }),
+        { status: 429 },
+      ),
+    workspaceId,
+  );
+  await assert.rejects(
+    api.runAtsAssessment(id, 1, "x".repeat(60)),
+    (e) => e.code === "rate_limited" && e.message === message,
+  );
+  await assert.rejects(api.runReadability(id, 1), (e) => e.message === message);
+});

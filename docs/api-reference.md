@@ -1,5 +1,19 @@
 # API reference
 
+## AI usage limits — 2026-11-21
+
+Paid Gemini requests are capped in resume-service before any work starts: POST `/api/v1/resume/:id/tailoring`, `/ats-assessment` and `/ai-rewrite`. GET requests, Apply/cancel, readability and PDF export are not counted.
+
+| Limit | Default | Env override |
+| --- | --- | --- |
+| Tailoring runs per user per UTC day | 5 | `AI_LIMIT_TAILORING_PER_DAY` |
+| Job fit checks per user per UTC day | 20 | `AI_LIMIT_ASSESSMENT_PER_DAY` |
+| AI rewrites per user per UTC day | 40 | `AI_LIMIT_REWRITE_PER_DAY` |
+| AI requests per user per minute (sliding) | 6 | `AI_LIMIT_PER_MINUTE` |
+| AI requests for the whole site per UTC day | 300 | `AI_LIMIT_SITE_PER_DAY` |
+
+Overrides must be whole numbers from 1 to 100000; an invalid value stops resume-service at startup. Over a limit, the API returns 429 `rate_limited` with a `Retry-After` header (seconds) and a message naming the reset time; the gateway forwards both, and the resume MFE shows the message. Requests rejected as client errors (invalid input, version conflict, not found) are refunded; provider failures still count because the paid call may have happened. Counts are in memory in the single resume-service process, so they reset when the app restarts, including on each deploy.
+
 ## Saved PDF readability — 2026-10-26
 
 GET/POST `/api/v1/resume/:id/readability` is connected through the gateway and personal allowlist. POST accepts strict `{expectedVersion}`; GET only retrieves the matching private result. Both require the personal owner plus `resume.read` and `resume.download`. Extraction includes owner header/contact text, so this is an export boundary rather than a public score. Shared `ReadabilityState` binds current version, immutable snapshot, document hash and engine. No JD/provider call, content mutation or schema migration. [Full contract](resume-readability.md).

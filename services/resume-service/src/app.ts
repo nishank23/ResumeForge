@@ -9,14 +9,21 @@ import { parseUploadedResume } from "./upload.js";
 import type { ActorResolution } from "@resume-forge/access-policy/server";
 import type { createResumeUseCases } from "./resume.js";
 import { ResumeError } from "./contracts.js";
+import {
+  createAiUsageLimiter,
+  type AiAction,
+  type AiUsageLimiter,
+} from "./ai-usage.js";
 
 export function createResumeApp(config: {
   resolveActor: (authorization: string | undefined) => Promise<ActorResolution>;
   resumes: ReturnType<typeof createResumeUseCases>;
   personalEditorOnly?: boolean;
   appOrigin?: string;
+  aiUsage?: AiUsageLimiter;
 }) {
   const app = new Hono();
+  const aiUsage = config.aiUsage ?? createAiUsageLimiter();
 
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
@@ -102,7 +109,7 @@ export function createResumeApp(config: {
     c: Context,
     code: string,
     message: string,
-    status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 415 | 422 | 503,
+    status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 415 | 422 | 429 | 503,
     requestId: string,
   ) =>
     c.json(
@@ -569,11 +576,21 @@ export function createResumeApp(config: {
       id: string,
       body: unknown,
     ) => Promise<unknown>,
+    aiAction?: AiAction,
   ) {
     const requestId = randomUUID();
     c.header("X-Request-Id", requestId);
     const auth = await authenticate(c, requestId);
     if (!auth.authenticated) return auth.response;
+    // Paid Gemini requests are capped per user and site-wide before any work starts.
+    const usage =
+      aiAction && c.req.method === "POST"
+        ? aiUsage.reserve(auth.context.actor.userId, aiAction)
+        : undefined;
+    if (usage && !usage.allowed) {
+      c.header("Retry-After", String(usage.retryAfterSeconds));
+      return fail(c, "rate_limited", usage.message, 429, requestId);
+    }
     try {
       return c.json({
         data: await operation(
@@ -584,6 +601,14 @@ export function createResumeApp(config: {
         requestId,
       });
     } catch (error) {
+      // Client errors are rejected before a provider call, so they do not use quota.
+      if (
+        usage?.allowed &&
+        (error instanceof SyntaxError ||
+          error instanceof z.ZodError ||
+          error instanceof ResumeError)
+      )
+        usage.release();
       if (error instanceof SyntaxError || error instanceof z.ZodError)
         return fail(
           c,
@@ -620,10 +645,13 @@ export function createResumeApp(config: {
     }
   }
   app.on(["GET", "POST"], "/api/v1/resume/:id/ats-assessment", (c) =>
-    atsRequest(c, (context, id, body) =>
-      c.req.method === "GET"
-        ? config.resumes.getAtsAssessment(context, id)
-        : config.resumes.runAtsAssessment(context, id, body),
+    atsRequest(
+      c,
+      (context, id, body) =>
+        c.req.method === "GET"
+          ? config.resumes.getAtsAssessment(context, id)
+          : config.resumes.runAtsAssessment(context, id, body),
+      "assessment",
     ),
   );
   app.on(["GET", "POST"], "/api/v1/resume/:id/jd-match", async (c) => {
@@ -643,16 +671,19 @@ export function createResumeApp(config: {
     atsRequest(c, config.resumes.updateJdPreference),
   );
   app.post("/api/v1/resume/:id/ai-rewrite", (c) =>
-    atsRequest(c, config.resumes.requestRewrite),
+    atsRequest(c, config.resumes.requestRewrite, "rewrite"),
   );
   app.post("/api/v1/resume/:id/ai-rewrite/apply", (c) =>
     atsRequest(c, config.resumes.applySavedRewrite),
   );
   app.on(["GET", "POST"], "/api/v1/resume/:id/tailoring", (c) =>
-    atsRequest(c, (context, id, body) =>
-      c.req.method === "GET"
-        ? config.resumes.getTailoring(context, id)
-        : config.resumes.startTailoring(context, id, body),
+    atsRequest(
+      c,
+      (context, id, body) =>
+        c.req.method === "GET"
+          ? config.resumes.getTailoring(context, id)
+          : config.resumes.startTailoring(context, id, body),
+      "tailoring",
     ),
   );
   app.post("/api/v1/resume/:id/tailoring/cancel", (c) =>

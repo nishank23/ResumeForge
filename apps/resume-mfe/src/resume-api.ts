@@ -376,41 +376,48 @@ export function createResumeApi(request: ApiRequest, workspaceId: string) {
     const envelope = record(await response.json().catch(() => null));
     if (!response.ok) {
       const code = str(record(envelope.error).code);
+      const message = str(record(envelope.error).message);
       throw new ResumeApiError(
         code,
-        path.endsWith("/readability")
-          ? code === "unauthenticated" || response.status === 401
-            ? "Sign in again to check your PDF."
-            : code === "revision_conflict"
-              ? "Your saved resume changed. Reopen the latest version before checking the PDF."
-              : code === "not_found"
-                ? "This resume is no longer available."
-                : "Could not check this PDF. Your resume is unchanged. Save and retry; very large or unsupported PDFs may need a simpler export."
-          : path.endsWith("/ats-assessment")
+        // Usage-limit messages carry the reset time, so show them as sent.
+        (code === "rate_limited" || response.status === 429) &&
+          message &&
+          message.length <= 300
+          ? message
+          : path.endsWith("/readability")
             ? code === "unauthenticated" || response.status === 401
-              ? "Sign in again to check job fit."
+              ? "Sign in again to check your PDF."
               : code === "revision_conflict"
-                ? "Your saved resume changed. Reopen the latest version before checking job fit."
-                : code === "invalid_input"
-                  ? "Use a job description between 50 and 12,000 characters and save your resume first."
-                  : "Job fit is unavailable. Your resume is unchanged. Retry later."
-            : /\/(jd-match|ai-rewrite|tailoring)(?:\/|$)/.test(path) &&
-                str(record(envelope.error).message).length <= 700
-              ? str(record(envelope.error).message) ||
-                "ATS request failed. Retry."
-              : code === "revision_conflict"
-                ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
-                : code === "invalid_input" || code === "unsupported_media_type"
-                  ? path.endsWith("/parse")
-                    ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
-                    : "Could not save this document. Check field lengths, links and dates; your edits are kept."
-                  : code === "file_too_large"
+                ? "Your saved resume changed. Reopen the latest version before checking the PDF."
+                : code === "not_found"
+                  ? "This resume is no longer available."
+                  : "Could not check this PDF. Your resume is unchanged. Save and retry; very large or unsupported PDFs may need a simpler export."
+            : path.endsWith("/ats-assessment")
+              ? code === "unauthenticated" || response.status === 401
+                ? "Sign in again to check job fit."
+                : code === "revision_conflict"
+                  ? "Your saved resume changed. Reopen the latest version before checking job fit."
+                  : code === "invalid_input"
+                    ? "Use a job description between 50 and 12,000 characters and save your resume first."
+                    : "Job fit is unavailable. Your resume is unchanged. Retry later."
+              : /\/(jd-match|ai-rewrite|tailoring)(?:\/|$)/.test(path) &&
+                  str(record(envelope.error).message).length <= 700
+                ? str(record(envelope.error).message) ||
+                  "ATS request failed. Retry."
+                : code === "revision_conflict"
+                  ? "A newer version exists. Your edits are kept; reopen the saved resume before saving again."
+                  : code === "invalid_input" ||
+                      code === "unsupported_media_type"
                     ? path.endsWith("/parse")
-                      ? "File exceeds the upload limit."
-                      : "Document exceeds the save limit. Shorten its content; your edits are kept."
-                    : code === "not_found"
-                      ? "This resume is no longer available."
-                      : "Could not load or save your resume. Retry when the service is available.",
+                      ? "Could not read this file. Use a text-based PDF, DOCX, TXT or Markdown file."
+                      : "Could not save this document. Check field lengths, links and dates; your edits are kept."
+                    : code === "file_too_large"
+                      ? path.endsWith("/parse")
+                        ? "File exceeds the upload limit."
+                        : "Document exceeds the save limit. Shorten its content; your edits are kept."
+                      : code === "not_found"
+                        ? "This resume is no longer available."
+                        : "Could not load or save your resume. Retry when the service is available.",
       );
     }
     return envelope.data;

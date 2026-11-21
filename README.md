@@ -17,7 +17,7 @@
 | **Tailoring** | Gemini asks guided questions about your experience, uses only facts you confirm, and proposes changes one by one. The result is saved as a separate copy with its own PDF. |
 | **Profile** | Optional master profile for your professional details. Tailored resumes never change it silently. |
 
-Without a Gemini key, importing, editing, readability, local scoring and PDF export still work.
+Without a Gemini key, importing, editing, readability, local scoring and PDF export still work. AI requests have per-user and site-wide daily limits; see [AI usage limits](docs/api-reference.md#ai-usage-limits--2026-11-21).
 
 ![Resume library](docs/verification/resume-library-desktop.png)
 

@@ -112,6 +112,9 @@ export function createGatewayApp(
       }
       const requestId = upstream.headers.get("X-Request-Id");
       if (requestId) responseHeaders.set("X-Request-Id", requestId);
+      const retryAfter = upstream.headers.get("Retry-After");
+      if (upstream.status === 429 && retryAfter && /^\d{1,6}$/.test(retryAfter))
+        responseHeaders.set("Retry-After", retryAfter);
       return new Response(upstream.body, {
         status: upstream.status,
         headers: responseHeaders,

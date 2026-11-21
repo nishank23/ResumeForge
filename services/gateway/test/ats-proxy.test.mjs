@@ -88,3 +88,31 @@ test("readability GET/POST forwards to the owner service with private transport"
   assert.equal((await app.request(path, { method: "PUT" })).status, 404);
   assert.equal(calls.length, 2);
 });
+test("usage-limit 429 keeps status and a numeric Retry-After only", async () => {
+  for (const [header, expected] of [
+    ["120", "120"],
+    ["Wed, 21 Oct 2026 07:28:00 GMT", null],
+  ]) {
+    const app = createGatewayApp(
+      async () =>
+        new Response(
+          '{"error":{"code":"rate_limited","message":"Daily limit reached."}}',
+          { status: 429, headers: { "Retry-After": header } },
+        ),
+    );
+    const response = await app.request(
+      "/api/v1/resume/12345678-1234-4123-8123-123456789012/tailoring",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer synthetic-owner",
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      },
+    );
+    assert.equal(response.status, 429);
+    assert.equal(response.headers.get("Retry-After"), expected);
+    assert.equal((await response.json()).error.code, "rate_limited");
+  }
+});
