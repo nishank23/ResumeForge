@@ -21,6 +21,10 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "@resume-forge/resume-service#test": {
+      "dependsOn": ["build", "@resume-forge/shared#build"],
+      "outputs": []
+    },
     "clean": {
       "cache": false
     }
